@@ -35,6 +35,12 @@ def main():
         action="store_true",
         help="Run frontend/tooling checks only; records incomplete verification",
     )
+    parser.add_argument(
+        "--browser-suite",
+        choices=("all", "core", "observatory", "setup"),
+        default="all",
+        help="Select one isolated browser fixture group with --only-browser",
+    )
     parser.add_argument("--report", type=Path)
     parser.add_argument(
         "--check-timeout",
@@ -45,6 +51,8 @@ def main():
     args = parser.parse_args()
     if args.only_browser and args.skip_browser:
         parser.error("--only-browser cannot be combined with --skip-browser")
+    if args.browser_suite != "all" and not args.only_browser:
+        parser.error("--browser-suite requires --only-browser")
     if args.check_timeout <= 0:
         parser.error("--check-timeout must be positive")
     results = []
@@ -99,70 +107,71 @@ def main():
             run("Frontend module contracts", [npm, "test"])
         if not args.skip_browser:
             with tempfile.TemporaryDirectory(prefix="companion-verification-") as directory:
-                with socket.socket() as probe:
-                    probe.bind(("127.0.0.1", 0))
-                    port = probe.getsockname()[1]
-                base = f"http://127.0.0.1:{port}"
-                with open(Path(directory) / "server.log", "w+", encoding="utf-8") as log:
-                    server = subprocess.Popen(
-                        [
-                            sys.executable,
-                            "run.py",
-                            "--demo",
-                            "--no-browser",
-                            "--port",
-                            str(port),
-                            "--data-dir",
-                            str(Path(directory) / "workspace"),
-                        ],
-                        cwd=ROOT,
-                        env=env,
-                        stdout=log,
-                        stderr=subprocess.STDOUT,
-                    )
-                    try:
-                        opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
-                        deadline = time.monotonic() + 45
-                        while time.monotonic() < deadline:
-                            if server.poll() is not None:
-                                log.seek(0)
-                                raise RuntimeError("Test server exited: " + log.read()[-4000:])
-                            try:
-                                with opener.open(base + "/api/health", timeout=1) as response:
-                                    if response.status == 200:
-                                        break
-                            except OSError:
-                                time.sleep(0.2)
-                        else:
-                            raise RuntimeError("Test server did not become ready")
-                        browser_env = {**env, "ECLIPSE_BASE_URL": base}
-                        if str(ROOT) not in sys.path:
-                            sys.path.insert(0, str(ROOT))
-                        from workbench.local_session import read_instance
-
-                        launcher_key = read_instance(Path(directory) / "workspace", port, True)
-                        for name in (
-                            "test_local_session_browser_072.cjs",
-                            "test_frontend_browser_070.cjs",
-                            "test_frontend_accessibility_070.cjs",
-                            "test_frontend_workspace_080.cjs",
-                        ):
-                            request = urllib.request.Request(
-                                base + "/api/session/launch",
-                                method="POST",
-                                headers={"X-Workbench-Launcher": launcher_key},
-                            )
-                            with opener.open(request, timeout=2) as response:
-                                launch = json.load(response)["launch"]
-                            browser_env["ECLIPSE_LAUNCH_URL"] = base + "/#launch=" + launch
-                            run(name, [node, "tests/" + name], browser_env)
-                    finally:
-                        server.terminate()
+                opener = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+                if args.browser_suite in ("all", "core"):
+                    with socket.socket() as probe:
+                        probe.bind(("127.0.0.1", 0))
+                        port = probe.getsockname()[1]
+                    base = f"http://127.0.0.1:{port}"
+                    with open(Path(directory) / "server.log", "w+", encoding="utf-8") as log:
+                        server = subprocess.Popen(
+                            [
+                                sys.executable,
+                                "run.py",
+                                "--demo",
+                                "--no-browser",
+                                "--port",
+                                str(port),
+                                "--data-dir",
+                                str(Path(directory) / "workspace"),
+                            ],
+                            cwd=ROOT,
+                            env=env,
+                            stdout=log,
+                            stderr=subprocess.STDOUT,
+                        )
                         try:
-                            server.wait(timeout=10)
-                        except subprocess.TimeoutExpired:
-                            server.kill()
-                            server.wait()
+                            deadline = time.monotonic() + 45
+                            while time.monotonic() < deadline:
+                                if server.poll() is not None:
+                                    log.seek(0)
+                                    raise RuntimeError("Test server exited: " + log.read()[-4000:])
+                                try:
+                                    with opener.open(base + "/api/health", timeout=1) as response:
+                                        if response.status == 200:
+                                            break
+                                except OSError:
+                                    time.sleep(0.2)
+                            else:
+                                raise RuntimeError("Test server did not become ready")
+                            browser_env = {**env, "ECLIPSE_BASE_URL": base}
+                            if str(ROOT) not in sys.path:
+                                sys.path.insert(0, str(ROOT))
+                            from workbench.local_session import read_instance
+
+                            launcher_key = read_instance(Path(directory) / "workspace", port, True)
+                            for name in (
+                                "test_local_session_browser_072.cjs",
+                                "test_frontend_browser_070.cjs",
+                                "test_frontend_accessibility_070.cjs",
+                                "test_frontend_workspace_080.cjs",
+                            ):
+                                request = urllib.request.Request(
+                                    base + "/api/session/launch",
+                                    method="POST",
+                                    headers={"X-Workbench-Launcher": launcher_key},
+                                )
+                                with opener.open(request, timeout=2) as response:
+                                    launch = json.load(response)["launch"]
+                                browser_env["ECLIPSE_LAUNCH_URL"] = base + "/#launch=" + launch
+                                run(name, [node, "tests/" + name], browser_env)
+                        finally:
+                            server.terminate()
+                            try:
+                                server.wait(timeout=10)
+                            except subprocess.TimeoutExpired:
+                                server.kill()
+                                server.wait()
                 # Each specialized suite owns fresh data: Observatory needs its
                 # multientity source universe; first-run setup needs an empty workspace.
                 for fixture_name, fixture_script, test_script, metadata_env in (
@@ -179,6 +188,8 @@ def main():
                         "SETUP_BROWSER_FIXTURE",
                     ),
                 ):
+                    if args.browser_suite not in ("all", fixture_name):
+                        continue
                     fixture_workspace = Path(directory) / fixture_name
                     metadata_path = fixture_workspace / "browser.json"
                     with open(
@@ -254,6 +265,7 @@ def main():
             "python": sys.version,
             "platform": sys.platform,
             "browser_checks_requested": not args.skip_browser,
+            "browser_suite": args.browser_suite if not args.skip_browser else None,
             "backend_checks_requested": not (args.skip_backend or args.only_browser),
             "portable_frontend_checks_requested": not args.only_browser,
             "complete": completed

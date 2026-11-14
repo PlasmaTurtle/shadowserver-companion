@@ -14,21 +14,16 @@ concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  PIP_DISABLE_PIP_VERSION_CHECK: '1'
+  PYTHONUTF8: '1'
+
 jobs:
-  verify:
-    name: Verify (${{ matrix.os }})
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 60
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-24.04, windows-2025]
-    env:
-      PIP_DISABLE_PIP_VERSION_CHECK: '1'
-      PYTHONUTF8: '1'
+  source:
+    name: Source checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
     steps:
-      # Release integrity compares source bytes with bundled wheels. Do not let
-      # Windows Git rewrite line endings while populating the checkout.
       - name: Preserve source bytes during checkout
         run: git config --global core.autocrlf false
       - name: Check out source
@@ -50,8 +45,43 @@ jobs:
         run: python -m pip install -r requirements-dev.txt
       - name: Install frontend development dependencies
         run: npm ci --ignore-scripts
-      - name: Run fast source checks before browser setup
-        run: python tools/verify.py --skip-backend --skip-browser --report verification-preflight.json
+      - name: Check release identity, boundaries, formatting, syntax and frontend contracts
+        run: python tools/verify.py --skip-backend --skip-browser --report source-checks.json
+      - name: Retain source check summaries
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: source-checks
+          path: |
+            source-checks.json
+            dependency-integrity.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  backend:
+    name: Backend (${{ matrix.os }}, shard ${{ matrix.shard }}/4)
+    needs: source
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+        shard: [1, 2, 3, 4]
+    steps:
+      # Dependency integrity and release packaging compare exact source bytes.
+      - name: Preserve source bytes during checkout
+        run: git config --global core.autocrlf false
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.14'
+      - name: Install development dependencies
+        run: python -m pip install -r requirements-dev.txt
       - name: Install PDF test utilities (Linux)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install --yes poppler-utils
@@ -63,10 +93,55 @@ jobs:
           python -c "import shutil; required = ('pdftotext', 'pdftoppm', 'pdffonts', 'pdfinfo');
           missing = [name for name in required if not shutil.which(name)];
           assert not missing, 'Install Poppler and add its bin directory to PATH: ' + ', '.join(missing)"
+      - name: Run backend and Attribution shard
+        run: >-
+          python -m pytest -q --maxfail=1 -p tools.pytest_shard
+          --ci-shard ${{ matrix.shard }} --ci-shards 4
+          --junitxml=backend.xml --durations=15
+      - name: Retain backend results and shard inventory
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: backend-${{ matrix.os }}-${{ matrix.shard }}
+          path: |
+            backend.xml
+            shard-manifest.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  browser:
+    name: Browser (${{ matrix.os }}, ${{ matrix.suite }})
+    needs: source
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+        suite: [core, observatory, setup]
+    steps:
+      - name: Preserve source bytes during checkout
+        run: git config --global core.autocrlf false
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.14'
+      - name: Set up Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Install development dependencies
+        run: python -m pip install -r requirements-dev.txt
+      - name: Install frontend development dependencies
+        run: npm ci --ignore-scripts
       - name: Install Chromium and OS dependencies
         run: npx --no-install playwright install --with-deps chromium
-      # Ubuntu restricts user namespaces for downloaded browser builds. Scope
-      # the exception to this pinned Playwright executable, keeping its sandbox.
+      # Scope the user-namespace exception to this exact Playwright executable.
       # https://chromium.googlesource.com/chromium/src/+/main/docs/security/apparmor-userns-restrictions.md
       - name: Configure sandboxed Chromium (Linux)
         if: runner.os == 'Linux'
@@ -83,16 +158,39 @@ jobs:
           EOF
           sudo apparmor_parser -r /etc/apparmor.d/playwright-chromium
           echo "CHROMIUM_EXECUTABLE=$browser_path" >> "$GITHUB_ENV"
-      - name: Run complete synthetic verification
-        run: python tools/verify.py --report verification.json
-      - name: Retain verification summaries
+      - name: Run isolated browser suite
+        run: >-
+          python tools/verify.py --only-browser --browser-suite ${{ matrix.suite }}
+          --report browser.json
+      - name: Retain browser verification summary
         if: always()
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
-          name: verification-${{ matrix.os }}
-          path: |
-            verification-preflight.json
-            verification.json
-            dependency-integrity.json
+          name: browser-${{ matrix.os }}-${{ matrix.suite }}
+          path: browser.json
           if-no-files-found: ignore
           retention-days: 14
+
+  result:
+    name: CI result
+    if: always()
+    needs: [source, backend, browser]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require every stage to pass
+        env:
+          JOB_RESULTS: ${{ toJSON(needs) }}
+        run: |
+          python3 - <<'PY'
+          import json
+          import os
+
+          results = json.loads(os.environ["JOB_RESULTS"])
+          for name, job in results.items():
+              print(f"{name}: {job['result']}")
+          if set(results) != {"source", "backend", "browser"} or any(
+              job["result"] != "success" for job in results.values()
+          ):
+              raise SystemExit("CI is incomplete or failed; all stages must pass.")
+          PY

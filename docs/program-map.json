@@ -2641,6 +2641,41 @@
       ]
     },
     {
+      "path": "tools/pytest_shard.py",
+      "module": "tools.pytest_shard",
+      "owner": "distribution",
+      "lines": 72,
+      "sha256": "49d32cd6411849877b85b74fcfe09cd7e1a0ec209e4ac3e57ffeacbcc8aaaeee",
+      "imports": [],
+      "symbols": [
+        {
+          "name": "module_plan",
+          "line": 13,
+          "kind": "function"
+        },
+        {
+          "name": "pytest_addoption",
+          "line": 19,
+          "kind": "function"
+        },
+        {
+          "name": "pytest_configure",
+          "line": 25,
+          "kind": "function"
+        },
+        {
+          "name": "pytest_collection_modifyitems",
+          "line": 33,
+          "kind": "function"
+        },
+        {
+          "name": "pytest_report_collectionfinish",
+          "line": 64,
+          "kind": "function"
+        }
+      ]
+    },
+    {
       "path": "tools/release_policy.py",
       "module": "tools.release_policy",
       "owner": "distribution",
@@ -2749,8 +2784,8 @@
       "path": "tools/verify.py",
       "module": "tools.verify",
       "owner": "distribution",
-      "lines": 274,
-      "sha256": "f59e7380153d06f5c2cd361ae1d9e1d5ff153a4485d48b8086d905c403cbe261",
+      "lines": 286,
+      "sha256": "edf4cc60c7be3fab1016792b5fff689551571e6d9d6d9dd17166dde53a760fac",
       "imports": [
         "workbench.local_session"
       ],
