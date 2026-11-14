@@ -2644,13 +2644,13 @@
       "path": "tools/release_policy.py",
       "module": "tools.release_policy",
       "owner": "distribution",
-      "lines": 211,
-      "sha256": "c5794c86a5fa83e7bf3e70a9ea84e8a048fe1f5a32b7f09bbefc43d34464bb4e",
+      "lines": 213,
+      "sha256": "d8b014e3c604e6bd7323813cfc89e246169f53efcda1ab4e1d605422a91f4ce1",
       "imports": [],
       "symbols": [
         {
           "name": "distributable",
-          "line": 74,
+          "line": 76,
           "kind": "function"
         }
       ]
