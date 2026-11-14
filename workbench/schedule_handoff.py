@@ -27,6 +27,26 @@ def _load(path):
         return None
 
 
+def _retry_sharing_violation(operation):
+    """Let short-lived Windows readers close before replacing/removing a marker."""
+    for attempt in range(20):
+        try:
+            return operation()
+        except OSError as error:
+            if getattr(error, "winerror", None) not in (32, 33) or attempt == 19:
+                raise
+            time.sleep(0.05)
+
+
+def _remove_owned(path, expected):
+    def remove():
+        # A retry must not remove a marker published by a different owner.
+        if _load(path) == expected:
+            path.unlink(missing_ok=True)
+
+    _retry_sharing_violation(remove)
+
+
 def _write(path, value):
     if path.is_symlink():
         raise ValueError("Scheduled handoff path must not be a link")
@@ -36,7 +56,7 @@ def _write(path, value):
         temporary = Path(handle.name)
         json.dump(value, handle)
     try:
-        os.replace(temporary, path)
+        _retry_sharing_violation(lambda: os.replace(temporary, path))
     finally:
         temporary.unlink(missing_ok=True)
 
@@ -84,8 +104,7 @@ def request_handoff(root, *, timeout=30):
     ):
         return False
     if not _alive(value["pid"]):
-        if _load(marker) == value:
-            marker.unlink(missing_ok=True)
+        _remove_owned(marker, value)
         return False
     _write(request, {"nonce": value["nonce"]})
     deadline = time.monotonic() + max(0, min(timeout, 60))
@@ -132,8 +151,7 @@ def scheduled_ownership(root, cancel_event):
     finally:
         stopped.set()
         worker.join(timeout=1)
-        if _load(marker) == value:
-            marker.unlink(missing_ok=True)
+        _remove_owned(marker, value)
         incoming = _load(request)
         if isinstance(incoming, dict) and incoming.get("nonce") == value["nonce"]:
-            request.unlink(missing_ok=True)
+            _remove_owned(request, incoming)
