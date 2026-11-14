@@ -33,6 +33,13 @@ The verifier covers release identity, module boundaries, formatting, lint, backe
 regressions, frontend contracts and its registered synthetic browser suites.
 It is not the complete manual workstation/installer acceptance procedure.
 
+Source identity, module-map drift, formatting, lint and frontend contracts run
+before downloading Chromium. This preflight writes `verification-preflight.json`
+with `complete: false`; only the subsequent full run can record complete
+verification. Fix stale generated maps with `python tools/program_map.py --write`
+and commit both generated outputs with the source change. The workflow checks
+these outputs; it never silently regenerates them to hide repository drift.
+
 The workflow uses read-only repository permissions, full commit action pins,
 ephemeral hosted runners, no persisted checkout credential, cancellation of
 superseded runs, and a 60-minute job ceiling. It preserves source line endings

@@ -200,7 +200,18 @@ def test_planner_statistics_are_explicit_bounded_and_busy_safe(tmp_path):
     store = Store(tmp_path / "workspace")
     add(store, base())
     result = run(store, force=True)
-    assert result["state"] == "complete" and result["stat_rows"] > 0
+    assert result["state"] == "complete"
+    # SQLite added optimize's all-tables bit (0x10000) in 3.46. Older
+    # system builds may legitimately do no work on a fresh connection.
+    assert result["stat_rows"] >= 0
+    if sqlite3.sqlite_version_info >= (3, 46, 0):
+        assert result["stat_rows"] > 0
+    with closing(sqlite3.connect(store.db)) as db:
+        has_stats = db.execute("SELECT 1 FROM sqlite_master WHERE name='sqlite_stat1'").fetchone()
+        actual_rows = (
+            db.execute("SELECT count(*) FROM sqlite_stat1").fetchone()[0] if has_stats else 0
+        )
+        assert result["stat_rows"] == actual_rows
     assert status(store.root)["completed_at"] == result["completed_at"]
     with closing(sqlite3.connect(store.db, timeout=0.25)) as writer:
         writer.execute("BEGIN IMMEDIATE")

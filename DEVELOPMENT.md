@@ -35,6 +35,13 @@ npm ci
 npx playwright install chromium
 ```
 
+PDF regression tests also require Poppler's `pdftotext`, `pdftoppm`, `pdffonts`
+and `pdfinfo` on `PATH`. On Ubuntu, install `poppler-utils` with apt. On Windows,
+install Poppler with `choco install poppler --yes --no-progress` or use an existing
+Poppler installation and add its `bin` directory to `PATH`. These are developer
+test tools; the installed application does not require them. CI installs and
+checks them before running the regression suite.
+
 Select `.venv\Scripts\python.exe` as the IDE interpreter. Editable Attribution
 installation makes local library edits visible to development runs. Release
 builds still verify the library source against its bundled wheel and will reject
