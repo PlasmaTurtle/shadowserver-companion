@@ -77,7 +77,7 @@ const base = process.env.ECLIPSE_BASE_URL || 'http://127.0.0.1:8897',
     assert.equal(await page.locator('#ec-filter-toggle').getAttribute('aria-expanded'), 'true');
     await page.locator('#ec-intelligence').selectOption('kev');
     await page.waitForFunction(() => document.querySelector('#ec-rows')?.textContent === '0');
-    assert.match(await page.locator('#ec-map-empty').innerText(), /No observations match/);
+    assert.match(await page.locator('#ec-map-empty').innerText(), /No findings match/);
     await page.locator('#ec-reset').click();
     await page.waitForFunction(
       (value) => document.querySelector('#ec-rows')?.textContent === value,
