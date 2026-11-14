@@ -106,44 +106,37 @@ configuration and is not reformatted by the root project.
 The approved template file is excluded from formatting deliberately. Its bytes are
 protected by regression tests. Do not edit it as a cosmetic cleanup.
 
-## CI stages and focused reruns
+## Complete CI verification
 
-GitHub Actions runs source checks once, then runs backend and browser jobs
-independently on Ubuntu and Windows. The final **CI result** succeeds only when
-every stage succeeds; a skipped or canceled stage cannot produce a passing result.
+GitHub Actions runs one complete verification job on Ubuntu and one on Windows.
+Each job installs its dependencies and runs the source checks, every browser
+suite, and the complete Python and standalone Attribution suite in collection
+order. Tests are not partitioned into shards. The final **CI result** succeeds
+only when both operating systems finish successfully.
 
-| Stage         | Scope                                                                                                                   |
-| ------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| Source checks | Dependency integrity, release identity, program map, Python and frontend formatting/lint, and frontend module contracts |
-| Backend       | Four shards per operating system, covering all collected Python and standalone Attribution tests                        |
-| Browser       | Separate Core, Observatory and Setup jobs per operating system                                                          |
-
-Backend shards keep whole test modules together and partition the sorted module
-list deterministically. Each test belongs to one shard on each operating system.
-The jobs retain a JUnit result and `shard-manifest.json`, including the selected
-tests, so a failure identifies a smaller reproducible group. Backend jobs install
-Python dependencies and Poppler; they do not install Node or Chromium.
-Backend logs name each test, and pytest prints all thread stacks when a test takes
-more than two minutes. This diagnostic does not skip the test or change its result.
-
-Browser jobs retain their JSON verification summaries. Core runs local-session,
-workspace workflow and accessibility checks against an isolated demo workspace;
-Observatory and Setup each use their own dedicated synthetic fixture. A single
-browser group remains a partial verification, even when it passes.
-
-To reproduce one failed group locally:
+To run the same checks locally:
 
 ```text
-python -m pytest -v --maxfail=1 -p tools.pytest_shard --ci-shard 2 --ci-shards 4 --junitxml=backend.xml --durations=15
-python tools/verify.py --only-browser --browser-suite setup --report browser.json
+python tools/check_dependencies.py --output dependency-integrity.json
+python tools/verify.py --check-timeout 4500 --report verification.json
 ```
 
-Use the shard number and operating system from the failed job. Browser suite
-choices are `core`, `observatory` and `setup`. After a transient infrastructure
-failure, GitHub's **Re-run failed jobs** reruns the failed jobs and the final result
-without repeating already successful independent jobs. A new code commit starts
-fresh checks for that commit. The full local verification command above remains
-available; staged CI does not replace exact-version native Windows acceptance.
+The full job has a 90-minute limit, with a 75-minute limit for each verifier
+subprocess, allowing the entire Windows backend suite to run in one process.
+CI retains `verification.json`, the backend JUnit report and the dependency
+integrity report. Test output names each test, and pytest prints all thread
+stacks when a test takes more than two minutes. This diagnostic does not skip
+the test or change its result.
+
+For focused debugging, run a specific pytest module or use the verifier's
+`--only-browser --browser-suite core|observatory|setup` options. These are partial
+runs and do not replace complete verification. Use the failed job's operating
+system when reproducing platform-specific behavior. Jobs that fail before
+starting a runner have no application test logs; check the GitHub run annotation
+for the startup failure rather than treating them as test failures.
+
+A complete CI pass still does not replace exact-version native Windows release
+acceptance on a workstation.
 
 ## Source configuration
 

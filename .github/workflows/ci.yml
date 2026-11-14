@@ -19,10 +19,14 @@ env:
   PYTHONUTF8: '1'
 
 jobs:
-  source:
-    name: Source checks
-    runs-on: ubuntu-24.04
-    timeout-minutes: 10
+  verify:
+    name: Full verification (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
     steps:
       - name: Preserve source bytes during checkout
         run: git config --global core.autocrlf false
@@ -45,43 +49,6 @@ jobs:
         run: python -m pip install -r requirements-dev.txt
       - name: Install frontend development dependencies
         run: npm ci --ignore-scripts
-      - name: Check release identity, boundaries, formatting, syntax and frontend contracts
-        run: python tools/verify.py --skip-backend --skip-browser --report source-checks.json
-      - name: Retain source check summaries
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: source-checks
-          path: |
-            source-checks.json
-            dependency-integrity.json
-          if-no-files-found: ignore
-          retention-days: 14
-
-  backend:
-    name: Backend (${{ matrix.os }}, shard ${{ matrix.shard }}/4)
-    needs: source
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-24.04, windows-2025]
-        shard: [1, 2, 3, 4]
-    steps:
-      # Dependency integrity and release packaging compare exact source bytes.
-      - name: Preserve source bytes during checkout
-        run: git config --global core.autocrlf false
-      - name: Check out source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Set up Python
-        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with:
-          python-version: '3.14'
-      - name: Install development dependencies
-        run: python -m pip install -r requirements-dev.txt
       - name: Install PDF test utilities (Linux)
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install --yes poppler-utils
@@ -93,52 +60,6 @@ jobs:
           python -c "import shutil; required = ('pdftotext', 'pdftoppm', 'pdffonts', 'pdfinfo');
           missing = [name for name in required if not shutil.which(name)];
           assert not missing, 'Install Poppler and add its bin directory to PATH: ' + ', '.join(missing)"
-      - name: Run backend and Attribution shard
-        run: >-
-          python -m pytest -v --maxfail=1 -p tools.pytest_shard
-          --ci-shard ${{ matrix.shard }} --ci-shards 4
-          --junitxml=backend.xml --durations=15
-      - name: Retain backend results and shard inventory
-        if: always()
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: backend-${{ matrix.os }}-${{ matrix.shard }}
-          path: |
-            backend.xml
-            shard-manifest.json
-          if-no-files-found: ignore
-          retention-days: 14
-
-  browser:
-    name: Browser (${{ matrix.os }}, ${{ matrix.suite }})
-    needs: source
-    runs-on: ${{ matrix.os }}
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-24.04, windows-2025]
-        suite: [core, observatory, setup]
-    steps:
-      - name: Preserve source bytes during checkout
-        run: git config --global core.autocrlf false
-      - name: Check out source
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: Set up Python
-        uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # v7.1.0
-        with:
-          python-version: '3.14'
-      - name: Set up Node
-        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version: '24'
-          package-manager-cache: false
-      - name: Install development dependencies
-        run: python -m pip install -r requirements-dev.txt
-      - name: Install frontend development dependencies
-        run: npm ci --ignore-scripts
       - name: Install Chromium and OS dependencies
         run: npx --no-install playwright install --with-deps chromium
       # Scope the user-namespace exception to this exact Playwright executable.
@@ -158,39 +79,38 @@ jobs:
           EOF
           sudo apparmor_parser -r /etc/apparmor.d/playwright-chromium
           echo "CHROMIUM_EXECUTABLE=$browser_path" >> "$GITHUB_ENV"
-      - name: Run isolated browser suite
-        run: >-
-          python tools/verify.py --only-browser --browser-suite ${{ matrix.suite }}
-          --report browser.json
-      - name: Retain browser verification summary
+      - name: Run complete source, browser, backend and Attribution verification
+        env:
+          PYTEST_ADDOPTS: --junitxml=backend.xml --durations=15
+        run: python tools/verify.py --check-timeout 4500 --report verification.json
+      - name: Retain complete verification results
         if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: browser-${{ matrix.os }}-${{ matrix.suite }}
-          path: browser.json
+          name: verification-${{ matrix.os }}
+          path: |
+            verification.json
+            backend.xml
+            dependency-integrity.json
           if-no-files-found: ignore
           retention-days: 14
 
   result:
     name: CI result
     if: always()
-    needs: [source, backend, browser]
+    needs: verify
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     steps:
-      - name: Require every stage to pass
+      - name: Require both complete runs to pass
         env:
-          JOB_RESULTS: ${{ toJSON(needs) }}
+          VERIFICATION_RESULT: ${{ needs.verify.result }}
         run: |
           python3 - <<'PY'
-          import json
           import os
 
-          results = json.loads(os.environ["JOB_RESULTS"])
-          for name, job in results.items():
-              print(f"{name}: {job['result']}")
-          if set(results) != {"source", "backend", "browser"} or any(
-              job["result"] != "success" for job in results.values()
-          ):
-              raise SystemExit("CI is incomplete or failed; all stages must pass.")
+          result = os.environ["VERIFICATION_RESULT"]
+          print(f"Full verification: {result}")
+          if result != "success":
+              raise SystemExit("CI is incomplete or failed; both operating systems must pass.")
           PY
