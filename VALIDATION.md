@@ -1,5 +1,10 @@
 # Validation — 0.12.0 Guided Setup
 
+> Recorded build evidence for the 0.12.0 candidate, prepared November 14, 2026.
+> These results describe that build and execution environment; they are not live
+> GitHub Actions status or acceptance of subsequent commits. Use the
+> [Windows checklist](HOME_VALIDATION.md) for outstanding workstation acceptance.
+
 This is an unsigned release candidate. It modernizes Windows installation,
 guided setup, Settings, jurisdiction-aware acquisition and map context, and
 software-update controls. Exact-version native Windows and rendered-browser
@@ -83,3 +88,4 @@ checks. The complete backend collection can also be split by file using pytest's
 import order. Do not count deselected nodes as tested or omit failing nodes.
 The verification reports explicitly distinguish partial toolchain runs from a
 complete run and keep native Windows acceptance false until separately recorded.
+

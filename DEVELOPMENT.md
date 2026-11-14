@@ -10,6 +10,9 @@ workspace and credential namespace for safe upgrades. They are compatibility
 identifiers, not product language or a permanent restriction on stable promotion.
 The legacy standalone Chaos identity remains separate.
 
+For documentation ownership and historical records, see the
+[documentation index](docs/README.md).
+
 ## Feature names
 
 Use **Workspace** for the current-work area in interface text, documentation,
@@ -102,6 +105,13 @@ configuration and is not reformatted by the root project.
 
 The approved template file is excluded from formatting deliberately. Its bytes are
 protected by regression tests. Do not edit it as a cosmetic cleanup.
+
+## Source configuration
+
+A source deployment may supply `NVD_API_KEY` for catalog acquisition. Do not commit
+keys or copy them into examples. Initial catalog seeding uses compressed annual
+NVD feeds; subsequent API updates use the configured key. Application setup and
+credential choices are described in the [user guide](docs/USER_GUIDE.md).
 
 ## Contact discovery verification
 
@@ -265,7 +275,7 @@ without loading report/case commands. Recovery is explicit in Store startup,
 after migrations/defaults and before callers start background jobs. Existing
 callers can keep their Store/Cases/reporting/closing/SectionReviews imports.
 
-For 0.7.5 maintenance, `Cases` keeps workflow policy while `repositories/cases.py`
+`Cases` keeps workflow policy while `repositories/cases.py`
 owns SQL scope/contact operations. EntityRepository and SourceRepository use the
 same caller-owned transaction convention. Use `Workspace.read_snapshot()` for
 related read-only projections; use the existing command transaction for reads that
@@ -280,3 +290,4 @@ and app polling. Existing backend commands continue independently after teardown
 The official SQLite, Python and MDN references and the transaction-mode rationale
 are linked in `ARCHITECTURE.md`. Run `tests/test_maintenance_075.py` and the full
 frontend runner when changing these boundaries.
+

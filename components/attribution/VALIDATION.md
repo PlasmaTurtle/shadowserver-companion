@@ -1,5 +1,7 @@
 # Attribution Module 0.2.4 validation
 
+> **Historical record.** This component record covers earlier versions. See [application validation](../../VALIDATION.md) for candidate evidence; the component version is recorded in [pyproject.toml](pyproject.toml).
+
 Validated on 2026-11-11 using Python 3.14.10 on Linux.
 
 - All 139 standalone attribution tests passed after extracting the shared bounded Google Public DNS query path.
@@ -33,3 +35,4 @@ Validated on 2026-11-06 using Python 3.12 on Linux.
 - The rebuilt wheel is installed and exercised offline in a clean environment. Bundled wheel hashes are verified.
 
 The result JSON remains schema version 2. Physical Windows execution and workstation DNS/proxy configuration remain unverified. Synthetic network tests and cached-response migration checks do not establish fresh attribution for any business.
+

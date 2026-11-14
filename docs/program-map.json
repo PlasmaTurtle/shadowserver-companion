@@ -2644,8 +2644,8 @@
       "path": "tools/release_policy.py",
       "module": "tools.release_policy",
       "owner": "distribution",
-      "lines": 213,
-      "sha256": "d8b014e3c604e6bd7323813cfc89e246169f53efcda1ab4e1d605422a91f4ce1",
+      "lines": 218,
+      "sha256": "c29105f1e80f06f9c3dd1a0ba6e95f2cf04c424d21ff0752ed5d0362204774d1",
       "imports": [],
       "symbols": [
         {
@@ -2846,45 +2846,45 @@
       "path": "tools/windows_installer/build.py",
       "module": "tools.windows_installer.build",
       "owner": "distribution",
-      "lines": 405,
-      "sha256": "ed351376c6772479227acde3391a212349e0f18835f2c8644fffba859b0fb48d",
+      "lines": 407,
+      "sha256": "7b00eda0fd4accbf66df1527800bd97e739a1a65cb89a2f23d2a6488d8ca5166",
       "imports": [
         "workbench.release"
       ],
       "symbols": [
         {
           "name": "sha256",
-          "line": 66,
+          "line": 68,
           "kind": "function"
         },
         {
           "name": "copy_source",
-          "line": 74,
+          "line": 76,
           "kind": "function"
         },
         {
           "name": "extract_runtime",
-          "line": 91,
+          "line": 93,
           "kind": "function"
         },
         {
           "name": "validate_wheels",
-          "line": 107,
+          "line": 109,
           "kind": "function"
         },
         {
           "name": "uninstall_inventory",
-          "line": 126,
+          "line": 128,
           "kind": "function"
         },
         {
           "name": "installer_definitions",
-          "line": 155,
+          "line": 157,
           "kind": "function"
         },
         {
           "name": "main",
-          "line": 170,
+          "line": 172,
           "kind": "function"
         }
       ]
