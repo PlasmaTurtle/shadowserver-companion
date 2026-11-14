@@ -1,0 +1,2 @@
+Single-file GitHub write test requested by Kyle on 2026-11-14.
+This diagnostic file contains no application code.
