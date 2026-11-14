@@ -224,6 +224,7 @@ const { chromium } = require('playwright');
     await page.locator('#software-updates-panel').waitFor();
     await snapshot('settings-release-desktop');
     await page.locator('[data-action="software-whats-new"]').click();
+    await page.locator('#modal[open] [data-action="software-whats-new-dismiss"]').waitFor();
     assert.equal(await page.locator('#modal-title').textContent(), 'What’s new');
     await dismissNews();
     checks.push(
