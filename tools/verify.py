@@ -245,7 +245,7 @@ def main():
         if not (args.only_browser or args.skip_backend):
             run(
                 "Backend and attribution regression",
-                [sys.executable, "-m", "pytest", "-q", "--maxfail=1"],
+                [sys.executable, "-m", "pytest", "-v", "--maxfail=1"],
             )
         completed = True
     except KeyboardInterrupt:

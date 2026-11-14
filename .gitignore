@@ -24,6 +24,8 @@ data-demo/
 
 # Local verification output; never commit operational workspaces or logs.
 /verification*.json
+/backend.xml
+/dependency-integrity.json
 /playwright-report/
 /test-results/
 .coverage
