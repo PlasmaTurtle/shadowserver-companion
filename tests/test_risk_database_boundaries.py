@@ -1,5 +1,7 @@
 """Risk freshness and schema compatibility agree across database entry points."""
 
+from contextlib import closing
+
 from datetime import timedelta
 from copy import deepcopy
 import hashlib
@@ -57,7 +59,7 @@ def test_catalog_and_direct_risk_share_score_and_retrieval_freshness(
 
 def test_future_risk_schema_rejected_by_direct_and_attached_reads_without_changes(tmp_path):
     reference, catalog = stores(tmp_path)
-    with sqlite3.connect(reference.db) as db:
+    with closing(sqlite3.connect(reference.db)) as db, db:
         db.execute("PRAGMA user_version=2")
     before = hashlib.sha256(reference.db.read_bytes()).hexdigest()
     operations = [
@@ -81,14 +83,14 @@ def test_future_risk_schema_rejected_by_direct_and_attached_reads_without_change
     # The separately versioned NVD database remains available and intact.
     assert catalog.get(ID)["cve"]["id"] == ID
     assert catalog.search(ID)["total"] == 1
-    with sqlite3.connect(reference.db) as db:
+    with closing(sqlite3.connect(reference.db)) as db, db:
         assert db.execute("PRAGMA user_version").fetchone()[0] == 2
         assert db.execute("SELECT score FROM epss WHERE id=?", (ID,)).fetchone()[0] == 0.7
 
 
 def test_future_risk_schema_is_visible_without_blocking_unrelated_workspace(tmp_path):
     reference, _ = stores(tmp_path)
-    with sqlite3.connect(reference.db) as db:
+    with closing(sqlite3.connect(reference.db)) as db, db:
         db.execute("PRAGMA user_version=2")
     app = create_app(tmp_path / "working", worker=False)
     with TestClient(app) as client:

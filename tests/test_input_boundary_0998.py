@@ -5,6 +5,8 @@ network request or opens a browser. These tests exercise the user-facing contact
 workflow rather than only the decoder or serializer implementation.
 """
 
+from contextlib import closing
+
 from copy import deepcopy
 import hashlib
 import json
@@ -137,7 +139,7 @@ def _simulate_legacy_capture(store, body, *, missing):
     # The fixtures emulate a file produced by an older version. The live product
     # keeps immutable provenance triggers; temporarily remove/recreate them only
     # inside this offline fixture transaction.
-    with sqlite3.connect(store.db) as db:
+    with closing(sqlite3.connect(store.db)) as db, db:
         triggers = db.execute(
             "SELECT name,sql FROM sqlite_master WHERE type='trigger' AND tbl_name='contact_runs'"
         ).fetchall()

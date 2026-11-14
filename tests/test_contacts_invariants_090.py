@@ -3,6 +3,8 @@
 All company pages and registration evidence in these tests are synthetic.
 """
 
+from contextlib import closing
+
 from dataclasses import asdict
 from hashlib import sha256
 import asyncio
@@ -176,7 +178,7 @@ def test_scope_ownership_change_cannot_receive_inflight_result(records):
 
 def test_corrupt_attribution_is_not_claimed_for_entity_website_contact_lookup(records):
     store, contacts, entity = records
-    with sqlite3.connect(store.root / "attribution.sqlite3") as db:
+    with closing(sqlite3.connect(store.root / "attribution.sqlite3")) as db, db:
         db.execute(
             "UPDATE snapshots SET body=? WHERE id=?", (b"corrupted", entity["response"].snapshot_id)
         )

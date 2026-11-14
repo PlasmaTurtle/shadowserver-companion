@@ -1,5 +1,7 @@
 """Workspace replacement is validated, cancellable, and deferred to startup."""
 
+from contextlib import closing
+
 import hashlib
 import importlib.util
 import json
@@ -153,7 +155,7 @@ def test_legacy_backup_and_future_schema_validation(tmp_path):
             if item.filename != "manifest.json":
                 old.writestr(item, current.read(item))
     unpack_workspace(legacy, tmp_path / "restored")
-    with sqlite3.connect(tmp_path / "restored" / "workbench.sqlite3") as db:
+    with closing(sqlite3.connect(tmp_path / "restored" / "workbench.sqlite3")) as db, db:
         db.execute("PRAGMA user_version=999")
     from workbench.workspace_data import validate_workspace
 

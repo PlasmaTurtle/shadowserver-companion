@@ -33,8 +33,21 @@ class SchemaTests(unittest.TestCase):
 
     def test_report_type_never_becomes_local_path(self):
         with TemporaryDirectory() as directory:
-            snap = SchemaStore(directory).capture("../../type", {"ip": "string"})
-            self.assertTrue(Path(snap.path).is_relative_to(Path(directory)))
+            # Snapshot paths are resolved; resolve the root too, since Windows
+            # temporary directories may use an 8.3 alias for the same location.
+            root = Path(directory).resolve()
+            for report_type in (
+                "../../type",
+                r"..\..\type",
+                r"C:\outside\type",
+                r"\\server\share\type",
+            ):
+                with self.subTest(report_type=report_type):
+                    snap = SchemaStore(directory).capture(report_type, {"ip": "string"})
+                    relative = Path(snap.path).relative_to(root)
+                    self.assertEqual(len(relative.parts), 2)
+                    self.assertRegex(relative.parts[0], r"^[0-9a-f]{64}$")
+                    self.assertEqual(relative.name, snap.sha256 + ".json")
 
 
 if __name__ == "__main__":

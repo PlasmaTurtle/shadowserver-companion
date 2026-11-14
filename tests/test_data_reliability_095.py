@@ -1,5 +1,7 @@
 """0.9.5 backup contracts, recovery copies and diagnostics protect real workflows."""
 
+from contextlib import closing
+
 import importlib.util
 import json
 from pathlib import Path
@@ -98,13 +100,13 @@ def test_application_startup_saves_pre_upgrade_schema_and_complete_files(tmp_pat
     root = tmp_path / "legacy"
     (root / "inbox").mkdir(parents=True)
     (root / "inbox" / "retained.csv").write_text("retained original bytes")
-    with sqlite3.connect(root / "workbench.sqlite3") as db:
+    with closing(sqlite3.connect(root / "workbench.sqlite3")) as db, db:
         db.row_factory = sqlite3.Row
         for version in range(1, 8):
             MIGRATIONS[version](db)
             db.execute(f"PRAGMA user_version={version}")
     app = create_app(root, worker=False, report_processes=False)
-    with app.state.store.connect() as db:
+    with closing(app.state.store.connect()) as db, db:
         assert db.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
     point = data.backup_status(root)["restore_points"][0]
     path = data.restore_point_path(root, point["id"])
@@ -112,7 +114,7 @@ def test_application_startup_saves_pre_upgrade_schema_and_complete_files(tmp_pat
         assert archive.read("data/inbox/retained.csv") == b"retained original bytes"
         old_db = tmp_path / "before.sqlite3"
         old_db.write_bytes(archive.read("data/workbench.sqlite3"))
-    with sqlite3.connect(old_db) as db:
+    with closing(sqlite3.connect(old_db)) as db, db:
         assert db.execute("PRAGMA user_version").fetchone()[0] == 7
 
 
@@ -125,7 +127,7 @@ def test_failed_pre_upgrade_backup_does_not_migrate_or_replace_existing_records(
     (root / "inbox").mkdir(parents=True)
     marker = root / "inbox/retained.csv"
     marker.write_bytes(b"exact original")
-    with sqlite3.connect(root / "workbench.sqlite3") as db:
+    with closing(sqlite3.connect(root / "workbench.sqlite3")) as db, db:
         db.row_factory = sqlite3.Row
         for version in range(1, 8):
             MIGRATIONS[version](db)
@@ -137,7 +139,7 @@ def test_failed_pre_upgrade_backup_does_not_migrate_or_replace_existing_records(
     )
     with pytest.raises(ValueError, match="full disk"):
         create_app(root, worker=False, report_processes=False)
-    with sqlite3.connect(root / "workbench.sqlite3") as db:
+    with closing(sqlite3.connect(root / "workbench.sqlite3")) as db, db:
         assert db.execute("PRAGMA user_version").fetchone()[0] == 7
     assert marker.read_bytes() == b"exact original"
 
@@ -270,7 +272,7 @@ def test_installer_stops_incompatible_existing_schema_before_cleanup(tmp_path, m
     local = tmp_path / "local"
     database = local / "OutreachWorkbench" / "data" / "workbench.sqlite3"
     database.parent.mkdir(parents=True)
-    with sqlite3.connect(database) as db:
+    with closing(sqlite3.connect(database)) as db, db:
         db.execute("PRAGMA user_version=999")
     monkeypatch.setenv("LOCALAPPDATA", str(local))
     manifest = json.loads(staged.read_text())

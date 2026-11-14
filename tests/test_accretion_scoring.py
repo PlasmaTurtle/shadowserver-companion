@@ -3,6 +3,7 @@
 from copy import deepcopy
 import hashlib
 import json
+import sqlite3
 
 import pytest
 
@@ -207,6 +208,30 @@ def test_catalog_corruption_isolated_and_rejected_not_scored(tmp_path):
     assert records[rejected]["status"] == "rejected"
     assert records[rejected]["cvss"] is None
     assert records[ID]["source"]["record_sha256"]
+
+
+@pytest.mark.parametrize("damaged", [False, True])
+def test_catalog_connection_closes_after_read_or_schema_failure(tmp_path, monkeypatch, damaged):
+    workspace = tmp_path / "data"
+    catalog = seed_catalog(workspace, [(ID, 9.8, "Analyzed", False)])
+    if damaged:
+        with catalog.connection() as db:
+            db.execute("DROP TABLE metadata")
+    opened = []
+    connect = sqlite3.connect
+
+    def tracked_connect(*args, **kwargs):
+        db = connect(*args, **kwargs)
+        opened.append(db)
+        return db
+
+    monkeypatch.setattr(accretion.sqlite3, "connect", tracked_connect)
+    result = accretion.vet_cves(workspace, [ID], as_of=NOW)
+    assert result[ID]["status"] == ("unavailable" if damaged else "available")
+    assert len(opened) == 1
+    for db in opened:
+        with pytest.raises(sqlite3.ProgrammingError, match="closed"):
+            db.execute("SELECT 1")
 
 
 def test_risk_record_corruption_isolated_stale_positives_retained(tmp_path):

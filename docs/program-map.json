@@ -1791,8 +1791,8 @@
       "path": "static/modules/navigation.js",
       "module": "static/modules/navigation.js",
       "owner": "browser",
-      "lines": 389,
-      "sha256": "7c9f8dde50d44cbae4c4db0286b8258491a5e760683490c2ea65acbbc5ff1a32",
+      "lines": 392,
+      "sha256": "0427478f081ff22e0a2a63dbb2caa402932030ecf0727b800f8158285c53839f",
       "imports": [],
       "symbols": [
         {
@@ -1802,7 +1802,7 @@
         },
         {
           "name": "start",
-          "line": 287,
+          "line": 290,
           "kind": "export"
         }
       ]
@@ -3074,8 +3074,8 @@
       "path": "workbench/accretion.py",
       "module": "workbench.accretion",
       "owner": "intake-jobs",
-      "lines": 758,
-      "sha256": "05b55ba550ef541f0c965262db3b01c778eeb4f280f20521526049806f9ffbc3",
+      "lines": 764,
+      "sha256": "67392e4445ed061942ac50a06ba6e6fbc30163b7aa170d16b831fa27184a9fe3",
       "imports": [
         "workbench.cve_catalog.risk",
         "workbench.cve_catalog.storage",
@@ -3086,32 +3086,32 @@
       "symbols": [
         {
           "name": "policy_defaults",
-          "line": 49,
+          "line": 50,
           "kind": "function"
         },
         {
           "name": "normalize_policy",
-          "line": 63,
+          "line": 64,
           "kind": "function"
         },
         {
           "name": "policy_hash",
-          "line": 111,
+          "line": 112,
           "kind": "function"
         },
         {
           "name": "vet_cves",
-          "line": 211,
+          "line": 212,
           "kind": "function"
         },
         {
           "name": "score_lead",
-          "line": 507,
+          "line": 513,
           "kind": "function"
         },
         {
           "name": "score_leads",
-          "line": 726,
+          "line": 732,
           "kind": "function"
         }
       ]
