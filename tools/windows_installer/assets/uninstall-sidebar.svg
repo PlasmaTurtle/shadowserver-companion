@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="164" height="314" viewBox="0 0 164 314">
+<rect width="164" height="314" fill="#080b10"/>
+<path d="M-30 270C24 304 146 216 186 82" fill="none" stroke="#bba5ff" stroke-width="1" opacity=".18"/>
+<circle cx="80" cy="79" r="36" fill="none" stroke="#aeece5" stroke-width="5"/>
+<circle cx="96" cy="65" r="33" fill="#080b10"/>
+<path d="M39 99C60 111 112 77 126 51" fill="none" stroke="#bba5ff" stroke-width="5" stroke-linecap="round"/>
+<circle cx="121" cy="56" r="5" fill="#aeece5"/>
+<g font-family="sans-serif" fill="#eaf2f4">
+<text x="22" y="149" font-size="11" letter-spacing="1.3">SHADOWSERVER</text>
+<text x="21" y="178" font-size="27" font-weight="bold">Eclipse</text>
+<path d="M22 197H142" stroke="#344449"/>
+<text x="22" y="226" font-size="11">Your workspace</text>
+<text x="22" y="245" font-size="11">records stay</text>
+<text x="22" y="264" font-size="11">separate.</text>
+</g></svg>
