@@ -300,7 +300,7 @@ def register(app, *, store, intake):
         except HTTPException:
             verified.close()
             raise
-        except (OSError, ValueError):
+        except OSError, ValueError:
             verified.close()
             raise HTTPException(404, "Original report is unavailable") from None
 

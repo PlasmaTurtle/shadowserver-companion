@@ -58,7 +58,7 @@ def local_source(mode):
                 while not stop.wait(0.02):
                     self.wfile.write(b"x")
                     self.wfile.flush()
-            except (BrokenPipeError, ConnectionResetError):
+            except BrokenPipeError, ConnectionResetError:
                 pass
 
     server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)

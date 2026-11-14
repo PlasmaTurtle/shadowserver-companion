@@ -41,7 +41,7 @@ def set_document_properties(doc, *, title, author, created_at=None, revision=1):
     properties.category = ""
     try:
         properties.revision = max(1, int(revision))
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         properties.revision = 1
     try:
         instant = datetime.fromisoformat(str(created_at).replace("Z", "+00:00"))
@@ -49,7 +49,7 @@ def set_document_properties(doc, *, title, author, created_at=None, revision=1):
             instant = None
         else:
             instant = instant.astimezone(timezone.utc)
-    except (TypeError, ValueError, OverflowError):
+    except TypeError, ValueError, OverflowError:
         instant = None
     for tag in ("dcterms:created", "dcterms:modified", "cp:lastPrinted"):
         for element in list(properties._element.findall(qn(tag))):

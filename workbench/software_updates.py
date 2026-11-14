@@ -138,7 +138,7 @@ class GitHubReleaseTransport:
                     "The release service is temporarily limiting requests. Try again later."
                 ) from None
             raise UpdateError("The release service could not complete the request.") from None
-        except (URLError, TimeoutError, OSError):
+        except URLError, TimeoutError, OSError:
             raise UpdateError(
                 "The release service could not be reached. Check your connection and try again."
             ) from None
@@ -201,7 +201,7 @@ def _json(raw):
             object_pairs_hook=pairs,
             parse_constant=lambda _value: (_ for _ in ()).throw(ValueError()),
         )
-    except (UnicodeError, ValueError, TypeError):
+    except UnicodeError, ValueError, TypeError:
         raise UpdateError("The published update metadata is invalid.") from None
 
 
@@ -397,7 +397,7 @@ class SoftwareUpdates:
                 and value.get("release", {}).get("edition") == self.release["edition"]
                 and value.get("release", {}).get("variant", "") == self.release.get("variant", "")
             )
-        except (OSError, UpdateError, AttributeError):
+        except OSError, UpdateError, AttributeError:
             return False
 
     def status(self):
@@ -628,7 +628,7 @@ class SoftwareUpdates:
         notes = bundled_notes(self.root, self.release)
         try:
             seen = _json(self.seen_file.read_bytes())
-        except (OSError, UpdateError):
+        except OSError, UpdateError:
             seen = {}
         if not isinstance(seen, dict):
             seen = {}

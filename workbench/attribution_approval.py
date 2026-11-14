@@ -95,7 +95,7 @@ def approved_proofs(store, root, evidence_store, entity_id):
             )
             if _checked_proof(proof, root, evidence_store):
                 yield proof
-        except (KeyError, ValueError, TypeError, AttributeError, IndexError):
+        except KeyError, ValueError, TypeError, AttributeError, IndexError:
             # Missing or corrupt historical evidence must not approve new data.
             continue
 
@@ -146,6 +146,6 @@ def reusable_review(store, group, evidence_store, result_id):
             }
             if valid_approval_reuse(proof, group.hostname, evidence_store):
                 return proof, anchor
-    except (KeyError, ValueError, TypeError, AttributeError, IndexError):
+    except KeyError, ValueError, TypeError, AttributeError, IndexError:
         return None
     return None

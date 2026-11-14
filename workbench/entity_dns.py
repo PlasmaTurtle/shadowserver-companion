@@ -53,13 +53,13 @@ def root_scopes(entity):
         ).top_domain_under_public_suffix
         if identity_root:
             roots[identity_root] = set()
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         pass
     for value in values:
         try:
             host = normalize_domain(value)
             root = EXTRACT_DOMAIN(host).top_domain_under_public_suffix
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             continue
         if not root:
             continue
@@ -141,7 +141,7 @@ class EntityDNS:
                 "comparison": comparison,
                 "stale": value.get("expires_at", 0) <= time.time(),
             }
-        except (OSError, ValueError, KeyError, TypeError, AttributeError, sqlite3.Error):
+        except OSError, ValueError, KeyError, TypeError, AttributeError, sqlite3.Error:
             return None
 
     def status(self, entity):

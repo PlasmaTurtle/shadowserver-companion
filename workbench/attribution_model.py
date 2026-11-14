@@ -33,7 +33,7 @@ def _ip(value):
 def _domain(value):
     try:
         return normalize_domain(value)
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return ""
 
 
@@ -56,7 +56,7 @@ def _field(record, path):
         for part in parts:
             value = value[int(part)] if isinstance(value, list) else value[part]
         return value
-    except (KeyError, IndexError, TypeError, ValueError):
+    except KeyError, IndexError, TypeError, ValueError:
         return None
 
 
@@ -82,7 +82,7 @@ def _network(record, details):
             if bounds and other != bounds:
                 return label, bounds, "Saved network range fields disagree."
             label, bounds = str(cidr), other
-        except (ValueError, IndexError):
+        except ValueError, IndexError:
             return str(cidr), bounds, "Saved network range cannot be interpreted."
     if not bounds:
         return None, None, "Covering network was not recorded."
@@ -197,7 +197,7 @@ def _item(group, original, exported):
                     and value == original
                     and _field(record, field) == original
                 ]
-            except (ValueError, TypeError, KeyError, AttributeError, LookupFailure):
+            except ValueError, TypeError, KeyError, AttributeError, LookupFailure:
                 issues.append("The saved public DNS response does not match its source query.")
         else:
             # Historical observations (including named Google captures) retain

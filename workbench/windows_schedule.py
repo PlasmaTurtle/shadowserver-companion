@@ -150,5 +150,5 @@ def configure(workspace, enabled, *, runner=subprocess.run):
             "scope": "Current user while signed in",
             "checked_at": datetime.now().astimezone().isoformat(),
         }
-    except (OSError, subprocess.TimeoutExpired, IndexError, StopIteration, csv.Error):
+    except OSError, subprocess.TimeoutExpired, IndexError, StopIteration, csv.Error:
         raise ValueError("Windows scheduled-task setup could not complete") from None

@@ -165,7 +165,7 @@ class RdapWhoisClient:
                     try:
                         until = parsedate_to_datetime(retry_after)
                         delay = (until - datetime.now(timezone.utc)).total_seconds()
-                    except (TypeError, ValueError, OverflowError):
+                    except TypeError, ValueError, OverflowError:
                         pass
             if not math.isfinite(delay):
                 delay = 30

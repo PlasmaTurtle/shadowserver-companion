@@ -75,7 +75,7 @@ class ContactRecords:
             raise ValueError("This hostname is outside the entity's associated websites")
         try:
             return self._attributed_scope(entity_id, root)
-        except (ValueError, OSError, sqlite3.Error, KeyError, TypeError):
+        except ValueError, OSError, sqlite3.Error, KeyError, TypeError:
             # A contact search is useful before a notification or attribution exists.
             # Never imply that the website association establishes network ownership.
             scope = {
@@ -120,7 +120,7 @@ class ContactRecords:
             for group in groups:
                 try:
                     eligible.append(self.scope(entity_id, group["root_domain"]))
-                except (ValueError, OSError, sqlite3.Error, KeyError):
+                except ValueError, OSError, sqlite3.Error, KeyError:
                     continue
             if len(eligible) != 1:
                 raise ValueError("Select one eligible attributed root hostname for this business")

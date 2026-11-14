@@ -154,14 +154,16 @@ def create_app(
                 cleanup.callback(service.close)
             for name in ("entity_dns", "report_operations"):
                 cleanup.callback(
-                    lambda name=name: getattr(app.state, name).close()
-                    if hasattr(app.state, name)
-                    else None
+                    lambda name=name: (
+                        getattr(app.state, name).close() if hasattr(app.state, name) else None
+                    )
                 )
             cleanup.callback(
-                lambda: app.state.workspace_health_jobs.shutdown()
-                if hasattr(app.state, "workspace_health_jobs")
-                else None
+                lambda: (
+                    app.state.workspace_health_jobs.shutdown()
+                    if hasattr(app.state, "workspace_health_jobs")
+                    else None
+                )
             )
             if demo:
                 from .demo import seed_demo

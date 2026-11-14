@@ -33,7 +33,7 @@ def valid_url(value):
     try:
         part = urlsplit(value or "")
         return part.scheme in ("http", "https") and bool(part.netloc)
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return False
 
 

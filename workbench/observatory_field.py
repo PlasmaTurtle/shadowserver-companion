@@ -73,7 +73,7 @@ def _stamp(value):
     try:
         parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
         return parsed.replace(tzinfo=parsed.tzinfo or timezone.utc).timestamp()
-    except (TypeError, ValueError, OverflowError):
+    except TypeError, ValueError, OverflowError:
         return float("-inf")
 
 

@@ -20,7 +20,7 @@ from .attribution_approval_evidence import snapshot_approval_matches
 def _domain(value):
     try:
         return normalize_domain(value)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return ""
 
 
@@ -28,7 +28,7 @@ def _ip(value):
     try:
         address = ip_address(value)
         return str(getattr(address, "ipv4_mapped", None) or address)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return None
 
 

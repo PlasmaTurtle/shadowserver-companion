@@ -133,7 +133,7 @@ class Catalog(CatalogStorage):
                 self.put_metadata(
                     "server_retry_at" if error.server_requested else "rate_limit_retry_at", until
                 )
-            except (OSError, ValueError, sqlite3.Error):
+            except OSError, ValueError, sqlite3.Error:
                 pass
 
     def _meta(self, year, cancel_event):

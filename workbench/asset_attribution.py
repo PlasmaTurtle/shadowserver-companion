@@ -28,7 +28,7 @@ def _key(entry):
         if not domain_equal_or_below(host, root) or not eligible_ip(ip):
             return None
         return root, host, ip
-    except (KeyError, TypeError, ValueError):
+    except KeyError, TypeError, ValueError:
         return None
 
 
@@ -81,7 +81,7 @@ def asset_state(store, case_id):
                         original_store, proof["result_id"], summary["root_domain"]
                     )
                     _verify_snapshots(original_store, original)
-            except (OSError, sqlite3.Error, ValueError, KeyError):
+            except OSError, sqlite3.Error, ValueError, KeyError:
                 intact = False
         if intact and summary.get("supported") and summary.get("validated_ip"):
             original_key = _key(selected.get(summary["root_domain"], {}))

@@ -152,7 +152,7 @@ def entrypoint(argv=None):
         for handler in logging.getLogger().handlers:
             try:
                 handler.flush()
-            except (OSError, ValueError):
+            except OSError, ValueError:
                 pass
 
 

@@ -48,7 +48,7 @@ def _stamp(value):
     try:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
         return parsed.replace(tzinfo=timezone.utc) if parsed.tzinfo is None else parsed
-    except (ValueError, AttributeError):
+    except ValueError, AttributeError:
         return datetime.min.replace(tzinfo=timezone.utc)
 
 

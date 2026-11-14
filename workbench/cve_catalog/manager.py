@@ -46,7 +46,7 @@ class CatalogManager:
             index_status = (
                 self.catalog.index_status() if hasattr(self.catalog, "index_status") else None
             )
-        except (ValueError, OSError, sqlite3.Error):
+        except ValueError, OSError, sqlite3.Error:
             index_status = {"ready": False, "error": "Product index is unavailable"}
             status = {
                 "source": "NVD",
@@ -143,7 +143,7 @@ class CatalogManager:
                 due = not next_check or date(next_check) <= self.catalog.clock()
                 if enabled and due and time.monotonic() >= self.retry_not_before:
                     self._start_job()
-            except (OSError, ValueError, sqlite3.Error):
+            except OSError, ValueError, sqlite3.Error:
                 logging.getLogger(__name__).warning(
                     "CVE catalog schedule unavailable; core workspace remains available"
                 )
@@ -163,7 +163,7 @@ class CatalogManager:
             if self.risk:
                 try:
                     self.risk.sync()
-                except (OSError, ValueError, sqlite3.Error):
+                except OSError, ValueError, sqlite3.Error:
                     logging.getLogger(__name__).warning(
                         "Risk updater is unavailable; continuing the CVE catalog update"
                     )
@@ -232,7 +232,7 @@ class CatalogManager:
             self.catalog.put_metadata(
                 "next_check_at", stamp(self.catalog.clock() + timedelta(seconds=delay))
             )
-        except (ValueError, OSError, sqlite3.Error, OverflowError):
+        except ValueError, OSError, sqlite3.Error, OverflowError:
             pass
 
     def cancel(self):

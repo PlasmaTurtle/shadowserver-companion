@@ -34,7 +34,7 @@ def timestamp(value):
         return (
             value.replace(tzinfo=value.tzinfo or timezone.utc).astimezone(timezone.utc).isoformat()
         )
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return ""
 
 

@@ -343,7 +343,7 @@ def repair_without_inventory(
             raise UpgradeError("Existing release metadata cannot be verified")
         try:
             release = json.loads(release_path.read_text(encoding="utf-8"))
-        except (ValueError, UnicodeError):
+        except ValueError, UnicodeError:
             release = None  # A known location can repair corrupt program metadata.
         if isinstance(release, dict) and "edition" in release:
             if manifest_identity({"release": release}) != (edition, variant):

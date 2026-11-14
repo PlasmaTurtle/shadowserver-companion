@@ -322,7 +322,7 @@ class APIAcquisition:
                 )
                 if job["kind"] == "connection":
                     self.connected = False
-        except (ValueError, OSError):
+        except ValueError, OSError:
             with self.lock:
                 job.update(
                     status="partial" if job["completed"] else "failed",

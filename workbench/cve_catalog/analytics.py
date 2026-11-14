@@ -419,7 +419,7 @@ class CatalogAnalytics:
                 }
             except UnsupportedRiskSchema:
                 raise
-            except (sqlite3.Error, ValueError, TypeError, AttributeError):
+            except sqlite3.Error, ValueError, TypeError, AttributeError:
                 pass
         return {
             "join": "",

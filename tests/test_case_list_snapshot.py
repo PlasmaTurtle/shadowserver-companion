@@ -47,9 +47,12 @@ def test_case_list_uses_one_read_only_connection_and_two_bulk_reads(client, app,
         connections.append(db)
         db.set_trace_callback(queries.append)
         db.set_authorizer(
-            lambda operation, *_: sqlite3.SQLITE_DENY
-            if operation in {sqlite3.SQLITE_INSERT, sqlite3.SQLITE_UPDATE, sqlite3.SQLITE_DELETE}
-            else sqlite3.SQLITE_OK
+            lambda operation, *_: (
+                sqlite3.SQLITE_DENY
+                if operation
+                in {sqlite3.SQLITE_INSERT, sqlite3.SQLITE_UPDATE, sqlite3.SQLITE_DELETE}
+                else sqlite3.SQLITE_OK
+            )
         )
         return db
 

@@ -75,7 +75,7 @@ def stream_available(stream):
         return (
             stream is not None and not getattr(stream, "closed", False) and callable(stream.write)
         )
-    except (AttributeError, OSError, ValueError):
+    except AttributeError, OSError, ValueError:
         return False
 
 
@@ -87,7 +87,7 @@ def safe_write(stream, message):
         stream.write(str(message))
         stream.flush()
         return True
-    except (AttributeError, OSError, ValueError):
+    except AttributeError, OSError, ValueError:
         return False
 
 
@@ -127,7 +127,7 @@ def _folders(workspace, app_id, fallback_folder):
     else:
         try:
             folders.append(Path.home() / ".shadowserver-companion" / app_id / "logs")
-        except (OSError, RuntimeError):
+        except OSError, RuntimeError:
             pass
     folders.append(Path(tempfile.gettempdir()) / (app_id + "-startup"))
     return list(dict.fromkeys(folders))

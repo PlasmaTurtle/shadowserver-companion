@@ -17,7 +17,7 @@ class ArtifactRepository:
         try:
             self.package_inventory(report)
             return True
-        except (ValueError, OSError, KeyError, TypeError):
+        except ValueError, OSError, KeyError, TypeError:
             return False
 
     def package_inventory(self, report):
@@ -68,12 +68,12 @@ class ArtifactRepository:
         try:
             self.closure_inventory(record)
             return True
-        except (OSError, ValueError, KeyError, TypeError):
+        except OSError, ValueError, KeyError, TypeError:
             return False
 
     def work_log_available(self, report):
         try:
             manifest, _ = self.package_inventory(report)
             return {"work-log.pdf", "chronology.json"} <= manifest["files"].keys()
-        except (ValueError, OSError, KeyError, TypeError):
+        except ValueError, OSError, KeyError, TypeError:
             return False

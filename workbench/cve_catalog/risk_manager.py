@@ -34,7 +34,7 @@ class RiskManager:
         try:
             value = self.store.status()
             value["enabled"] = bool(value.get("enabled") or self.enabled())
-        except (ValueError, OSError, sqlite3.Error):
+        except ValueError, OSError, sqlite3.Error:
             value = {
                 "epss": {"count": 0, "stale": True, "last_error": "Local EPSS data is unavailable"},
                 "kev": {"count": 0, "stale": True, "last_error": "Local KEV data is unavailable"},
@@ -63,7 +63,7 @@ class RiskManager:
                     providers = [name for name in ("epss", "kev") if self._due(name)]
                     if providers:
                         self._start_job(providers)
-            except (ValueError, OSError, sqlite3.Error):
+            except ValueError, OSError, sqlite3.Error:
                 logging.getLogger(__name__).warning(
                     "Risk feed schedule is unavailable; existing work remains available"
                 )
@@ -125,7 +125,7 @@ class RiskManager:
             if isinstance(error, CatalogDeferred) and error.server_requested:
                 state["retry_at"] = next_check
             self.store.put_metadata(provider, state)
-        except (ValueError, OSError, sqlite3.Error, OverflowError):
+        except ValueError, OSError, sqlite3.Error, OverflowError:
             pass
 
     def _run(self, providers):

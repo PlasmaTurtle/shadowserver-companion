@@ -155,16 +155,20 @@ def render_pdf(data: ReportSnapshot, destination: Path, evidence_root: Path, dra
         else:
             text = re.sub(
                 r"\[(\d+)\]",
-                lambda m: '<link href="#ref' + m[1] + '" color="#000000">' + m[0] + "</link>"
-                if m[1] in citations
-                else m[0],
+                lambda m: (
+                    '<link href="#ref' + m[1] + '" color="#000000">' + m[0] + "</link>"
+                    if m[1] in citations
+                    else m[0]
+                ),
                 text,
             )
         text = re.sub(
             r"(?<![\w-])(?:[A-D]-[0-9a-f]{16}(?:-\d+)?|EX-(?:SUMMARY|ATTRIBUTION|VULNERABILITY))(?![\w-])",
-            lambda m: '<link href="#' + m[0] + '" color="#000000">' + m[0] + "</link>"
-            if m[0] in anchors
-            else m[0],
+            lambda m: (
+                '<link href="#' + m[0] + '" color="#000000">' + m[0] + "</link>"
+                if m[0] in anchors
+                else m[0]
+            ),
             text,
         )
         if anchor:

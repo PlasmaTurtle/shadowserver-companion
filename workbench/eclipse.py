@@ -88,14 +88,14 @@ def _text(value):
 def _json(value, default):
     try:
         return json.loads(value)
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return default
 
 
 def _day(value):
     try:
         return date.fromisoformat(_text(value)[:10]).isoformat()
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return ""
 
 
@@ -107,7 +107,7 @@ def _coordinates(fields):
             continue
         try:
             lat, lon = float(lat), float(lon)
-        except (TypeError, ValueError, OverflowError):
+        except TypeError, ValueError, OverflowError:
             continue
         if math.isfinite(lat) and math.isfinite(lon) and -90 <= lat <= 90 and -180 <= lon <= 180:
             return lat, lon
@@ -125,7 +125,7 @@ def _asn(value):
             if math.isfinite(number) and number.is_integer() and 0 <= number <= 4294967295
             else ""
         )
-    except (ValueError, OverflowError):
+    except ValueError, OverflowError:
         return ""
 
 
@@ -144,7 +144,7 @@ class Eclipse:
                     encoding="utf-8"
                 )
             )
-        except (OSError, ValueError):
+        except OSError, ValueError:
             self._places = {}
 
     def _location(self, fields):
@@ -321,7 +321,7 @@ class Eclipse:
         for identity, item in imports.items():
             try:
                 available[identity] = self.store.path(item["path"]).is_file()
-            except (OSError, ValueError):
+            except OSError, ValueError:
                 available[identity] = False
 
         def finding_work(finding, links):
@@ -426,7 +426,7 @@ class Eclipse:
                             if requested_finding["condition"] in original_conditions:
                                 source, resolved_fields = candidate, original_fields
                                 break
-                        except (OSError, ValueError, KeyError, CSVError):
+                        except OSError, ValueError, KeyError, CSVError:
                             continue
                     if resolved_fields is None:
                         fields_error = "The exact source row supporting this finding at the selected observation could not be verified."
@@ -450,7 +450,7 @@ class Eclipse:
                         fields = self._exact_source_fields(
                             source, imports.get(source.get("import_id"), {})
                         )
-                    except (OSError, ValueError, KeyError, CSVError):
+                    except OSError, ValueError, KeyError, CSVError:
                         fields = {}
                         fields_error = "Historical source fields are unavailable or failed their fingerprint check."
             imported = imports.get(source.get("import_id"), {})

@@ -48,7 +48,7 @@ def _covers(proof):
                 and ip_address(record["endAddress"]) == right
             )
         return True
-    except (KeyError, ValueError, TypeError):
+    except KeyError, ValueError, TypeError:
         return False
 
 
@@ -134,7 +134,7 @@ def snapshot_approval_matches(proof, root):
             source_identity
             and source_identity == _identity(proof, root) == reuse.get("registrant_identity")
         )
-    except (KeyError, ValueError, TypeError, AttributeError):
+    except KeyError, ValueError, TypeError, AttributeError:
         return False
 
 
@@ -153,5 +153,5 @@ def valid_approval_reuse(proof, root, evidence_store):
             and _checked_proof(source, root, evidence_store)
             and _checked_proof(proof, root, evidence_store)
         )
-    except (KeyError, ValueError, TypeError, AttributeError, IndexError):
+    except KeyError, ValueError, TypeError, AttributeError, IndexError:
         return False

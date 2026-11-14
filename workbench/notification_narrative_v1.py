@@ -139,11 +139,13 @@ def generate_narrative(lead, draft):
     )
     ranges = grouped_values(
         groups,
-        lambda g: g["affected_versions"]
-        or (
-            "not supplied in the selected source"
-            if g["cves"]
-            else "not applicable; no CVE reported"
+        lambda g: (
+            g["affected_versions"]
+            or (
+                "not supplied in the selected source"
+                if g["cves"]
+                else "not applicable; no CVE reported"
+            )
         ),
     )
     range_text = "; ".join(

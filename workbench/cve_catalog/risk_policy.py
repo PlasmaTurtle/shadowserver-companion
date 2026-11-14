@@ -40,6 +40,6 @@ def freshness(provider, state, current):
             or score_age is not None
             and score_age > 2
         )
-    except (ValueError, TypeError, AttributeError):
+    except ValueError, TypeError, AttributeError:
         stale = True
     return {"score_age_days": score_age, "stale": bool(stale)}

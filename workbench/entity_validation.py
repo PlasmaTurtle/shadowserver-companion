@@ -172,7 +172,7 @@ def validate_profile(values, *, previous=None):
                 raise ValueError
             if domain.endswith(".") or len(domain) > 253:
                 raise ValueError
-        except (MessageError, ValueError, TypeError, UnicodeError):
+        except MessageError, ValueError, TypeError, UnicodeError:
             raise ValueError(
                 "Enter one valid email address, such as contact@example.com."
             ) from None

@@ -38,13 +38,13 @@ def _clock(value):
         return None, "not_recorded"
     try:
         parsed = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
-    except (ValueError, TypeError, OverflowError):
+    except ValueError, TypeError, OverflowError:
         return None, "invalid"
     if parsed.tzinfo is None:
         return None, "timezone_not_recorded"
     try:
         return parsed.astimezone(timezone.utc), "recorded"
-    except (ValueError, OverflowError):
+    except ValueError, OverflowError:
         return None, "invalid"
 
 
@@ -131,7 +131,7 @@ def build_chronology(lead, section_history, certification=None):
         if record.get("action") == "observation_scope_changed":
             try:
                 decision = json.loads(detail)
-            except (TypeError, ValueError):
+            except TypeError, ValueError:
                 decision = {}
             if isinstance(decision, dict) and decision.get("decision") in {"include", "exclude"}:
                 ids = decision.get("entry_ids", [])

@@ -362,7 +362,7 @@ class PublicHTTPSFetcher:
             raise DiscoveryError(
                 "request_timeout", "The source exceeded its retrieval time budget."
             ) from None
-        except (OSError, ValueError, asyncio.IncompleteReadError, asyncio.LimitOverrunError):
+        except OSError, ValueError, asyncio.IncompleteReadError, asyncio.LimitOverrunError:
             raise DiscoveryError(
                 "network_failed", "The source could not be retrieved safely."
             ) from None

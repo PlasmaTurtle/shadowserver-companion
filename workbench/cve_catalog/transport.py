@@ -86,12 +86,12 @@ def pace_nvd(cancel_event=None, *, authenticated=False):
 def retry_seconds(value):
     try:
         return max(60, float(value))
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         try:
             return max(
                 60, (parsedate_to_datetime(value) - datetime.now(timezone.utc)).total_seconds()
             )
-        except (ValueError, TypeError, OverflowError):
+        except ValueError, TypeError, OverflowError:
             return 3600
 
 
@@ -118,7 +118,7 @@ def explicit_retry_seconds(value):
                 deadline = deadline.replace(tzinfo=timezone.utc)
             delay = (deadline - datetime.now(timezone.utc)).total_seconds()
         return max(0, delay) if math.isfinite(delay) else None
-    except (ValueError, TypeError, OverflowError):
+    except ValueError, TypeError, OverflowError:
         return None
 
 

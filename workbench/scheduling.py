@@ -146,7 +146,7 @@ class AcquisitionSchedule:
                     date.fromisoformat(run["start"])
                     date.fromisoformat(run["end"])
             return state
-        except (ValueError, TypeError, KeyError):
+        except ValueError, TypeError, KeyError:
             # An optional restored/corrupt schedule must not prevent agents from
             # opening existing records. Do not overwrite the original until saved.
             return {
@@ -292,7 +292,7 @@ class AcquisitionSchedule:
                         return False
                     try:
                         age = self.clock() - datetime.fromisoformat(when.replace("Z", "+00:00"))
-                    except (KeyError, ValueError, TypeError):
+                    except KeyError, ValueError, TypeError:
                         return False
                     if (
                         not timedelta(0) <= age < timedelta(hours=20)

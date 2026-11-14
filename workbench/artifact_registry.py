@@ -81,7 +81,7 @@ def register_artifact(db, root, kind, artifact_id, *, legacy=False):
         _check_identity(db, kind, row, manifest)
         digest = hashlib.sha256(raw).hexdigest()
         binding = "legacy_manifest" if legacy else "verified_manifest"
-    except (OSError, ValueError, KeyError, TypeError):
+    except OSError, ValueError, KeyError, TypeError:
         if not legacy:
             raise
     db.execute(

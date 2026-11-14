@@ -44,7 +44,7 @@ def verify(store, cve_id, *, refresh=False, cancel_event=None, local_only=False)
         prior = json.loads(cached["payload"]) if cached else None
         if prior and acquisition._intact(store, prior):
             acquisition.validate_reference_projection(store, cve_id, prior)
-    except (OSError, ValueError, KeyError, TypeError, AttributeError):
+    except OSError, ValueError, KeyError, TypeError, AttributeError:
         # A divergent mutable summary is a cache miss, never a last-good
         # fallback. Reacquisition creates a new revision without rewriting it.
         prior = None

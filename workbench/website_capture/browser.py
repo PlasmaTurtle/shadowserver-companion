@@ -402,7 +402,7 @@ def capture_website(url, *, cancel_event=None, executable=None):
         if client:
             try:
                 client.send("Browser.close", browser=True)
-            except (OSError, ValueError):
+            except OSError, ValueError:
                 pass
             client.close()
         if guard:

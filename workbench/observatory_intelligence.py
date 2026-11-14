@@ -52,7 +52,7 @@ def _label(value):
 def _day(value):
     try:
         return date.fromisoformat(_text(value)[:10]).isoformat()
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return ""
 
 

@@ -156,7 +156,7 @@ class ReportOperations:
                     )
                 self._records[item["id"]] = item
             self._save()
-        except (OSError, ValueError, TypeError, AttributeError):
+        except OSError, ValueError, TypeError, AttributeError:
             self._records = {}
             self.history_warning = "Previous report-operation history could not be read. Case records were not changed."
             log.exception("Cannot load report operation history")

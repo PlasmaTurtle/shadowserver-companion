@@ -62,7 +62,7 @@ def pdf_streams(blob):
             if raw.rstrip().endswith(b"~>"):
                 raw = base64.a85decode(raw.rstrip(), adobe=True)
             decoded.append(zlib.decompress(raw))
-        except (ValueError, zlib.error):
+        except ValueError, zlib.error:
             decoded.append(raw)
     return b"\n".join(decoded)
 
