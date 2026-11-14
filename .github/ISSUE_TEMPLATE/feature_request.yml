@@ -1,0 +1,28 @@
+name: Feature request
+description: Describe a workflow problem and the improvement you need.
+title: "[Feature]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use fictional examples. Do not include real organizations, case evidence,
+        contact lists, credentials or other operational data.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Workflow problem
+      description: What are you trying to accomplish, and where does the current application fall short?
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Desired outcome
+      description: Describe the behavior that would solve the problem and how you would know it works.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Current workaround or alternatives
+      description: Describe what you do today and any constraints on the proposed change.

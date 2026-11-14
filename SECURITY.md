@@ -2,6 +2,33 @@ TLP:AMBER
 
 # Security scope and release assurance
 
+## Reporting a vulnerability
+
+Do not place credentials, real hostnames/IPs, case records, source reports,
+workspace databases, or exploit details in an ordinary issue or pull request.
+This repository is private, but its collaborators and automation can still read
+issue bodies, attachments and build logs.
+
+Report suspected vulnerabilities to the repository maintainer, **@PlasmaTurtle**,
+through an existing approved private contact channel. If you do not already have
+one, open a minimal issue asking for a private reporting route, without technical
+details or attachments. A dedicated security mailbox and GitHub private reporting
+feature have not been configured or verified; do not assume they are available.
+
+Once the channel is agreed, provide the affected version, security boundary,
+impact, and a minimal synthetic reproduction. Replace real identifiers and use
+dummy credentials. Coordinate disclosure and remediation with the maintainer;
+there is no published response-time or long-term support commitment.
+
+## Version support
+
+Use `VERSION`, `RELEASE.json` and `VALIDATION.md` for the current candidate and its
+acceptance limits. Development and fixes target the current source line; older
+releases do not have a promised security backport schedule. Automated repository
+checks do not establish Windows workstation acceptance or authorize deployment.
+
+## Application security boundaries
+
 Shadowserver Eclipse is a local, single-analyst application. The security
 boundary includes untrusted imported fields, external registration/intelligence
 responses, browser origins, local HTTP clients and files selected for export.

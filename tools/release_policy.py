@@ -32,6 +32,8 @@ TOP_FILES = {
     "ARCHITECTURE.md",
     "DEVELOPMENT.md",
     "SECURITY.md",
+    "CONTRIBUTING.md",
+    "SUPPORT.md",
 }
 FOLDERS = {
     "workbench",

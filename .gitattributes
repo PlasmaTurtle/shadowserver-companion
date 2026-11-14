@@ -11,3 +11,7 @@
 *.woff binary
 *.woff2 binary
 *.tzif binary
+*.whl binary
+*.ico binary
+*.jpeg binary
+*.webp binary

@@ -1,0 +1,41 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    groups:
+      actions:
+        patterns: ['*']
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    groups:
+      frontend-tooling:
+        patterns: ['*']
+        update-types: [minor, patch]
+  # Python updates require coordinated wheel, hash and constraint refreshes.
+  # They are proposals: CI must pass before a maintainer merges them.
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 3
+    groups:
+      python-dependencies:
+        patterns: ['*']
+  - package-ecosystem: pip
+    directory: /components/attribution
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 2
+    groups:
+      attribution-dependencies:
+        patterns: ['*']

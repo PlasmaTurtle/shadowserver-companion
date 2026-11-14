@@ -1,6 +1,6 @@
 # Development and verification
 
-**0.11.1 — Workspace Evolution.** Develop from a source checkout or the extracted
+**0.12.0 — Guided Setup.** Develop from a source checkout or the extracted
 source archive, not the installed directory. `RELEASE.json` separates version,
 release channel, review name, accepted Windows baseline and current-version
 acceptance. Tests and packaging never manufacture workstation confirmation.
@@ -38,7 +38,7 @@ npx playwright install chromium
 Select `.venv\Scripts\python.exe` as the IDE interpreter. Editable Attribution
 installation makes local library edits visible to development runs. Release
 builds still verify the library source against its bundled wheel and will reject
-unreleased library changes. No runtime dependency upgrade is part of 0.11.1; the API module is vendored with its source manifest.
+unreleased library changes. The Guided Setup release retains the pinned runtime dependency set; the API module is vendored with its source manifest.
 
 VS Code: use **Companion: isolated synthetic demo** under Run and Debug (F5).
 It launches on port 8880 with data under `build/ide-demo`. The default test task
@@ -176,8 +176,8 @@ never point both editions at the same working directory.
 ## Building a release
 
 ```text
-python tools/build_release.py shadowserver-eclipse-0.11.1-workspace-evolution-rc-windows.zip
-python tools/windows_installer/build.py --build-dir PATH_TO_BUILD_CACHE --output ShadowserverEclipse-0.11.1-workspace-evolution-rc-Setup-x64.exe
+python tools/build_release.py shadowserver-eclipse-0.12.0-guided-setup-rc-windows.zip
+python tools/windows_installer/build.py --build-dir PATH_TO_BUILD_CACHE --output ShadowserverEclipse-0.12.0-guided-setup-rc-Setup-x64.exe
 ```
 
 The installer build requires NSIS and the runtime in its pinned lock. Both source

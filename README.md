@@ -9,6 +9,12 @@ and retain a consistent record of the work.
 Start with the [User Guide](docs/USER_GUIDE.md) for setup, the analyst workday,
 notification and delivery steps, Observatory, backup, and troubleshooting.
 
+For source work, see [Contributing](CONTRIBUTING.md),
+[Development](DEVELOPMENT.md), [Support](SUPPORT.md), and
+[Security reporting](SECURITY.md#reporting-a-vulnerability).
+Repository maintenance and release controls are described in
+[GitHub maintenance](docs/GITHUB_MAINTENANCE.md).
+
 ## Install or update
 
 Run `ShadowserverEclipse-0.12.0-guided-setup-rc-Setup-x64.exe`,
