@@ -251,7 +251,7 @@ async function createHarness({ envelope, saved = {}, hash = '#eclipse', mobile =
   );
   const modules = new Map();
   async function load(file) {
-    if (file.endsWith('/eclipse_scene.js')) return sceneModule;
+    if (file === path.join(staticRoot, 'eclipse_scene.js')) return sceneModule;
     if (modules.has(file)) return modules.get(file);
     const mod = new vm.SourceTextModule(fs.readFileSync(file, 'utf8'), {
       context,
