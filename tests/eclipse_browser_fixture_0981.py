@@ -131,10 +131,17 @@ def main():
         settings = app.state.store.settings()
         settings.update(
             analyst_name="Synthetic Observatory Reviewer",
+            agency="Synthetic acceptance workspace",
+            office="Local fixture; no real exposure assessed",
             watch_inbox=False,
             regions=["North Carolina", "South Carolina"],
         )
         db.execute("UPDATE settings SET value=? WHERE key='profile'", (json.dumps(settings),))
+    # This suite starts in an established workspace. The separate setup fixture
+    # covers first-run dialogs and release-note presentation.
+    assert not app.state.setup.status()["required"]
+    updates = app.state.software_updates
+    updates.mark_seen(updates.whats_new()["version"])
     if not args.empty:
         item = app.state.intake.enqueue_stream(
             "synthetic-observatory.csv", BytesIO(csv_bytes(rows()))
