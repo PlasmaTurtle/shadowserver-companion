@@ -1,5 +1,7 @@
 """Lossless compact snapshots, bounded decoding and recipient-only transport."""
 
+from contextlib import closing
+
 from copy import deepcopy
 import hashlib
 import io
@@ -69,7 +71,7 @@ def test_oversized_validation_writes_no_record_or_event(monkeypatch):
     from workbench.repositories.reviews import SectionReviewRepository
 
     monkeypatch.setattr(compact_json, "MAX_EXPANDED_STRING_BYTES", 2000)
-    with sqlite3.connect(":memory:") as db:
+    with closing(sqlite3.connect(":memory:")) as db, db:
         db.row_factory = sqlite3.Row
         db.execute(
             "CREATE TABLE section_validations(id,case_id,section_key,revision,validated_at,validated_by,content_hash,snapshot_json)"

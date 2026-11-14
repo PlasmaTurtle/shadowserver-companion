@@ -1,6 +1,6 @@
 """DarkMatter is a third isolated identity; prior Chaos and standard homes stay intact."""
 
-from contextlib import nullcontext
+from contextlib import nullcontext, closing
 import json
 from pathlib import Path
 import re
@@ -255,7 +255,7 @@ def test_schema_guard_checks_only_dark_matter_database(tmp_path, monkeypatch):
     assert tree_bytes(local) == before
     database = local / NAMESPACES[2] / "data/workbench.sqlite3"
     database.parent.mkdir(parents=True)
-    with sqlite3.connect(database) as db:
+    with closing(sqlite3.connect(database)) as db, db:
         db.execute("PRAGMA user_version=999")
     before = tree_bytes(local)
     with pytest.raises(upgrade.UpgradeError, match="schema 999"):

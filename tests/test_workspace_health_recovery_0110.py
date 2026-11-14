@@ -1,5 +1,7 @@
 """Offline recovery and cleanup preserve evidence, including damaged originals."""
 
+from contextlib import closing
+
 import hashlib
 import json
 from pathlib import Path
@@ -58,7 +60,7 @@ def test_health_readonly_no_migration_and_independent_bad_reference_store(tmp_pa
 
 def test_health_future_main_is_not_migrated_and_cancellable(tmp_path):
     store = Store(tmp_path / "data")
-    with sqlite3.connect(store.db) as db:
+    with closing(sqlite3.connect(store.db)) as db, db:
         db.execute(f"PRAGMA user_version={SCHEMA_VERSION + 10}")
     before = sha(store.db)
     health = inspect_workspace(store.root)
@@ -88,7 +90,7 @@ def test_cleanup_plan_matches_apply_and_keeps_all_snapshots(tmp_path):
     applied = cleanup(root, cutoff=reviewed["cutoff"], token=reviewed["token"])
     assert applied["removed"] == applied["lookup_pointers"] == 1
     assert applied["estimated_payload_bytes"] == reviewed["estimated_payload_bytes"]
-    with sqlite3.connect(root / "attribution.sqlite3") as db:
+    with closing(sqlite3.connect(root / "attribution.sqlite3")) as db, db:
         assert db.execute("SELECT key FROM cache").fetchall() == [("current",)]
         assert tuple(db.execute("SELECT id,metadata,body FROM snapshots").fetchone()) == before
 
@@ -99,18 +101,18 @@ def test_cleanup_rejects_stale_review_and_rolls_back_trigger_failure(tmp_path):
         evidence._db.execute("INSERT INTO cache VALUES ('a','[]',1)")
         evidence._db.commit()
     reviewed = plan(root)
-    with sqlite3.connect(root / "attribution.sqlite3") as db:
+    with closing(sqlite3.connect(root / "attribution.sqlite3")) as db, db:
         db.execute("INSERT INTO cache VALUES ('b','[]',1)")
     with pytest.raises(ValueError, match="changed"):
         cleanup(root, cutoff=reviewed["cutoff"], token=reviewed["token"])
     reviewed = plan(root)
-    with sqlite3.connect(root / "attribution.sqlite3") as db:
+    with closing(sqlite3.connect(root / "attribution.sqlite3")) as db, db:
         db.execute(
             "CREATE TRIGGER stop_cleanup BEFORE DELETE ON cache WHEN OLD.key='b' BEGIN SELECT RAISE(ABORT,'stop'); END"
         )
     with pytest.raises(sqlite3.IntegrityError):
         cleanup(root, cutoff=reviewed["cutoff"], token=reviewed["token"])
-    with sqlite3.connect(root / "attribution.sqlite3") as db:
+    with closing(sqlite3.connect(root / "attribution.sqlite3")) as db, db:
         assert db.execute("SELECT count(*) FROM cache").fetchone()[0] == 2
 
 
@@ -123,7 +125,7 @@ def test_restore_preserves_damaged_or_future_tree(tmp_path, damaged):
     if damaged:
         original.write_bytes(b"damaged bytes must survive")
     else:
-        with sqlite3.connect(original) as db:
+        with closing(sqlite3.connect(original)) as db, db:
             db.execute(f"PRAGMA user_version={SCHEMA_VERSION + 10}")
     (target / "private-note.txt").write_bytes(b"keep everything")
     before = sha(original)
@@ -301,7 +303,7 @@ def test_offline_cli_checks_unopenable_workspace_without_normal_startup(tmp_path
     root.mkdir()
     path = root / "workbench.sqlite3"
     if future:
-        with sqlite3.connect(path) as db:
+        with closing(sqlite3.connect(path)) as db, db:
             db.execute(f"PRAGMA user_version={SCHEMA_VERSION + 10}")
     else:
         path.write_bytes(b"corrupt SQLite bytes")

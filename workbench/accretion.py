@@ -7,6 +7,7 @@ and policy state and must not be rewritten when a case is certified.
 
 from .intake.versions import selected_version
 from collections.abc import Mapping
+from contextlib import closing
 from copy import deepcopy
 from dataclasses import asdict, is_dataclass
 from datetime import date, datetime, timezone
@@ -225,7 +226,12 @@ def vet_cves(workspace_root, cve_ids, *, as_of=None):
     catalog = CatalogStorage(workspace_root)
     if catalog.db.is_file():
         try:
-            with sqlite3.connect(catalog.db.as_uri() + "?mode=ro", uri=True, timeout=10) as db:
+            with (
+                closing(
+                    sqlite3.connect(catalog.db.as_uri() + "?mode=ro", uri=True, timeout=10)
+                ) as db,
+                db,
+            ):
                 db.row_factory = sqlite3.Row
                 db.execute("BEGIN")
                 metadata = db.execute(

@@ -225,6 +225,9 @@ const base = process.env.ECLIPSE_BASE_URL || 'http://127.0.0.1:8897';
 
     await page.goto(base + '/#settings');
     await page.locator('[data-action="backup"]').waitFor();
+    // Settings launches status reads after rendering its controls. The server
+    // correctly requires an idle workspace before reserving it for export.
+    await page.waitForLoadState('networkidle');
     // The complete synthetic archive contains rendered exhibits and embedded fonts.
     const downloadEvent = page
       .waitForEvent('download', { timeout: 120000 })

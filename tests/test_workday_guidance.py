@@ -1,5 +1,7 @@
 """Workday next actions and atomic adoption of revised business identity."""
 
+from contextlib import closing
+
 from copy import deepcopy
 import json
 import sqlite3
@@ -215,7 +217,7 @@ def test_workspace_keeps_one_snapshot_during_concurrent_change(client, app, monk
 
     def change_after_case_list(*args, **kwargs):
         rows = original(*args, **kwargs)
-        with sqlite3.connect(store.db) as writer:
+        with closing(sqlite3.connect(store.db)) as writer, writer:
             writer.execute(
                 "UPDATE cases SET next_action='New concurrent plan' WHERE id=?", (case_id,)
             )
