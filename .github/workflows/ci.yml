@@ -52,6 +52,17 @@ jobs:
         run: npm ci --ignore-scripts
       - name: Run fast source checks before browser setup
         run: python tools/verify.py --skip-backend --skip-browser --report verification-preflight.json
+      - name: Install PDF test utilities (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install --yes poppler-utils
+      - name: Install PDF test utilities (Windows)
+        if: runner.os == 'Windows'
+        run: choco install poppler --yes --no-progress
+      - name: Verify PDF test utilities are on PATH
+        run: >-
+          python -c "import shutil; required = ('pdftotext', 'pdftoppm', 'pdffonts', 'pdfinfo');
+          missing = [name for name in required if not shutil.which(name)];
+          assert not missing, 'Install Poppler and add its bin directory to PATH: ' + ', '.join(missing)"
       - name: Install Chromium and OS dependencies
         run: npx --no-install playwright install --with-deps chromium
       - name: Run complete synthetic verification
