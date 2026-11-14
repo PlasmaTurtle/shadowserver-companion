@@ -4,6 +4,7 @@ import argparse
 from io import BytesIO
 import json
 from pathlib import Path
+import socket
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -113,7 +114,7 @@ def rows():
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--workspace", type=Path, required=True)
-    parser.add_argument("--port", type=int, default=8931)
+    parser.add_argument("--port", type=int, default=0)
     parser.add_argument("--empty", action="store_true")
     args = parser.parse_args()
     if args.workspace.exists():
@@ -161,21 +162,24 @@ def main():
                 )
             db.execute("UPDATE leads SET demo=1")
     entity_map = Eclipse(app.state.store).view(include_undated=True)["intelligence"]["atlas"]
-    base = f"http://127.0.0.1:{args.port}"
-    (args.workspace / "browser.json").write_text(
-        json.dumps(
-            {
-                "base": base,
-                "launch_url": base + "/#launch=" + app.state.sessions.issue_launch(),
-                "empty": args.empty,
-                "entity_map": {
-                    key: entity_map[key]
-                    for key in ("total_entities", "mapped_entities", "unplaced_entities")
-                },
-            }
+    with socket.socket() as sock:
+        sock.bind(("127.0.0.1", args.port))
+        sock.listen()
+        base = f"http://127.0.0.1:{sock.getsockname()[1]}"
+        (args.workspace / "browser.json").write_text(
+            json.dumps(
+                {
+                    "base": base,
+                    "launch_url": base + "/#launch=" + app.state.sessions.issue_launch(),
+                    "empty": args.empty,
+                    "entity_map": {
+                        key: entity_map[key]
+                        for key in ("total_entities", "mapped_entities", "unplaced_entities")
+                    },
+                }
+            )
         )
-    )
-    uvicorn.run(app, host="127.0.0.1", port=args.port, log_level="warning")
+        uvicorn.Server(uvicorn.Config(app, log_level="warning")).run(sockets=[sock])
 
 
 if __name__ == "__main__":
