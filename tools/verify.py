@@ -95,8 +95,6 @@ def main():
             run("Python format", [sys.executable, "-m", "ruff", "format", "--check", "."])
             run("Python lint", [sys.executable, "-m", "ruff", "check", "."])
             run("Frontend format", [npm, "run", "format:check"])
-            if not args.skip_backend:
-                run("Backend and attribution regression", [sys.executable, "-m", "pytest", "-q"])
             run("Frontend syntax", [npm, "run", "lint"])
             run("Frontend module contracts", [npm, "test"])
         if not args.skip_browser:
@@ -214,6 +212,10 @@ def main():
                         except subprocess.TimeoutExpired:
                             server.kill()
                             server.wait()
+        # Browser acceptance is fast; expose UI regressions before the longer
+        # backend suite. Full verification still requires both to succeed.
+        if not (args.only_browser or args.skip_backend):
+            run("Backend and attribution regression", [sys.executable, "-m", "pytest", "-q"])
         completed = True
     except KeyboardInterrupt:
         interrupted = True
