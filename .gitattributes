@@ -1,0 +1,13 @@
+# Generated documents and binary assets must never receive newline conversion.
+*.pdf binary
+*.docx binary
+*.xlsx binary
+*.zip binary
+*.exe binary
+*.png binary
+*.jpg binary
+*.gif binary
+*.ttf binary
+*.woff binary
+*.woff2 binary
+*.tzif binary
