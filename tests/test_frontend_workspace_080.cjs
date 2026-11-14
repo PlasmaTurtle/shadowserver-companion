@@ -50,10 +50,15 @@ const base = process.env.ECLIPSE_BASE_URL || 'http://127.0.0.1:8897';
     assert.equal(original.demo, 1, 'This browser test must never edit a working entity');
     await page.goto(base + '/#workspace/notifications/' + work.id);
     await page.locator('[data-report-section="Introduction"]').waitFor();
-    // Reopen a provided fixture field for review using the same value-bound API as the UI.
+    // Start with a hostname-only synthetic identity so the incomplete-detail reminders
+    // remain applicable; complete business/contact records intentionally suppress them.
     await page.evaluate(async () => {
       const { application } = await import('/static/main.js');
-      const lead = application.state.editor.currentLead;
+      const current = application.state.editor.currentLead;
+      const lead = await application.actions.api(`/api/entities/${current.id}/name`, {
+        method: 'PUT',
+        body: { name: current.domain, expected_revision: current.entity_revision },
+      });
       const field = lead.entity_review.fields.find((item) => item.field === 'name');
       await application.actions.api(`/api/entities/${lead.id}/field-review`, {
         method: 'POST',
@@ -105,7 +110,9 @@ const base = process.env.ECLIPSE_BASE_URL || 'http://127.0.0.1:8897';
       await page.locator('#entity-details-form [name="notes"]').inputValue(),
       'Unsaved synthetic notes',
     );
-    await page.locator('#entity-details-form [name="city"]').fill('Synthetic Review City');
+    await page
+      .locator('#entity-details-form [name="city"]')
+      .fill(original.current_entity.entity_profile.city);
     const profileRestored = page.waitForResponse(
       (response) => response.request().method() === 'PUT' && response.url().endsWith('/profile'),
     );

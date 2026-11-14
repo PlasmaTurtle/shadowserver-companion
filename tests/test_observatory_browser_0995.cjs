@@ -72,16 +72,21 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       await page.locator('#ec-inspect-toggle').click();
     const object = page.locator('[data-ec-node]').first();
     await object.waitFor();
-    await object.focus();
-    await page.keyboard.press('Enter');
-    await page.locator('#ec-selection:not([hidden])').waitFor();
-    const selectedName = await page.locator('#ec-selection-name').innerText();
+    // Selecting a field object now opens its focused constellation. Return must
+    // restore the overview captured before that focus, including its camera.
     await page.locator('#ec-zoom-in').click();
     await page.waitForFunction(
       () => document.querySelector('#eclipse').dataset.animating !== 'true',
     );
     const zoom = await page.locator('#ec-zoom-level').innerText();
     const fieldCounts = await counts();
+    const focusedResponse = fieldRequest();
+    await object.focus();
+    await page.keyboard.press('Enter');
+    await focusedResponse;
+    await ready();
+    await page.locator('#ec-selection:not([hidden])').waitFor();
+    const selectedName = await page.locator('#ec-selection-name').innerText();
     const scopedResponse = fieldRequest();
     await page.locator('[data-ec-drill="locations"]').click();
     const scoped = await (await scopedResponse).json();
@@ -104,6 +109,7 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     const unchanged = await counts();
     for (const mode of ['atlas', 'pulse', 'records', 'field']) {
       await page.locator('.ec-views [data-ec-view="' + mode + '"]').click();
+      await ready();
       assert.equal(await page.locator('#eclipse').getAttribute('data-view'), mode);
       assert.deepEqual(await counts(), unchanged);
     }
