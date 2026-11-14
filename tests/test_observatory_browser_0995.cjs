@@ -143,6 +143,8 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     await ready();
     assert.equal(await page.locator('#eclipse').getAttribute('data-view'), 'atlas');
     assert.equal(await page.locator('#ec-selection-name').innerText(), entityName);
+    if ((await page.locator('#ec-filter-toggle').getAttribute('aria-expanded')) !== 'true')
+      await page.locator('#ec-filter-toggle').click();
     await page.locator('#ec-unplaced').click();
     const unplacedEntities = page.locator('[data-ec-map-entity]');
     await unplacedEntities.first().waitFor();
