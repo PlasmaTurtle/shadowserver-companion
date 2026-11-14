@@ -146,7 +146,6 @@ def main():
                             "test_frontend_browser_070.cjs",
                             "test_frontend_accessibility_070.cjs",
                             "test_frontend_workspace_080.cjs",
-                            "test_observatory_browser_0995.cjs",
                         ):
                             request = urllib.request.Request(
                                 base + "/api/session/launch",
@@ -164,54 +163,72 @@ def main():
                         except subprocess.TimeoutExpired:
                             server.kill()
                             server.wait()
-                # First-run acceptance deliberately uses a separate empty workspace:
-                # demo identities suppress onboarding and cannot exercise this path.
-                setup_workspace = Path(directory) / "setup-workspace"
-                metadata_path = setup_workspace / "browser.json"
-                with open(Path(directory) / "setup-server.log", "w+", encoding="utf-8") as log:
-                    server = subprocess.Popen(
-                        [
-                            sys.executable,
-                            "tests/setup_release_browser_fixture.py",
-                            "--workspace",
-                            str(setup_workspace),
-                        ],
-                        cwd=ROOT,
-                        env=env,
-                        stdout=log,
-                        stderr=subprocess.STDOUT,
-                    )
-                    try:
-                        deadline = time.monotonic() + 45
-                        while time.monotonic() < deadline:
-                            if server.poll() is not None:
-                                log.seek(0)
-                                raise RuntimeError(
-                                    "Setup test server exited: " + log.read()[-4000:]
-                                )
-                            try:
-                                metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
-                                with opener.open(
-                                    metadata["base"] + "/api/health", timeout=1
-                                ) as response:
-                                    if response.status == 200:
-                                        break
-                            except OSError, ValueError, KeyError:
-                                time.sleep(0.2)
-                        else:
-                            raise RuntimeError("Setup test server did not become ready")
-                        run(
-                            "test_setup_release_browser.cjs",
-                            [node, "tests/test_setup_release_browser.cjs"],
-                            {**env, "SETUP_BROWSER_FIXTURE": str(metadata_path)},
+                # Each specialized suite owns fresh data: Observatory needs its
+                # multientity source universe; first-run setup needs an empty workspace.
+                for fixture_name, fixture_script, test_script, metadata_env in (
+                    (
+                        "observatory",
+                        "eclipse_browser_fixture_0981.py",
+                        "test_observatory_browser_0995.cjs",
+                        "ECLIPSE_FIXTURE",
+                    ),
+                    (
+                        "setup",
+                        "setup_release_browser_fixture.py",
+                        "test_setup_release_browser.cjs",
+                        "SETUP_BROWSER_FIXTURE",
+                    ),
+                ):
+                    fixture_workspace = Path(directory) / fixture_name
+                    metadata_path = fixture_workspace / "browser.json"
+                    with open(
+                        Path(directory) / (fixture_name + "-server.log"), "w+", encoding="utf-8"
+                    ) as log:
+                        server = subprocess.Popen(
+                            [
+                                sys.executable,
+                                "tests/" + fixture_script,
+                                "--workspace",
+                                str(fixture_workspace),
+                            ],
+                            cwd=ROOT,
+                            env=env,
+                            stdout=log,
+                            stderr=subprocess.STDOUT,
                         )
-                    finally:
-                        server.terminate()
                         try:
-                            server.wait(timeout=10)
-                        except subprocess.TimeoutExpired:
-                            server.kill()
-                            server.wait()
+                            deadline = time.monotonic() + 45
+                            while time.monotonic() < deadline:
+                                if server.poll() is not None:
+                                    log.seek(0)
+                                    raise RuntimeError(
+                                        fixture_name + " test server exited: " + log.read()[-4000:]
+                                    )
+                                try:
+                                    metadata = json.loads(metadata_path.read_text(encoding="utf-8"))
+                                    with opener.open(
+                                        metadata["base"] + "/api/health", timeout=1
+                                    ) as response:
+                                        if response.status == 200:
+                                            break
+                                except OSError, ValueError, KeyError:
+                                    time.sleep(0.2)
+                            else:
+                                raise RuntimeError(
+                                    fixture_name + " test server did not become ready"
+                                )
+                            run(
+                                test_script,
+                                [node, "tests/" + test_script],
+                                {**env, metadata_env: str(metadata_path)},
+                            )
+                        finally:
+                            server.terminate()
+                            try:
+                                server.wait(timeout=10)
+                            except subprocess.TimeoutExpired:
+                                server.kill()
+                                server.wait()
         # Browser acceptance is fast; expose UI regressions before the longer
         # backend suite. Full verification still requires both to succeed.
         if not (args.only_browser or args.skip_backend):
