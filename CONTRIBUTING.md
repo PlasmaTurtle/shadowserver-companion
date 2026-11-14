@@ -2,6 +2,7 @@
 
 Shadowserver Eclipse is a local Windows application. This repository contains
 source, synthetic tests and release tooling; it is not a casework workspace.
+[AGENTS.md](AGENTS.md) defines the maintenance and execution policy.
 [DEVELOPMENT.md](DEVELOPMENT.md) is the detailed development and release guide.
 
 ## Propose a change
@@ -56,7 +57,6 @@ Do not add a license or redistribute third-party assets without confirming the
 applicable rights and retained notices. Release publication follows the existing
 release gates and version-specific workstation acceptance in
 [HOME_VALIDATION.md](HOME_VALIDATION.md).
-
 
 ## Maintain the documentation
 

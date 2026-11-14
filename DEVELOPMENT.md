@@ -13,6 +13,86 @@ The legacy standalone Chaos identity remains separate.
 For documentation ownership and historical records, see the
 [documentation index](docs/README.md).
 
+## Maintenance and execution policy
+
+[AGENTS.md](AGENTS.md) is the repository's maintenance contract. Do portable work
+in the current Codex environment first. Once the user's Windows workstation is
+connected, use it for native verification and the release checks in
+[HOME_VALIDATION.md](HOME_VALIDATION.md). GitHub is an optional execution venue;
+valid, reproducible test evidence determines acceptance.
+
+The paid GitHub Actions budget is **zero**. An exhausted included-usage cap means
+hosted work cannot start; it is not an application-test failure. Check the actual
+startup annotation and usage availability before retrying. Do not change the
+application, weaken tests or redesign workflows to address an account limit.
+
+For each validation record, retain the exact revision, any uncommitted changes,
+OS, relevant runtime/dependency versions, command, results and skips. Keep logs
+with the verification report. Once configured, the Windows workstation can run:
+
+```powershell
+.\.venv\Scripts\python.exe tools/check_dependencies.py --output dependency-integrity.json
+.\.venv\Scripts\python.exe tools/verify.py --check-timeout 4500 --report verification-windows.json
+```
+
+These automated checks complement the exact-version installer and workstation
+acceptance checklist. Partial results stay labeled partial. A hosted check that
+never executed remains unexecuted, even when the equivalent local checks passed.
+
+## Project-owned development workflow
+
+Choose execution from the capabilities and constraints established for the task.
+Plugin access and security controls remain in force; their suggested workflows
+are not project requirements. Keep familiar, reproducible commands as the
+foundation and automate a process only after it works reliably by hand.
+
+| Work                                                        | Default execution                                                              | Evidence required                                                             |
+| ----------------------------------------------------------- | ------------------------------------------------------------------------------ | ----------------------------------------------------------------------------- |
+| Inspection, edits, portable reproduction and focused checks | Current Codex environment                                                      | Exact revision or recorded working diff, command and result                   |
+| Native Windows behavior, installer and release acceptance   | Connected Windows workstation, once available                                  | Same source/build, runtime details, logs and relevant workstation outcomes    |
+| Publishing, review and source history                       | GitHub                                                                         | Reviewable diff and validation summary                                        |
+| Optional hosted verification                                | GitHub Actions only when included capacity and a specific need are established | Executed steps and results; an account-limit failure supplies no test verdict |
+
+For each bounded change:
+
+1. Establish the goal, relevant execution constraints, existing baseline, expected
+   evidence and a stop condition. Investigate unknown platform or tool limitations
+   before committing to a workflow.
+2. Reproduce the problem in the cheapest suitable available environment. Classify
+   infrastructure, harness and application failures before deciding what to edit.
+3. Make the smallest supported change. Use existing scripts for predictable checks;
+   reserve agent reasoning for diagnosis, implementation and review.
+4. Run focused validation, then the relevant full verification for the finished
+   application change set. Use Windows for Windows-only claims. Documentation-only
+   work needs document review, not another application regression run.
+5. Review the diff against the request, retain the evidence and publish within
+   the user's existing authorization. Report remaining uncertainty explicitly.
+6. If an unchanged external limit prevents execution, stop that path. Record the
+   blocker and the specific evidence or environment change needed to resume.
+
+Repeated passes of the same unchanged code do not explain a hosted job that never
+started. Track useful outcomes, elapsed effort and resource consumption; do not
+use the number of commands, retries or green hosted checks as the measure of progress.
+
+### Engineering references
+
+Reviewed November 14, 2026. These sources inform the practices above; this
+project's platform, budget and user decisions determine how they are applied.
+
+- [OpenAI: Best practices](https://learn.chatgpt.com/guides/best-practices):
+  configure the real environment early, keep durable guidance concise and make
+  verification expectations explicit.
+- [Stripe: Minions, Part 2](https://stripe.dev/blog/minions-stripes-one-shot-end-to-end-coding-agents-part-2):
+  reuse established development environments, run predictable checks locally and
+  bound CI repair attempts. Its large hosted infrastructure is not our default.
+- [Spotify: Predictable Results Through Strong Feedback Loops](https://engineering.atspotify.com/2025/12/feedback-loops-background-coding-agents-part-3):
+  reuse build/test verifiers, review changes against the requested scope and
+  account for target-platform limitations.
+- [Anthropic: Infrastructure noise in agentic coding evals](https://www.anthropic.com/research/infrastructure-noise):
+  infrastructure conditions can affect measured outcomes. Applying its environment
+  reporting discipline to maintenance is our adaptation, not a claim that its
+  experimental failures explain this project's GitHub cap.
+
 ## Feature names
 
 Use **Workspace** for the current-work area in interface text, documentation,
@@ -108,11 +188,14 @@ protected by regression tests. Do not edit it as a cosmetic cleanup.
 
 ## Complete CI verification
 
-GitHub Actions runs one complete verification job on Ubuntu and one on Windows.
+When hosted execution is available and used, GitHub Actions runs one complete
+verification job on Ubuntu and one on Windows.
 Each job installs its dependencies and runs the source checks, every browser
 suite, and the complete Python and standalone Attribution suite in collection
 order. Tests are not partitioned into shards. The final **CI result** succeeds
-only when both operating systems finish successfully.
+only when both operating systems finish successfully. This describes the hosted
+workflow's status; it does not make GitHub the authority over valid workstation
+test results.
 
 To run the same checks locally:
 
