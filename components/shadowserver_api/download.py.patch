@@ -1,0 +1,122 @@
+--- baseline-0.1.1/download.py
++++ workbench/shadowserver_reports/download.py
+@@ -6,6 +6,7 @@
+ """
+ from __future__ import annotations
+ 
++import codecs
+ import csv
+ from datetime import datetime, timezone
+ import gzip
+@@ -33,6 +34,7 @@
+ 
+ DOWNLOAD_ORIGIN = "https://dl.shadowserver.org"
+ _CHUNK = 64 * 1024
++_MAX_HEADER_BYTES = 256 * 1024
+ _DEFAULT_MAX = 256 * 1024 * 1024
+ _WINDOWS_RESERVED = {"CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$"} | {
+     f"{name}{number}" for name in ("COM", "LPT") for number in "123456789¹²³"
+@@ -98,6 +100,71 @@
+         return len(data)
+ 
+ 
++def _validate_header(header):
++    if not header or len(header) < 2 or any(not value.strip() for value in header) or len(set(header)) != len(header):
++        raise DownloadError("The report needs at least two unique, nonempty CSV headers.")
++    if any(value.lstrip().startswith(("<", "{", "[")) for value in header):
++        raise DownloadError("The download is an error document instead of a CSV report.")
++    if any(any(ord(char) < 32 and char not in "\t\r\n" for char in value) for value in header):
++        raise DownloadError("The report CSV headers contain unsupported control characters.")
++
++
++class _HeaderGate:
++    """Validate a bounded decoded CSV header before any response bytes reach disk.
++
++    Service MIME labels are not reliable. Gzip is checked as gzip and inspected
++    after bounded decompression; the complete file still passes _rows before
++    publication. Pending transport bytes are bounded independently as well.
++    """
++    def __init__(self, compressed):
++        self.decoder = zlib.decompressobj(31) if compressed else None
++        self.prefix = bytearray()
++        self.pending = bytearray()
++        self.ready = False
++
++    def accept(self, chunk, *, final=False):
++        if self.ready:
++            return chunk
++        self.pending.extend(chunk)
++        if len(self.pending) > _MAX_HEADER_BYTES:
++            raise DownloadError("The report CSV header exceeds its supported size.")
++        try:
++            decoded = self.decoder.decompress(chunk, _MAX_HEADER_BYTES + 1 - len(self.prefix)) if self.decoder else chunk
++        except zlib.error:
++            raise DownloadError("The report compression does not match its CSV filename.") from None
++        self.prefix.extend(decoded)
++        if len(self.prefix) > _MAX_HEADER_BYTES:
++            # Only the first record matters here; limit parser input, not a
++            # high compression ratio for the rest of an otherwise valid file.
++            self.prefix = self.prefix[:_MAX_HEADER_BYTES]
++        significant = bytes(self.prefix).removeprefix(b"\xef\xbb\xbf").lstrip()
++        if significant.startswith((b"<", b"{", b"[")):
++            raise DownloadError("The download is an error document instead of a CSV report.")
++        if not final and b"\n" not in self.prefix and b"\r" not in self.prefix:
++            if len(self.prefix) >= _MAX_HEADER_BYTES:
++                raise DownloadError("The report CSV header exceeds its supported size.")
++            return b""
++        try:
++            # A transport chunk may end in the middle of a UTF-8 value after
++            # the header. Only a complete invalid sequence is an early error.
++            text = codecs.getincrementaldecoder("utf-8-sig")().decode(self.prefix, final=final)
++            header = next(csv.reader(io.StringIO(text, newline=""), strict=True), None)
++        except UnicodeDecodeError as error:
++            if not final and error.reason == "unexpected end of data":
++                return b""
++            raise DownloadError("The report CSV header is not valid UTF-8.") from None
++        except csv.Error:
++            if not final and len(self.prefix) < _MAX_HEADER_BYTES:
++                return b""
++            raise DownloadError("The report CSV header is malformed.") from None
++        _validate_header(header)
++        self.ready = True
++        retained = bytes(self.pending)
++        self.pending.clear()
++        self.prefix.clear()
++        return retained
++
++
+ def _rows(path, operation, max_uncompressed, compressed):
+     """CSV syntax validation does not assert a particular Shadowserver schema."""
+     try:
+@@ -113,11 +180,7 @@
+                 header = next(reader, None)
+                 # Shadowserver reports are multi-column tables. A single-line
+                 # plaintext failure must not pass as a one-column empty report.
+-                if not header or len(header) < 2 or any(not value.strip() for value in header) or len(set(header)) != len(header):
+-                    raise DownloadError("The report needs at least two unique, nonempty CSV headers.")
+-                first = header[0].lstrip().lower()
+-                if first.startswith(("<", "{", "[")):
+-                    raise DownloadError("The download is an error document instead of a CSV report.")
++                _validate_header(header)
+                 for row in reader:
+                     operation.check()
+                     if not row:
+@@ -251,6 +314,7 @@
+                 temporary = Path(temporary_name)
+                 digest = hashlib.sha256()
+                 total = 0
++                gate = _HeaderGate(suffix == ".csv.gz")
+                 read = getattr(response, "read1", response.read)
+                 with os.fdopen(fd, "wb") as output:
+                     while True:
+@@ -268,8 +332,9 @@
+                             raise BudgetExceeded("Report download exceeds its file size budget.")
+                         if shutil.disk_usage(root).free < len(chunk):
+                             raise StorageError("There is insufficient free space for the report.")
+-                        output.write(chunk)
++                        output.write(gate.accept(chunk))
+                         digest.update(chunk)
++                    output.write(gate.accept(b"", final=True))
+                     output.flush()
+                     os.fsync(output.fileno())
+                 if expected_length is not None and total != expected_length:
