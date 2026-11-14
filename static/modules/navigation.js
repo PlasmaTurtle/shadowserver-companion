@@ -234,7 +234,10 @@ export function install(ctx) {
       if (page === 'settings') {
         void ctx.actions.loadNvdKeyStatus();
         void ctx.actions.loadSettingsSetupStatus?.();
-        void ctx.actions.loadSoftwareStatus?.();
+        void ctx.actions.loadSoftwareStatus?.().catch((error) => {
+          if (id === ctx.state.navigation.renderId && error.name !== 'AbortError')
+            ctx.actions.toast('Could not refresh software status: ' + error.message, true);
+        });
       }
       if (page === 'settings')
         ctx.actions.$('#f-targeted_reason').required =

@@ -42,7 +42,7 @@ function target(extra = {}) {
   const doc = target({
     querySelector: node,
     querySelectorAll: () => [],
-    body: { classList: { toggle() {} } },
+    body: { dataset: {}, classList: { toggle() {} } },
   });
   const win = target({ scrollTo() {}, Eclipse: { destroy() {} } });
   const context = vm.createContext({
@@ -71,6 +71,7 @@ function target(extra = {}) {
     },
   });
   const { application: app } = await loadApplication(context, { attach: false });
+  const realRoute = app.actions.route;
   Object.assign(app.actions, {
     busy: async (_button, action) => action(),
     toast() {},
@@ -196,6 +197,39 @@ function target(extra = {}) {
   await pending;
   assert.equal(timers.size, 0);
   assert.equal(doc.count() + win.count(), 0);
+  // A detached Settings refresh may be aborted when the user leaves the view.
+  // It must not reject globally; actual current-view failures remain visible.
+  context.location.hash = '#settings';
+  Object.assign(app.actions, {
+    route: realRoute,
+    settingsPage: async () => '<section>Settings</section>',
+    loadNvdKeyStatus: async () => {},
+    loadSettingsSetupStatus: async () => {},
+    refreshNavigationCounts: async () => {},
+  });
+  const unhandled = [],
+    notices = [];
+  const onUnhandled = (error) => unhandled.push(error);
+  process.on('unhandledRejection', onUnhandled);
+  try {
+    app.actions.toast = (message) => notices.push(message);
+    app.actions.loadSoftwareStatus = async () => {
+      throw Object.assign(new Error('The user aborted a request.'), { name: 'AbortError' });
+    };
+    await app.actions.route(true);
+    await new Promise(setImmediate);
+    assert.deepEqual(unhandled, []);
+    assert.deepEqual(notices, []);
+    app.actions.loadSoftwareStatus = async () => {
+      throw new Error('Synthetic status failure');
+    };
+    await app.actions.route(true);
+    await new Promise(setImmediate);
+    assert.deepEqual(unhandled, []);
+    assert.deepEqual(notices, ['Could not refresh software status: Synthetic status failure']);
+  } finally {
+    process.off('unhandledRejection', onUnhandled);
+  }
   console.log(
     'Feature event dispatch, freeze/dirty guards, idempotent startup, detach/remount, and stale polling passed.',
   );
