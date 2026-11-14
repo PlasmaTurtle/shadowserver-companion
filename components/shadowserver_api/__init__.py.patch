@@ -1,0 +1,11 @@
+--- baseline-0.1.1/__init__.py
++++ workbench/shadowserver_reports/__init__.py
+@@ -8,7 +8,7 @@
+ from .sync import sync_once
+ from .transport import SignedTransport
+ 
+-__version__ = "0.1.1"
++__version__ = "0.1.2"
+ __all__ = ["Credentials", "Operation", "ReportDescriptor", "ReportSelection", "QuerySpec",
+            "ReportsClient", "ReportDownloader", "iter_rows", "Ledger", "SchemaStore",
+            "sync_once", "SignedTransport"]
