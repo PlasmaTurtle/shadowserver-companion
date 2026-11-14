@@ -78,11 +78,18 @@ npx playwright install chromium
 python tools/verify.py --report verification.json
 ```
 
-The command checks Python formatting/lint, frontend formatting/syntax, backend and
-standalone Attribution regressions, frontend module suites, then starts an
-isolated synthetic workspace for browser workflow/accessibility checks. It removes
-that workspace and terminates its test server on completion or failure. It does not
-open your working case directory. Browser installation may require OS libraries on Linux.
+The command checks Python formatting/lint, frontend formatting/syntax and frontend
+module suites, then starts an isolated synthetic workspace for browser workflow
+and accessibility checks. Backend and standalone Attribution regressions run after
+browser acceptance so UI failures surface early. It removes the synthetic workspace
+and terminates its test server on completion or failure; it does not open your working
+case directory. Browser installation may require OS libraries on Linux.
+
+Ubuntu CI grants user-namespace access to the exact installed Playwright executable
+through an AppArmor profile, then selects it with `CHROMIUM_EXECUTABLE`. The Observatory
+browser test keeps its Chromium sandbox enabled. See Chromium's
+[AppArmor guidance](https://chromium.googlesource.com/chromium/src/+/main/docs/security/apparmor-userns-restrictions.md)
+when configuring a Linux developer workstation.
 
 `CHROMIUM_EXECUTABLE` can select an already installed test browser.
 `--skip-browser` and `--skip-backend` are explicit partial-run options; the JSON

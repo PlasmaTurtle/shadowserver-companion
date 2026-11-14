@@ -65,6 +65,24 @@ jobs:
           assert not missing, 'Install Poppler and add its bin directory to PATH: ' + ', '.join(missing)"
       - name: Install Chromium and OS dependencies
         run: npx --no-install playwright install --with-deps chromium
+      # Ubuntu restricts user namespaces for downloaded browser builds. Scope
+      # the exception to this pinned Playwright executable, keeping its sandbox.
+      # https://chromium.googlesource.com/chromium/src/+/main/docs/security/apparmor-userns-restrictions.md
+      - name: Configure sandboxed Chromium (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          browser_path="$(node -e "process.stdout.write(require('playwright').chromium.executablePath())")"
+          test -x "$browser_path"
+          cat <<EOF | sudo tee /etc/apparmor.d/playwright-chromium
+          abi <abi/4.0>,
+          include <tunables/global>
+          profile playwright-chromium "$browser_path" flags=(unconfined) {
+            userns,
+          }
+          EOF
+          sudo apparmor_parser -r /etc/apparmor.d/playwright-chromium
+          echo "CHROMIUM_EXECUTABLE=$browser_path" >> "$GITHUB_ENV"
       - name: Run complete synthetic verification
         run: python tools/verify.py --report verification.json
       - name: Retain verification summaries
