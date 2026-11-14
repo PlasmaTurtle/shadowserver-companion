@@ -1,23 +1,41 @@
-# Bundled dependencies
+# Dependencies and bundled assets
 
-The separate `.exe` installer bundles official CPython 3.14.10 x64 and the
-same 34 dependency versions with CPython 3.14 Windows native wheels. Its
-runtime artifact hash is in `tools/windows_installer/runtime-lock.json`.
-Both editions now share `requirements-windows.txt`, `wheelhouse-sha256.json`,
-and the source `wheelhouse` as their canonical dependency artifacts.
-The following describes the independently runnable source ZIP edition.
+This reference explains the Windows runtime, package locks and asset provenance.
+Use [Development](DEVELOPMENT.md) for setup and audit commands, and
+[Validation](VALIDATION.md) for recorded results and their limits.
+
+## Runtime and package sources
+
+The `.exe` installer includes CPython 3.14 x64 and the application's Windows
+dependencies. The exact interpreter patch version, download and hash are pinned in
+[`tools/windows_installer/runtime-lock.json`](tools/windows_installer/runtime-lock.json).
+The independently runnable source archive requires a separately installed
+64-bit Python 3.14 interpreter before setup. The installed edition does not.
+
+Both editions share [`requirements-windows.txt`](requirements-windows.txt),
+[`wheelhouse-sha256.json`](wheelhouse-sha256.json), and the `wheelhouse` directory
+as their dependency artifacts. Use these files for the exact current inventory;
+package counts and archive sizes change when the bundle changes.
 
 `wheelhouse` contains the complete application dependency set for **Windows x64 CPython 3.14**. Setup uses `--no-index --require-hashes`: it installs only bundled wheels whose SHA-256 matches `requirements-windows.txt`. `wheelhouse-sha256.json` provides the filename/hash mapping.
 
-The release includes 34 wheels totaling approximately 25 MB before ZIP packaging. Package licenses and notices are retained inside each wheel's metadata. The application's bundled PDF fonts have their license in `fonts/LICENSE.txt`.
+Package licenses and notices are retained inside each wheel's metadata. The
+application's bundled PDF fonts have their license in `fonts/LICENSE.txt`.
 
 `requirements-constraints.txt` pins the selected versions for source/development installs. `requirements.txt` installs the Attribution Module from this checkout; Windows installs its included wheel. The package's source is under `components/attribution`.
 
-The Windows dependency closure was checked using each wheel's `Requires-Dist` metadata evaluated for Windows x64 Python 3.14, including the `httpx[socks]` extra. Native Windows wheels were downloaded explicitly for that interpreter/platform. Linux verification uses the same package versions with Linux native wheels.
+The recorded dependency review evaluated each wheel's `Requires-Dist` metadata
+for Windows x64 Python 3.14, including the `httpx[socks]` extra. Repeat that closure
+review when changing the locks. Native Windows wheels must match the selected
+interpreter and platform.
 
-This bundle does not contain the Python interpreter. Install Python 3.14 64-bit before setup. Other operating systems or Python versions require an appropriate source installation/dependency set; the included Windows wheels are not portable native binaries.
+Windows is the application distribution target. Developer checks run on another
+operating system require native packages for that host; bundled Windows wheels
+cannot be used as portable binaries. Such checks do not establish support for
+another desktop platform.
 
-DNS resolution adds dnspython 2.9.2 (pure Python); the standalone module remains independently installable.
+DNS resolution uses dnspython. Its exact version is retained in the dependency
+locks; the standalone Attribution Module remains independently installable.
 
 ## Release verification
 
@@ -36,13 +54,19 @@ incomplete scan, skipped package, timeout or tool error fails the check. The
 internal Attribution Module is reviewed as application source rather than queried
 under a public package identity. Absence of an advisory is not proof of safety.
 
-The release retains CPython 3.14.10. As of 2026-11-07 no official 3.14.11 Windows
-runtime artifact was available at the checked Python release endpoint. Track
-CVE-2026-119170 (conditional on OpenSSL FIPS mode) and CVE-2026-116566 (embedded
-NUL address resolution; tested application input guards reject NUL). Do not claim
-FIPS compliance from the bundled runtime, and do not downgrade past other fixes.
 Native codec and CPython advisories require separate review from the Python-wheel
-audit. References:
+audit. Do not infer FIPS compliance or absence of runtime vulnerabilities from a
+successful package scan.
+
+### Historical runtime review: November 7, 2026
+
+The recorded review retained CPython 3.14.10 and found no official 3.14.11 Windows
+runtime artifact at the release endpoint checked that day. It tracked
+CVE-2026-119170 (conditional on OpenSSL FIPS mode) and CVE-2026-116566 (embedded
+NUL address resolution), with application input guards tested to reject NUL.
+This is a dated review record, not a current advisory scan or a statement about
+what Python releases are available today. Recheck the interpreter and native
+libraries during release review. Original references:
 
 - https://github.com/rthalley/dnspython/security/advisories/GHSA-45c3-73f7-pv4m
 - https://dnspython.readthedocs.io/en/latest/whatsnew.html
@@ -64,15 +88,15 @@ rebuilds both assets from those archives. No external tile service is required.
 These assets add no Python dependencies, Node runtime requirement or
 external browser connections.
 
-The local `static/geo/places.json` is derived from the official U.S. Census
-2025 national places gazetteer. It contains representative internal points
-for 1,241 unambiguous North/South Carolina place names; duplicate city names
-within the same state are excluded. These points support explicitly labeled
-approximate reported-city placement, not verified physical asset locations.
-The source URL and SHA-256 are retained in the JSON metadata. Source:
+The local `static/geo/places.json` covers all 50 states, the District of Columbia
+and Puerto Rico using unambiguous state/place names from the 2025 national
+gazetteer. Duplicate city names within the same state are excluded. These points
+support explicitly labeled approximate reported-city placement, not verified
+physical asset locations. The current point count, source URL and SHA-256 are
+retained with the asset metadata and `static/geo/README.txt`. Source:
 https://www2.census.gov/geo/docs/maps-data/data/gazetteer/2025_Gazetteer/2025_Gaz_place_national.zip
 
-## 0.7.0 report exhibits and field inventory
+## Report exhibits, fonts and field inventory
 
 The exhibit/appendix implementation adds no runtime package. ReportLab renders native PDF graphics and text; Pillow provides compatible PNG fallbacks; python-docx/lxml embeds SVG plus fallback and native report text. The installed runtime does not require a browser automation engine, Node, Word, LibreOffice, or cloud AI for document generation.
 
@@ -80,9 +104,9 @@ The exhibit/appendix implementation adds no runtime package. ReportLab renders n
 
 The document font bundle includes a static Noto Sans SC derivative and WOFF versions for self-contained SVG exports. The OFL notice and exact source/hash/conversion provenance are under `fonts/`. The variable-font conversion input is a development-only asset and is excluded from releases. Font conversion does not add a runtime dependency.
 
-## 0.7.1 runtime consolidation
+## Runtime alignment and older source environments
 
-`runtime-lock.json` is the interpreter baseline for both installed and source
+`tools/windows_installer/runtime-lock.json` is the interpreter baseline for installed and source
 editions. The build derives the ABI and isolated import-path filename from
 that record. Source `Setup.cmd` uses `tools/setup_environment.py` to select
 the same Python minor version and install the same hash-locked dependencies.
@@ -94,7 +118,8 @@ rename that environment before running setup with Python 3.14 installed. Keep
 the `data` folder unchanged. Installed-edition workspaces retain their original
 location and do not require this source-checkout step.
 
-The installer bundles Python 3.14.10. The available Linux verification
-interpreter is 3.14.9 with identical locked application dependency versions.
-Passing those checks establishes the Python 3.14 code path on Linux, not
-execution of Windows native binaries or native Windows installer acceptance.
+Record the actual interpreter, platform and dependency versions with each
+verification run. Results from one development host do not establish native
+Windows installer acceptance; follow [the Windows acceptance checklist](HOME_VALIDATION.md)
+for the candidate being distributed.
+

@@ -22,12 +22,13 @@ not require an unavailable second reviewer and then routinely bypass the rule.
 For the current project size, issues plus a milestone for the next candidate are
 sufficient. If a GitHub Project is used, use Backlog, Ready, In progress, In review
 and Done statuses, with one owner and observable acceptance criteria per item.
-No duplicate tracker or Project board was created by this audit.
+Keep the issue or milestone as the source of truth rather than maintaining a second progress log in Markdown.
 
 ## Automated checks
 
 The [CI workflow](https://github.com/PlasmaTurtle/shadowserver-companion/blob/main/.github/workflows/ci.yml)
-runs the existing complete `tools/verify.py` on Ubuntu 24.04 and Windows 2025 with
+is the source of truth for runner selection and triggers. At this documentation
+revision it runs the complete `tools/verify.py` on Ubuntu 24.04 and Windows 2025 with
 Python 3.14, Node 24 and Chromium. It also checks bundled wheel/source integrity.
 The verifier covers release identity, module boundaries, formatting, lint, backend
 regressions, frontend contracts and its registered synthetic browser suites.
@@ -66,17 +67,18 @@ required check, because it intentionally does not run on every pull request.
 
 ## Settings requiring repository administration
 
-The 2026-11-14 audit could write source through the GitHub integration but could
-not administer repository settings. The rulesets API explicitly returned a plan
-upgrade requirement for this private repository; branch-protection reads returned
-an integration permission error. The browser had no signed-in settings session.
-The following are recommendations, **not enabled controls**:
+Repository administration and available controls depend on the account plan and
+integration permissions. Check the actual settings before treating a control as
+enforced. The [November 14 repository audit](history/reviews/GITHUB_REPOSITORY_AUDIT_2026_11_14.md)
+records the access limitations observed during setup; it is not a live settings inventory.
+The following are recommendations, **not a claim that these controls are enabled**:
 
-- When the private-repository plan supports protection, require a pull request,
-  resolved review conversations and passing `Verify (ubuntu-24.04)` and
-  `Verify (windows-2025)` checks on `main`, after those exact checks have run
-  successfully. Block force pushes and branch deletion. Account for the sole
-  maintainer when choosing approval requirements and bypass permissions.
+- When the repository plan supports protection, require a pull request, resolved
+  review conversations, and the relevant passing checks on `main`. Establish a
+  repeatable Windows application check before requiring it. Linux tool execution
+  does not make Linux a supported application platform. Select exact check names
+  from the current workflow rather than copying names from an old audit. Block
+  force pushes and branch deletion, with an appropriate sole-maintainer policy.
 - Enable automatic deletion of merged branches and keep squash merging available.
 - Set the default Actions token to read-only, disable workflow PR approval, and
   restrict permitted actions to reviewed publishers/actions with full SHA pins.
@@ -116,3 +118,12 @@ Keep that decision separate from third-party notices already present.
 Full SHA pins are used here. A generated Actions dependency lockfile can be
 evaluated later; it must be generated and verified with GitHub's supported tooling,
 not handwritten as an apparent guarantee of provenance.
+
+
+## Documentation maintenance
+
+Use the [documentation index](README.md) to find the maintained home for each
+topic. Put dated audits and execution evidence in [history](history/README.md);
+record ongoing work in issues and milestones rather than appending session logs
+to setup or architecture guides. Keep README navigation and packaged copies in
+sync when adding or moving documentation.

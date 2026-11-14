@@ -1,10 +1,13 @@
 # Shadowserver Eclipse — Input Validation
 
-Version 0.9.98 addresses a retention defect: contact discovery saved complete
-website responses before establishing whether they contained useful contact
-information. A script reference could therefore be retained on disk and copied
-into internal evidence exports, even though the contact parser did not execute
-JavaScript.
+This reference describes the input, scanning, and evidence-retention contracts
+used by the application. It is intended for maintainers changing provider adapters,
+contact extraction, browser capture, or exports.
+
+The boundaries were introduced during the 0.9.98 input-validation work. The
+[historical release record](history/releases/RELEASE_098.md) explains that change;
+[validation evidence](../VALIDATION.md) records the current candidate's checks and
+remaining acceptance.
 
 ## Required boundaries
 
@@ -100,3 +103,4 @@ Regression tests use inert synthetic responses. No flagged production page is
 fetched or executed for validation. Native Windows and Microsoft Defender behavior
 must be verified on the installed release; portable test results are recorded in
 VALIDATION.md without implying workstation acceptance.
+
