@@ -232,7 +232,10 @@ def main():
         # Browser acceptance is fast; expose UI regressions before the longer
         # backend suite. Full verification still requires both to succeed.
         if not (args.only_browser or args.skip_backend):
-            run("Backend and attribution regression", [sys.executable, "-m", "pytest", "-q"])
+            run(
+                "Backend and attribution regression",
+                [sys.executable, "-m", "pytest", "-q", "--maxfail=1"],
+            )
         completed = True
     except KeyboardInterrupt:
         interrupted = True
