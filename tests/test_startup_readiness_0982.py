@@ -62,6 +62,23 @@ def assert_browser_thread_stopped():
     assert not any(thread.name == "workbench-browser" for thread in threading.enumerate())
 
 
+@pytest.fixture
+def desktop_errors(monkeypatch):
+    desktop = helper("desktop")
+    dialogs = []
+    # The real MessageBoxW waits for a click on Windows CI's unattended desktop.
+    monkeypatch.setattr(
+        desktop,
+        "ctypes",
+        SimpleNamespace(
+            windll=SimpleNamespace(
+                user32=SimpleNamespace(MessageBoxW=lambda *args: dialogs.append(args) or 1)
+            )
+        ),
+    )
+    return desktop, dialogs
+
+
 def test_browser_opens_once_after_own_server_binds_despite_connect_timeout(startup, monkeypatch):
     servers = []
     server_class = uvicorn.Server
@@ -112,9 +129,9 @@ def test_occupied_port_exits_without_opening_browser(startup):
 
 
 def test_occupied_port_entrypoint_retains_actual_bind_error_in_application_log(
-    startup, monkeypatch
+    startup, monkeypatch, desktop_errors
 ):
-    desktop = helper("desktop")
+    desktop, dialogs = desktop_errors
     log_path = startup.workspace / "application.log"
     handler = RotatingFileHandler(log_path, encoding="utf-8")
     root_logger = logging.getLogger()
@@ -144,10 +161,35 @@ def test_occupied_port_entrypoint_retains_actual_bind_error_in_application_log(
         assert startup.opened == []
         assert not startup.instance.exists()
         assert_browser_thread_stopped()
+        if sys.platform == "win32":
+            assert len(dialogs) == 1
+            owner, message, title, flags = dialogs[0]
+            assert owner is None and title == desktop.APP_NAME and flags == 0x10
+            assert "Could not start the local server" in message
+        else:
+            assert dialogs == []
     finally:
         root_logger.removeHandler(handler)
         handler.close()
         root_logger.setLevel(previous_level)
+
+
+def test_windows_entrypoint_reports_error_dialog_and_returns_failure(
+    desktop_errors, monkeypatch, caplog
+):
+    desktop, dialogs = desktop_errors
+    # Exercise Windows error presentation on Linux too, without changing the
+    # process-wide platform or loading a native GUI library.
+    monkeypatch.setattr(desktop, "sys", SimpleNamespace(platform="win32", stderr=sys.stderr))
+    monkeypatch.setattr(desktop, "configure_logging", lambda: None)
+
+    def fail_startup():
+        raise RuntimeError("Synthetic startup failure")
+
+    monkeypatch.setattr(desktop, "main", fail_startup)
+    assert desktop.entrypoint() == 1
+    assert dialogs == [(None, "Synthetic startup failure", desktop.APP_NAME, 0x10)]
+    assert "Synthetic startup failure" in caplog.text
 
 
 @pytest.mark.parametrize("started,code", [(False, 0), (True, 3)])
