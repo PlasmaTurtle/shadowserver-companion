@@ -1,0 +1,15 @@
+{
+  "schema": 1,
+  "version": "0.12.0",
+  "channel": "candidate",
+  "edition": "chaos",
+  "variant": "dark_matter",
+  "review_name": "Guided Setup",
+  "home_confirmation": null,
+  "windows_baseline": {
+    "version": "0.9.96",
+    "confirmed_on": "2026-11-12",
+    "confirmed_by": "operator",
+    "notes": "The operator confirmed that requesting the next release means the previous release is working on Windows."
+  }
+}
