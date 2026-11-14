@@ -2749,8 +2749,8 @@
       "path": "tools/verify.py",
       "module": "tools.verify",
       "owner": "distribution",
-      "lines": 252,
-      "sha256": "fc5bc6ca0d7d43f73a07da3d6077dd1fe48678d530b4ab73d2ee1f08a88847e7",
+      "lines": 254,
+      "sha256": "954a9a010dd21a25e9c367acec814a05ef65de0083f42b35bc2667fcd02a51fe",
       "imports": [
         "workbench.local_session"
       ],
