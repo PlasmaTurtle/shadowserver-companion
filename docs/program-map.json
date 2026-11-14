@@ -9820,20 +9820,20 @@
       "path": "workbench/schedule_handoff.py",
       "module": "workbench.schedule_handoff",
       "owner": "intake-jobs",
-      "lines": 139,
-      "sha256": "805e8102ae682081a1bc75ddacb0302f21fdcbe48e7c783a6134ce6554dfbd8e",
+      "lines": 157,
+      "sha256": "119f57875ba062172b02e38dd0198cfb6ad8aabf2023b64760f9bbb4dc5891ca",
       "imports": [
         "workbench.workspace_lock"
       ],
       "symbols": [
         {
           "name": "request_handoff",
-          "line": 69,
+          "line": 89,
           "kind": "function"
         },
         {
           "name": "scheduled_ownership",
-          "line": 110,
+          "line": 129,
           "kind": "function"
         }
       ]
