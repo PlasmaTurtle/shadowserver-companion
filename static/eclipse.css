@@ -1,0 +1,1735 @@
+/* Eclipse Observatory: a spatial field with precise instruments at its edges. */
+body.eclipse-view #main {
+  padding: 0;
+  max-width: none;
+  background: transparent;
+}
+body.eclipse-view .app-footer {
+  display: none;
+}
+#eclipse {
+  --ec-bg: #030609;
+  --ec-panel: #030609d9;
+  --ec-text: #edf5ff;
+  --ec-muted: #a9bed2;
+  --ec-line: #33434c;
+  --ec-cyan: #8aece8;
+  --ec-violet: #b6a0ff;
+  --ec-green: #8df2c6;
+  --ec-amber: #ffce8e;
+  --ec-red: #ff9dba;
+  --ec-inspector-width: 340px;
+  --ec-viewport-height: max(550px, calc(100dvh - 315px));
+  color: var(--ec-text);
+  background: transparent;
+  font:
+    14px/1.5 Inter,
+    'Segoe UI',
+    sans-serif;
+  min-height: calc(100dvh - 93px);
+  color-scheme: dark;
+  position: relative;
+}
+#eclipse * {
+  box-sizing: border-box;
+}
+#eclipse [hidden] {
+  display: none !important;
+}
+#eclipse :focus-visible {
+  outline: 2px solid var(--ec-cyan);
+  outline-offset: 4px;
+}
+#eclipse h1,
+#eclipse h2,
+#eclipse h3,
+#eclipse p {
+  margin: 0;
+}
+#eclipse a {
+  color: var(--ec-cyan);
+  text-decoration: none;
+}
+#eclipse button,
+#eclipse input,
+#eclipse select {
+  font: inherit;
+}
+#eclipse button,
+#eclipse summary {
+  cursor: pointer;
+}
+#eclipse button:disabled {
+  cursor: default;
+  opacity: 0.5;
+}
+#eclipse .ec-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+#eclipse .ec-mast {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  min-height: 74px;
+  padding: 16px 28px;
+  background: #030609d9;
+  border-bottom: 1px solid #a7c5e118;
+}
+#eclipse .ec-view-identity {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 170px;
+}
+#eclipse .ec-aperture {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #050c16;
+  box-shadow:
+    -3px 0 0 #a6efe4,
+    0 0 22px #7be5e222;
+  flex: none;
+}
+#eclipse .ec-view-identity h1 {
+  font-size: 20px;
+  line-height: 1.2;
+  font-weight: 550;
+  letter-spacing: -0.5px;
+}
+#eclipse .ec-view-identity > div > span {
+  display: block;
+  color: var(--ec-muted);
+  font-size: 12px;
+  margin-top: 4px;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+#eclipse .ec-views {
+  display: flex;
+  gap: 3px;
+  padding: 3px;
+  border: 1px solid #90b9d326;
+  background: #030609bf;
+  border-radius: 5px;
+}
+#eclipse .ec-views button {
+  border: 0;
+  border-radius: 3px;
+  color: #b9cbdc;
+  background: transparent;
+  padding: 9px 16px;
+  min-height: 38px;
+  font-size: 13px;
+}
+#eclipse .ec-views button:hover {
+  color: var(--ec-text);
+  background: #ffffff0a;
+}
+#eclipse .ec-views button[aria-pressed='true'] {
+  color: #eafffa;
+  background: #39565e85;
+  box-shadow: inset 0 -1px #a5e5df;
+}
+#eclipse .ec-back-field {
+  margin-left: auto;
+}
+#eclipse .ec-exit {
+  margin-left: auto;
+  font-size: 12px !important;
+  white-space: nowrap;
+}
+#eclipse .ec-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  border: 1px solid #466078;
+  background: #05090ef0;
+  color: #e4f0fc;
+  border-radius: 4px;
+  min-height: 36px;
+  padding: 7px 11px;
+  text-decoration: none;
+  white-space: nowrap;
+  font-size: 12px;
+}
+#eclipse .ec-btn:hover {
+  border-color: #9ac7cf;
+  background: #1a3043;
+}
+#eclipse .ec-btn-primary {
+  background: #c4eee5;
+  color: #08222b;
+  border-color: #c4eee5;
+  font-weight: 550;
+}
+#eclipse .ec-btn-primary:hover {
+  background: #e0fff5;
+  color: #08222b;
+}
+#eclipse .ec-text-btn {
+  color: var(--ec-cyan);
+  background: transparent;
+  border: 0;
+  padding: 5px 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+}
+#eclipse .ec-quiet {
+  background: transparent;
+  border-color: transparent;
+  color: var(--ec-muted);
+}
+#eclipse .ec-command {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 28px;
+  position: relative;
+  z-index: 12;
+}
+#eclipse .ec-search-wrap {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-width: 0;
+  max-width: 540px;
+  flex: 1;
+  padding: 3px 12px;
+  background: #030609d9;
+  border: 1px solid #3b5269;
+  border-radius: 4px;
+}
+#eclipse .ec-search-wrap > span {
+  font-size: 25px;
+  color: #b2d5e1;
+  line-height: 1;
+}
+#eclipse .ec-search-wrap input {
+  width: 100%;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  color: #eff6ff;
+  padding: 6px 0;
+  font-size: 13px;
+}
+#eclipse input::placeholder {
+  color: #a9bdcf;
+  opacity: 1;
+}
+#eclipse kbd {
+  color: #bac9d8;
+  font: 11px monospace;
+  border: 1px solid #41516a;
+  border-radius: 3px;
+  padding: 1px 5px;
+}
+#eclipse .ec-inspect-toggle {
+  margin-left: auto;
+}
+#eclipse .ec-inspect-toggle span {
+  background: #354b61;
+  color: #eef5ff;
+  padding: 0 5px;
+  font-size: 11px;
+  border-radius: 3px;
+}
+#eclipse .ec-instrument-options {
+  position: relative;
+}
+#eclipse .ec-instrument-options > summary {
+  padding: 8px 10px;
+  color: #b6cadd;
+  font-size: 12px;
+  min-height: 36px;
+  border-radius: 4px;
+  border: 1px solid transparent;
+}
+#eclipse .ec-instrument-options[open] > summary {
+  background: #102033;
+  border-color: #43617a;
+}
+#eclipse .ec-instrument-menu {
+  position: absolute;
+  z-index: 20;
+  right: 0;
+  top: calc(100% + 9px);
+  width: 330px;
+  padding: 18px;
+  background: #030609f2;
+  border: 1px solid #587087;
+  box-shadow: 0 18px 50px #0007;
+  border-radius: 6px;
+  backdrop-filter: blur(9px);
+}
+#eclipse .ec-lenses,
+#eclipse .ec-levels {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+#eclipse .ec-lenses {
+  padding-bottom: 15px;
+  border-bottom: 1px solid #2b4158;
+  margin-bottom: 15px;
+}
+#eclipse .ec-eyebrow {
+  font:
+    11px/1.5 Consolas,
+    monospace;
+  letter-spacing: 1.3px;
+  color: #abc2d7;
+  text-transform: uppercase;
+}
+#eclipse .ec-lenses > .ec-eyebrow,
+#eclipse .ec-levels > .ec-eyebrow {
+  width: 100%;
+  margin-bottom: 5px;
+}
+#eclipse .ec-lenses button,
+#eclipse .ec-levels button {
+  background: transparent;
+  border: 1px solid #354b62;
+  border-radius: 3px;
+  color: #bed0e2;
+  min-height: 34px;
+  padding: 6px 9px;
+  font-size: 12px;
+}
+#eclipse .ec-lenses button[aria-pressed='true'],
+#eclipse .ec-levels button[aria-pressed='true'] {
+  background: #24434c;
+  color: #e5fffa;
+  border-color: #7fb8b7;
+}
+#eclipse #ec-motion {
+  margin-top: 14px;
+}
+#eclipse[data-view='atlas'] .ec-levels,
+#eclipse[data-view='pulse'] .ec-levels,
+#eclipse[data-view='records'] .ec-levels {
+  display: none;
+}
+#eclipse .ec-filters {
+  display: flex;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  gap: 13px;
+  background: #030609ed;
+  margin: 2px 28px 12px;
+  padding: 18px;
+  border: 1px solid #3b536b;
+  border-radius: 5px;
+}
+#eclipse .ec-filters label {
+  display: grid;
+  gap: 6px;
+  color: #c0d0e0;
+  min-width: 130px;
+  flex: 1;
+  font-size: 12px;
+}
+#eclipse select {
+  color: #edf5ff;
+  background: #13263b;
+  border: 1px solid #647c92;
+  border-radius: 4px;
+  padding: 8px;
+  max-width: 100%;
+  height: 38px;
+}
+#eclipse .ec-scope-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 0 28px 12px;
+}
+#eclipse .ec-scope-chips > * {
+  background: #18313ded;
+  border: 1px solid #48656f;
+  border-radius: 3px;
+  padding: 4px 8px;
+  color: #cbeae9;
+  font-size: 12px;
+}
+#eclipse .ec-warning {
+  background: #291d2ceb;
+  color: #f0ccdd;
+  border: 1px solid #65405c;
+  margin: 4px 28px 12px;
+  padding: 10px 14px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+#eclipse .ec-census {
+  display: flex;
+  align-items: baseline;
+  gap: 23px;
+  padding: 3px 28px 12px;
+  flex-wrap: wrap;
+  color: var(--ec-muted);
+  font-size: 12px;
+}
+#eclipse .ec-census strong {
+  font-size: 17px;
+  font-weight: 450;
+  color: var(--ec-text);
+  margin-right: 4px;
+  font-variant-numeric: tabular-nums;
+}
+#eclipse .ec-selection {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin: 0 28px 14px;
+  padding: 12px 16px;
+  background: linear-gradient(100deg, #040b0ef0, #020407eb);
+  border: 1px solid #557986;
+  border-radius: 5px;
+  box-shadow: 0 6px 24px #0002;
+}
+#eclipse .ec-selection-indicator {
+  width: 3px;
+  height: 40px;
+  background: var(--ec-cyan);
+  box-shadow: 0 0 20px #7cffff40;
+  flex: none;
+}
+#eclipse .ec-selection-identity {
+  min-width: 120px;
+  flex: 1;
+}
+#eclipse #ec-selection-kind {
+  font-size: 11px;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: #b0cae2;
+  display: block;
+}
+#eclipse #ec-selection-name {
+  font-size: 17px;
+  font-weight: 550;
+  display: block;
+  overflow-wrap: anywhere;
+}
+#eclipse #ec-selection-support {
+  display: block;
+  font-size: 12px;
+  color: #b5cadd;
+}
+#eclipse .ec-selection-navigation {
+  display: grid;
+  gap: 5px;
+}
+#eclipse .ec-drill-context {
+  font-size: 11px;
+  color: #b2c7da;
+}
+#eclipse .ec-drill-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+#eclipse .ec-drill-actions button {
+  background: #d0efe7;
+  color: #0a2630;
+  border: 1px solid #d0efe7;
+  border-radius: 3px;
+  padding: 7px 10px;
+  font-size: 12px;
+  min-height: 36px;
+}
+#eclipse .ec-drill-actions button:hover {
+  background: #e6fff7;
+}
+#eclipse .ec-selection > .ec-text-btn {
+  font-size: 24px;
+  padding: 2px 7px;
+}
+#eclipse .ec-workbench {
+  position: relative;
+}
+#eclipse .ec-stage {
+  position: relative;
+  min-width: 0;
+}
+#eclipse .ec-viewport {
+  height: var(--ec-viewport-height);
+  min-width: 0;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: radial-gradient(ellipse at 18% 85%, #12333b16, transparent 65%);
+}
+#eclipse #ec-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: grab;
+}
+#eclipse #ec-canvas:active {
+  cursor: grabbing;
+}
+#eclipse .ec-data-heading {
+  position: absolute;
+  z-index: 2;
+  left: 28px;
+  top: 22px;
+  display: grid;
+  gap: 5px;
+  pointer-events: none;
+  max-width: min(52%, 420px);
+  text-shadow:
+    0 1px 14px #030915,
+    0 1px 4px #030915;
+}
+#eclipse .ec-data-heading h2 {
+  font-size: 30px;
+  font-weight: 450;
+  line-height: 1.2;
+  letter-spacing: -0.8px;
+}
+#eclipse #ec-scene-subtitle {
+  font-size: 12px;
+  color: #b0c5db;
+}
+#eclipse .ec-space-key {
+  position: absolute;
+  z-index: 2;
+  left: 28px;
+  bottom: 24px;
+  display: grid;
+  gap: 8px;
+  pointer-events: none;
+  color: #b4c9dd;
+  font-size: 11px;
+  max-width: 55%;
+  text-shadow: 0 1px 7px #030915;
+}
+#eclipse #ec-scene-coordinate {
+  font:
+    11px Consolas,
+    monospace;
+  letter-spacing: 1px;
+  color: #91afc8;
+}
+#eclipse .ec-density-legend {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 5px;
+  font:
+    11px Consolas,
+    monospace;
+  color: #b4c9dd;
+}
+#eclipse .ec-density-legend > span {
+  margin-right: 4px;
+}
+#eclipse .ec-density-legend i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #8aece8;
+  margin-left: 5px;
+}
+#eclipse .ec-density-legend i[data-density='yellow'] {
+  background: #eccb6b;
+}
+#eclipse .ec-density-legend i[data-density='red'] {
+  background: #f07891;
+}
+#eclipse .ec-density-legend i[data-density='purple'] {
+  background: #b26cff;
+  box-shadow: 0 0 9px #b26cffaa;
+}
+#eclipse .ec-scene-controls {
+  position: absolute;
+  z-index: 3;
+  bottom: 22px;
+  right: 28px;
+  display: flex;
+  align-items: center;
+  padding: 4px;
+  background: #020508ed;
+  border: 1px solid #4b6b80;
+  border-radius: 4px;
+  box-shadow: 0 5px 20px #0004;
+  backdrop-filter: blur(10px);
+}
+#eclipse .ec-scene-controls .ec-btn {
+  border: 0;
+  background: transparent;
+  min-height: 32px;
+  min-width: 32px;
+  padding: 5px 8px;
+  font-size: 13px;
+}
+#eclipse .ec-scene-controls .ec-btn:hover {
+  background: #253f53;
+}
+#eclipse #ec-zoom-level {
+  font:
+    12px Consolas,
+    monospace;
+  color: #c0d6e8;
+  min-width: 43px;
+  text-align: center;
+}
+#eclipse .ec-scene-caption {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 10px 28px;
+  color: #adc2d6;
+  font-size: 11px;
+  border-top: 1px solid #b3d9ef17;
+}
+#eclipse .ec-scene-caption .ec-text-btn {
+  white-space: nowrap;
+  font-size: 12px;
+}
+#eclipse #ec-list-total {
+  color: #cbe9f2;
+  padding: 1px 5px;
+  font-size: 11px;
+}
+#eclipse .ec-tooltip {
+  position: absolute;
+  z-index: 15;
+  pointer-events: none;
+  max-width: min(310px, calc(100% - 20px));
+  padding: 12px 15px;
+  background: #030609f5;
+  border: 1px solid #789bb7;
+  border-radius: 4px;
+  color: #f3fbff;
+  font-size: 13px;
+  box-shadow: 0 10px 25px #0008;
+}
+#eclipse .ec-tooltip small {
+  display: block;
+  color: #bfd3e9;
+  margin-top: 4px;
+  font-size: 11px;
+}
+#eclipse .ec-loading {
+  position: absolute;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 8;
+  background: #030609f0;
+  border: 1px solid #5c7b96;
+  border-radius: 4px;
+  padding: 10px 18px;
+  color: #d0e6f9;
+  font-size: 12px;
+  max-width: 80%;
+}
+#eclipse[data-ready='loading'] #ec-canvas {
+  opacity: 0.45;
+  pointer-events: none;
+}
+#eclipse[data-ready='loading'] .ec-pattern {
+  pointer-events: none;
+  opacity: 0.5;
+}
+#eclipse .ec-map-empty {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: 14px;
+  text-align: center;
+  padding: 30px;
+  pointer-events: none;
+}
+#eclipse .ec-map-empty h2 {
+  font-size: 25px;
+  font-weight: 450;
+}
+#eclipse .ec-map-empty p {
+  font-size: 13px;
+  color: #b8cde1;
+  max-width: 360px;
+}
+#eclipse .ec-map-empty button,
+#eclipse .ec-map-empty a {
+  pointer-events: auto;
+}
+#eclipse .ec-empty-orbit {
+  width: 88px;
+  height: 88px;
+  border: 1px solid #8dbfc9;
+  border-radius: 50%;
+  box-shadow:
+    0 0 60px #748dff15,
+    inset 0 0 35px #86bfff15;
+  margin-bottom: 14px;
+}
+#eclipse .ec-inspector {
+  position: absolute;
+  z-index: 9;
+  right: 24px;
+  top: 22px;
+  width: var(--ec-inspector-width);
+  max-height: calc(var(--ec-viewport-height) - 96px);
+  background: linear-gradient(145deg, #030609d9, #010305e0);
+  border: 1px solid #627e8b55;
+  border-top-color: #91b3bf66;
+  border-radius: 6px;
+  padding: 0 21px 22px;
+  overflow-wrap: anywhere;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: #4c667b #0a1422;
+  backdrop-filter: blur(9px);
+  box-shadow: 0 20px 55px #0004;
+}
+#eclipse[data-inspector-open='false'] .ec-inspector {
+  display: none;
+}
+#eclipse .ec-drawer-bar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: #04080cf5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 14px 0;
+  margin-bottom: 7px;
+  border-bottom: 1px solid #385064;
+  font-size: 13px;
+  font-weight: 500;
+}
+#eclipse .ec-drawer-bar .ec-btn {
+  padding: 4px 9px;
+  min-height: 30px;
+  font-size: 18px;
+  background: transparent;
+  border-color: #456277;
+}
+#eclipse .ec-inspector-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 18px 0 10px;
+}
+#eclipse .ec-inspector-top .ec-btn {
+  font-size: 11px;
+  min-height: 27px;
+  padding: 4px 7px;
+}
+#eclipse .ec-inspector h2 {
+  font-size: 22px;
+  line-height: 1.25;
+  font-weight: 550;
+  letter-spacing: -0.4px;
+  margin: 12px 0 13px;
+}
+#eclipse .ec-inspector p {
+  font-size: 12px;
+  color: #b5c6dc;
+  line-height: 1.6;
+}
+#eclipse .ec-stat-row {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  padding: 17px 0;
+  margin: 18px 0;
+  border-top: 1px solid #304762;
+  border-bottom: 1px solid #304762;
+}
+#eclipse .ec-stat-row strong {
+  display: block;
+  font-size: 28px;
+  line-height: 1.2;
+  font-weight: 400;
+  color: #f0f6ff;
+}
+#eclipse .ec-stat-row span {
+  display: block;
+  font-size: 11px;
+  color: #b1c5df;
+  margin-top: 6px;
+}
+#eclipse .ec-section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 22px 0 12px;
+}
+#eclipse .ec-section-heading h3 {
+  font-size: 13px;
+  font-weight: 550;
+}
+#eclipse .ec-section-heading > span {
+  font-size: 11px;
+  color: #a3b9d6;
+}
+#eclipse .ec-pattern {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 17px 0;
+  border: 0;
+  border-bottom: 1px solid #2a425d;
+  border-radius: 0;
+  background: none;
+  color: #eaf2ff;
+}
+#eclipse .ec-pattern:hover {
+  background: linear-gradient(90deg, #83faff0b, transparent);
+}
+#eclipse .ec-pattern-type {
+  font-size: 10px;
+  letter-spacing: 0.7px;
+  text-transform: uppercase;
+  color: #b8a4ff;
+  display: block;
+  margin-bottom: 8px;
+}
+#eclipse .ec-pattern strong {
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1.4;
+  display: block;
+}
+#eclipse .ec-pattern small {
+  font-size: 12px;
+  color: #a9c1de;
+  display: block;
+  margin-top: 7px;
+}
+#eclipse .ec-pattern-arrow {
+  float: right;
+  font-size: 17px;
+  color: #80f5ff;
+}
+#eclipse .ec-inspector .ec-truth-note {
+  font-size: 10px;
+  color: #9eb2cf;
+  border-left: 2px solid #4b6b94;
+  padding-left: 10px;
+  margin-top: 22px;
+  line-height: 1.65;
+}
+#eclipse .ec-detail-grid {
+  display: grid;
+  grid-template-columns: 75px minmax(0, 1fr);
+  gap: 11px;
+  margin: 20px 0;
+  font-size: 13px;
+}
+#eclipse .ec-detail-grid dt {
+  color: #b0c4df;
+}
+#eclipse .ec-detail-grid dd {
+  margin: 0;
+  color: #e9f3ff;
+  overflow-wrap: anywhere;
+}
+#eclipse .ec-inspector-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 20px 0;
+}
+#eclipse .ec-inspector-links .ec-btn {
+  font-size: 12px;
+}
+#eclipse .ec-tag {
+  display: inline-block;
+  border: 1px solid #426386;
+  background: #1a2d46;
+  border-radius: 3px;
+  padding: 3px 7px;
+  color: #cce4fb;
+  font-size: 11px;
+  margin: 2px 3px 2px 0;
+}
+#eclipse .ec-risk {
+  background: #381c2c;
+  border-color: #96536c;
+  color: #ffc6d6;
+}
+#eclipse .ec-source-row {
+  display: block;
+  width: 100%;
+  background: none;
+  border: 0;
+  border-bottom: 1px solid #28405f;
+  padding: 12px 0;
+  text-align: left;
+  color: #b1f4ff;
+}
+#eclipse .ec-source-row strong {
+  font-size: 13px;
+  font-weight: 500;
+  display: block;
+}
+#eclipse .ec-source-row small {
+  display: block;
+  color: #aac1df;
+  font-size: 11px;
+  margin-top: 5px;
+}
+#eclipse .ec-source-row:hover {
+  background: #77ffff0b;
+}
+#eclipse .ec-inspector details {
+  border-top: 1px solid #304b6b;
+  padding: 13px 0;
+  margin-top: 14px;
+  font-size: 12px;
+}
+#eclipse .ec-inspector summary {
+  cursor: pointer;
+  color: #cbe0f9;
+}
+#eclipse .ec-inspector pre {
+  padding: 12px;
+  background: #050c17;
+  border: 1px solid #2e4668;
+  font: 11px/1.6 monospace;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  max-height: 350px;
+  overflow: auto;
+  color: #bed9ef;
+}
+#eclipse .ec-source-fields {
+  display: grid;
+  grid-template-columns: 80px minmax(0, 1fr);
+  gap: 10px;
+  font: 11px/1.5 monospace;
+  margin-top: 14px;
+}
+#eclipse .ec-source-fields dt {
+  color: #9eb7d6;
+}
+#eclipse .ec-source-fields dd {
+  margin: 0;
+  color: #e0f1fc;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+#eclipse .ec-inspector p {
+  font-size: 13px;
+  color: #bacdde;
+}
+#eclipse .ec-inspector .ec-truth-note,
+#eclipse .ec-pattern-type {
+  font-size: 11px;
+}
+#eclipse .ec-history-panel {
+  margin: 0 28px 14px;
+  border: 1px solid #344b625c;
+  background: #020508d9;
+  border-radius: 4px;
+}
+#eclipse .ec-history-panel > summary {
+  padding: 10px 14px;
+  font-size: 12px;
+  color: #c6d9e9;
+}
+#eclipse .ec-history-panel > summary > span {
+  margin-left: 12px;
+  font-size: 11px;
+  color: #a1b7ca;
+}
+#eclipse .ec-timebar {
+  padding: 3px 16px 16px;
+}
+#eclipse .ec-time-heading {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  font-size: 12px;
+  color: #afc4d9;
+  margin-bottom: 10px;
+}
+#eclipse .ec-time-heading output {
+  color: #e0ebfa;
+  font-size: 12px;
+}
+#eclipse .ec-time-heading button {
+  margin-left: auto;
+}
+#eclipse .ec-histogram {
+  height: 32px;
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+}
+#eclipse .ec-histogram span {
+  flex: 1;
+  background: linear-gradient(#b1cdd7, #526878);
+  min-width: 2px;
+  max-width: 80px;
+  opacity: 0.9;
+}
+#eclipse .ec-histogram span.ec-future {
+  opacity: 0.18;
+}
+#eclipse #ec-time {
+  appearance: none;
+  display: block;
+  width: 100%;
+  height: 20px;
+  margin: 0;
+  background: transparent;
+  accent-color: #bdd8dd;
+  cursor: pointer;
+}
+#eclipse #ec-time::-webkit-slider-runnable-track {
+  height: 2px;
+  background: #516d85;
+}
+#eclipse #ec-time::-webkit-slider-thumb {
+  appearance: none;
+  width: 12px;
+  height: 12px;
+  background: #d3eee8;
+  margin-top: -5px;
+  box-shadow: 0 0 0 3px #b6e4e325;
+  border-radius: 3px;
+}
+#eclipse .ec-time-labels {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: #b0c4dd;
+  font:
+    11px/1.4 Consolas,
+    monospace;
+}
+#eclipse .ec-status-strip {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  flex-wrap: wrap;
+  padding: 11px 28px;
+  border-top: 1px solid #a1c9de19;
+  color: #a8bbd0;
+  font-size: 11px;
+  background: #020508dd;
+}
+#eclipse .ec-status-strip > span:first-child:before {
+  content: '';
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #a0ddc8;
+  margin-right: 7px;
+}
+#eclipse .ec-revision {
+  font:
+    11px Consolas,
+    monospace;
+  color: #93adc2;
+}
+#eclipse .ec-records {
+  padding: 22px 26px;
+  background: #09111f;
+  border-top: 1px solid #45658c;
+  scroll-margin-top: 100px;
+}
+#eclipse .ec-records-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  margin-bottom: 20px;
+}
+#eclipse .ec-records-head h2 {
+  font-size: 20px;
+  font-weight: 450;
+}
+#eclipse .ec-records-head h2 span {
+  color: #a9bdd8;
+  font-size: 13px;
+}
+#eclipse .ec-table-wrap {
+  overflow: auto;
+}
+#eclipse .ec-records table {
+  width: 100%;
+  border-collapse: collapse;
+  background: transparent;
+  font-size: 12px;
+}
+#eclipse .ec-records th {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-align: left;
+  background: #13223a;
+  color: #a8c2e3;
+  border-bottom: 1px solid #36587b;
+  padding: 11px;
+}
+#eclipse .ec-records td {
+  padding: 13px 11px;
+  border-bottom: 1px solid #253b58;
+  color: #d4e6f9;
+  vertical-align: top;
+}
+#eclipse .ec-records td button {
+  font-size: 13px;
+  text-align: left;
+  color: #9af8ff;
+  background: none;
+  border: 0;
+  padding: 0;
+}
+#eclipse .ec-records td small {
+  display: block;
+  margin-top: 4px;
+  font-size: 11px;
+  color: #a9bdd8;
+}
+#eclipse .ec-records tr[aria-selected='true'] {
+  background: #233c56;
+  border-left: 3px solid #7cffff;
+}
+#eclipse .ec-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 15px;
+  margin-top: 20px;
+  font-size: 12px;
+  color: #bed1e9;
+}
+#eclipse .ec-records {
+  margin: 0 28px 20px;
+  padding: 22px;
+  background: #030609ed;
+  border: 1px solid #415d75;
+  border-radius: 5px;
+}
+#eclipse[data-view='records'] .ec-stage {
+  display: none;
+}
+#eclipse[data-view='records'] .ec-records {
+  min-height: 550px;
+}
+#eclipse[data-view='records'][data-inspector-open='true'] .ec-records {
+  margin-right: calc(var(--ec-inspector-width) + 48px);
+}
+#eclipse[data-view='records'] .ec-inspector {
+  top: 0;
+  max-height: calc(100dvh - 250px);
+}
+#eclipse .ec-priority {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  font-size: 12px;
+  color: #c2d1df;
+  margin: 0.2rem 0.5rem;
+}
+#eclipse .ec-priority i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--intake-temperature, #8bd5ff);
+}
+#eclipse .ec-mobile-inspect {
+  display: none;
+}
+#eclipse .ec-arrow {
+  display: inline-block;
+  width: 12px;
+  height: 12px;
+  vertical-align: middle;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.5;
+  flex-shrink: 0;
+}
+#eclipse .ec-organization-list {
+  display: grid;
+  gap: 0;
+}
+#eclipse .ec-organization-list > a,
+#eclipse .ec-organization-list > button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  border-bottom: 1px solid #30465a;
+  background: none;
+  padding: 13px 0;
+  color: #e4f2fa;
+  font-size: 13px;
+}
+#eclipse .ec-organization-list small {
+  display: block;
+  margin-top: 5px;
+  font-size: 12px;
+  color: #b2c7da;
+}
+#eclipse.ec-opening .ec-mast {
+  justify-content: space-between;
+}
+#eclipse .ec-opening-stage {
+  min-height: calc(100dvh - 190px);
+  display: grid;
+  place-items: center;
+  padding: 32px;
+}
+#eclipse .ec-opening-status {
+  display: grid;
+  justify-items: center;
+  gap: 12px;
+  padding: 30px 36px;
+  border: 1px solid #627a8d;
+  border-radius: 8px;
+  background: #030609d9;
+  backdrop-filter: blur(14px);
+  text-align: center;
+  box-shadow: 0 20px 60px #0004;
+}
+#eclipse .ec-opening-status h2 {
+  font-size: 20px;
+  font-weight: 500;
+}
+#eclipse .ec-opening-status p {
+  color: var(--ec-muted);
+  font-size: 13px;
+}
+#eclipse[data-journey='approaching'] .ec-data-heading {
+  opacity: 0.5;
+}
+@media (min-width: 1600px) {
+  #eclipse {
+    --ec-inspector-width: 370px;
+  }
+  #eclipse .ec-inspector {
+    padding-left: 24px;
+    padding-right: 24px;
+  }
+  #eclipse .ec-data-heading h2 {
+    font-size: 34px;
+  }
+}
+@media (max-width: 1250px) {
+  #eclipse .ec-mast {
+    gap: 14px;
+    padding: 14px 20px;
+  }
+  #eclipse .ec-view-identity {
+    min-width: 150px;
+  }
+  #eclipse .ec-view-identity > div > span {
+    max-width: 200px;
+  }
+  #eclipse .ec-views button {
+    padding: 8px 12px;
+  }
+  #eclipse .ec-exit {
+    display: none;
+  }
+  #eclipse .ec-selection {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+  #eclipse .ec-selection-navigation {
+    flex-basis: auto;
+  }
+}
+@media (max-width: 1050px) {
+  #eclipse .ec-inspector {
+    position: fixed;
+    z-index: 100;
+    left: max(var(--dm-rail, 92px), calc((100vw - 660px) / 2));
+    right: 12px;
+    width: auto;
+    bottom: 12px;
+    top: auto;
+    max-height: min(72dvh, 760px);
+    border: 1px solid #7895aa;
+    border-radius: 8px 8px 0 0;
+    box-shadow: 0 -30px 100px #0009;
+    background: #030609;
+    padding: 0 22px 24px;
+  }
+  #eclipse .ec-drawer-bar {
+    background: #030609;
+  }
+  #eclipse .ec-mobile-inspect {
+    display: block;
+    position: absolute;
+    z-index: 4;
+    left: 28px;
+    bottom: 96px;
+    background: #c0eee4;
+    color: #08212a;
+    border: 1px solid #c0eee4;
+    border-radius: 4px;
+    padding: 10px 13px;
+    font-size: 12px;
+    box-shadow: 0 5px 25px #0008;
+  }
+  #eclipse:not([data-has-selection='true']) .ec-mobile-inspect {
+    display: none;
+  }
+  #eclipse .ec-command {
+    flex-wrap: wrap;
+  }
+  #eclipse .ec-instrument-options {
+    margin-left: 0;
+  }
+  #eclipse .ec-census {
+    gap: 15px;
+  }
+  #eclipse[data-view='records'][data-inspector-open='true'] .ec-records {
+    margin-right: 28px;
+  }
+  #eclipse[data-view='records'] .ec-inspector {
+    top: auto;
+    max-height: 72dvh;
+  }
+}
+@media (max-width: 760px) {
+  #eclipse .ec-mast {
+    padding: 14px 16px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  #eclipse .ec-view-identity {
+    flex: 1;
+    min-width: 150px;
+  }
+  #eclipse .ec-view-identity h1 {
+    font-size: 19px;
+  }
+  #eclipse .ec-view-identity > div > span {
+    font-size: 11px;
+    max-width: 200px;
+  }
+  #eclipse .ec-views {
+    order: 3;
+    flex-basis: 100%;
+  }
+  #eclipse .ec-views button {
+    flex: 1;
+    min-height: 40px;
+    font-size: 13px;
+    padding: 8px;
+  }
+  #eclipse .ec-back-field {
+    font-size: 11px;
+    padding: 7px 9px;
+  }
+  #eclipse .ec-command {
+    padding: 9px 16px;
+    gap: 7px;
+  }
+  #eclipse .ec-search-wrap {
+    max-width: none;
+    flex-basis: calc(100% - 86px);
+  }
+  #eclipse .ec-search-wrap input {
+    font-size: 16px;
+  }
+  #eclipse .ec-search-wrap kbd {
+    display: none;
+  }
+  #eclipse .ec-instrument-options > summary {
+    padding: 8px;
+  }
+  #eclipse .ec-instrument-menu {
+    right: 0;
+    width: min(330px, calc(100vw - 32px));
+  }
+  #eclipse .ec-census {
+    padding: 5px 16px 12px;
+    gap: 5px 15px;
+    font-size: 11px;
+  }
+  #eclipse .ec-census strong {
+    font-size: 16px;
+  }
+  #eclipse .ec-scope-chips {
+    padding: 0 16px 12px;
+  }
+  #eclipse .ec-selection {
+    margin: 0 16px 12px;
+    padding: 12px;
+    gap: 9px;
+  }
+  #eclipse .ec-selection-identity {
+    flex-basis: calc(100% - 26px);
+  }
+  #eclipse #ec-selection-name {
+    font-size: 16px;
+  }
+  #eclipse .ec-selection-navigation {
+    width: 100%;
+    order: 2;
+  }
+  #eclipse .ec-drill-actions button {
+    flex: 1;
+    min-height: 42px;
+  }
+  #eclipse .ec-selection > .ec-text-btn {
+    margin-left: auto;
+  }
+  #eclipse .ec-viewport {
+    height: 62dvh;
+    min-height: 500px;
+  }
+  #eclipse .ec-data-heading {
+    top: 20px;
+    left: 16px;
+    max-width: calc(100% - 32px);
+  }
+  #eclipse .ec-data-heading h2 {
+    font-size: 25px;
+  }
+  #eclipse .ec-data-heading .ec-eyebrow {
+    font-size: 11px;
+  }
+  #eclipse .ec-space-key {
+    left: 16px;
+    bottom: 68px;
+    max-width: calc(100% - 32px);
+    font-size: 11px;
+    gap: 5px;
+  }
+  #eclipse .ec-density-legend {
+    font-size: 11px;
+    gap: 4px;
+  }
+  #eclipse .ec-scene-controls {
+    right: 16px;
+    bottom: 16px;
+  }
+  #eclipse .ec-scene-controls .ec-btn {
+    min-width: 36px;
+    min-height: 36px;
+  }
+  #eclipse .ec-mobile-inspect {
+    left: 16px;
+    bottom: 16px;
+    padding: 10px;
+    font-size: 11px;
+    max-width: calc(100% - 215px);
+  }
+  #eclipse .ec-scene-caption {
+    padding: 10px 16px;
+    align-items: flex-start;
+  }
+  #eclipse .ec-inspector {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    border-radius: 12px 12px 0 0;
+    max-height: 72dvh;
+    padding: 0 20px 24px;
+  }
+  #eclipse .ec-drawer-bar {
+    padding: 15px 0;
+    font-size: 14px;
+  }
+  #eclipse .ec-drawer-bar .ec-btn {
+    min-height: 36px;
+    min-width: 36px;
+  }
+  #eclipse .ec-history-panel {
+    margin: 0 16px 14px;
+  }
+  #eclipse .ec-history-panel > summary > span {
+    display: none;
+  }
+  #eclipse .ec-time-heading {
+    flex-wrap: wrap;
+    gap: 7px;
+  }
+  #eclipse .ec-time-labels {
+    font-size: 11px;
+    gap: 7px;
+  }
+  #eclipse .ec-status-strip {
+    padding: 12px 16px;
+    gap: 8px 14px;
+    font-size: 11px;
+  }
+  #eclipse .ec-records,
+  #eclipse[data-view='records'][data-inspector-open='true'] .ec-records {
+    margin: 0 16px 16px;
+    padding: 16px;
+  }
+  #eclipse .ec-records table {
+    min-width: 680px;
+  }
+  #eclipse .ec-records-head h2 {
+    font-size: 19px;
+  }
+  #eclipse .ec-filters,
+  #eclipse .ec-warning {
+    margin-left: 16px;
+    margin-right: 16px;
+  }
+  #eclipse .ec-filters {
+    padding: 14px;
+  }
+}
+@media (max-width: 400px) {
+  #eclipse .ec-mobile-inspect {
+    bottom: 116px;
+    max-width: none;
+  }
+  #eclipse .ec-aperture {
+    display: none;
+  }
+  #eclipse .ec-view-identity {
+    gap: 0;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  #eclipse *,
+  #eclipse *:before,
+  #eclipse *:after {
+    animation: none !important;
+    transition: none !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+#eclipse .ec-organization {
+  display: block;
+  padding: 13px 0;
+  border-bottom: 1px solid #30465a;
+  font-size: 13px;
+  color: #e4f2fa;
+}
+#eclipse .ec-organization strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+}
+#eclipse .ec-organization small {
+  display: block;
+  font-size: 12px;
+  color: #b2c7da;
+  margin-top: 5px;
+}
+#eclipse .ec-scope-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+#eclipse .ec-records-head > .ec-btn:first-of-type {
+  margin-left: auto;
+}
+#eclipse #ec-record-title {
+  color: var(--ec-text);
+  font-size: inherit;
+}
+
+/* Observatory owns its optical palette even when the surrounding app is light. */
+body.eclipse-view {
+  background-color: #030609;
+  background-image: none;
+}
+:root[data-theme] body.eclipse-view #dm-viewport {
+  display: block;
+  opacity: 0.76;
+}
+#eclipse .ec-command,
+#eclipse .ec-lenses,
+#eclipse .ec-space-key,
+#eclipse .ec-map-empty {
+  background: transparent;
+}
+#eclipse .ec-command {
+  border: 0;
+}
+#eclipse .ec-records-head {
+  flex-wrap: wrap;
+}
+#eclipse .ec-records td {
+  overflow-wrap: anywhere;
+}
+#eclipse .ec-records td:first-child {
+  min-width: 160px;
+  max-width: 360px;
+}
+#eclipse .ec-pagination {
+  flex-wrap: wrap;
+}
+#eclipse .ec-scope-chip {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+#eclipse .ec-drill-context {
+  overflow-wrap: anywhere;
+}
+@media (max-width: 760px) {
+  #eclipse .ec-instrument-options[open] {
+    position: static;
+  }
+  #eclipse .ec-instrument-menu {
+    left: 16px;
+    right: 16px;
+    top: calc(100% + 4px);
+    width: auto;
+  }
+  #eclipse .ec-records-head {
+    gap: 9px;
+  }
+  #eclipse .ec-records-head h2 {
+    flex: 1 0 100%;
+  }
+  #eclipse .ec-records-head > .ec-btn:first-of-type {
+    margin-left: 0;
+  }
+  #eclipse .ec-pagination {
+    gap: 9px;
+    justify-content: space-between;
+  }
+}
+#eclipse .ec-reference-findings > p {
+  padding: 12px 0;
+  border-bottom: 1px solid #30475d;
+}
+#eclipse .ec-reference-findings > p:last-child {
+  border-bottom: 0;
+}
+#eclipse .ec-detail-grid dt,
+#eclipse .ec-source-fields dt {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+#eclipse .ec-drill-actions button:disabled {
+  background: #314650;
+  color: #a7bdc7;
+  border-color: #4a626d;
+  cursor: default;
+}
+@media (max-width: 400px) {
+  #eclipse .ec-stat-row {
+    gap: 9px;
+  }
+  #eclipse .ec-stat-row strong {
+    font-size: 23px;
+    overflow-wrap: anywhere;
+  }
+}
+
+/* Navigation stays outside the field, keeping the optical surface unobstructed. */
+#eclipse .ec-field-navigation {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin: 8px auto;
+  width: fit-content;
+  max-width: calc(100% - 32px);
+  padding: 8px 12px;
+  border: 1px solid #7896a233;
+  border-radius: 6px;
+  background: #020508d9;
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 24px #0005;
+}
+#eclipse .ec-field-navigation output {
+  font-size: 12px;
+  color: var(--ec-muted);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+#eclipse .ec-field-navigation[hidden] {
+  display: none;
+}
+#eclipse[data-view='field'] .ec-data-heading .ec-eyebrow {
+  display: none;
+}
+#eclipse .ec-field-navigation button:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+@media (max-width: 760px) {
+  #eclipse .ec-field-navigation {
+    gap: 8px;
+    padding: 6px;
+    flex-wrap: wrap;
+  }
+  #eclipse .ec-field-navigation .ec-btn {
+    padding: 6px 8px;
+    font-size: 11px;
+  }
+}
+
+#eclipse .ec-dark-evidence {
+  margin: 18px 0;
+  padding: 12px 14px;
+  border-left: 2px solid #8297b5;
+  background: #01030766;
+}
+#eclipse .ec-dark-evidence h3 {
+  font-size: 14px;
+  color: #c2cde2;
+  margin: 0;
+}
+#eclipse .ec-dark-evidence h3 span {
+  float: right;
+  font-variant-numeric: tabular-nums;
+}
+#eclipse .ec-dark-reasons {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 7px 14px;
+  font-size: 12px;
+}
+#eclipse .ec-dark-reasons dt {
+  overflow-wrap: anywhere;
+  color: var(--ec-muted);
+}
+#eclipse .ec-dark-reasons dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Entity map keeps entities primary; observation counts remain in evidence details. */
+#eclipse[data-view='atlas'] .ec-census-entities {
+  order: -1;
+}
+#eclipse[data-view='atlas'] .ec-census-evidence {
+  display: none;
+}

@@ -1,0 +1,8 @@
+{
+  "source": "Kyle-approved orbital shear background, user-supplied upscale",
+  "width": 2048,
+  "height": 1152,
+  "sha256": "45340a634936f4a4a036daecb561df07d3b219b551f37057a175d9560183a5eb",
+  "design": "144-second shared camera orbit with registered SVG corona and trajectories; accepted 2026-11-11",
+  "native_4k": false
+}
