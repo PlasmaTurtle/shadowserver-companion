@@ -18,7 +18,8 @@ const { chromium } = require('playwright');
   });
   const checks = [],
     errors = [],
-    external = [];
+    external = [],
+    responses = [];
   let page;
   try {
     const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
@@ -33,6 +34,13 @@ const { chromium } = require('playwright');
     page = await context.newPage();
     page.setDefaultTimeout(15000);
     page.on('pageerror', (error) => errors.push(error.message));
+    page.on('response', (response) => {
+      const url = new URL(response.url());
+      if (url.origin === base && url.pathname.startsWith('/api/')) {
+        responses.push({ path: url.pathname, status: response.status() });
+        if (responses.length > 30) responses.shift();
+      }
+    });
     const json = async (url) => (await context.request.get(base + url)).json();
     const mutate = (url, method, body) =>
       page.evaluate(
@@ -247,6 +255,16 @@ const { chromium } = require('playwright');
     );
   } catch (error) {
     if (page) {
+      const setup = await page
+        .evaluate(() => ({
+          title: document.querySelector('#modal-title')?.textContent,
+          error: document.querySelector('#setup-error')?.textContent,
+          invalid: [...document.querySelectorAll('#setup-wizard :invalid')].map(
+            (element) => element.id || element.name,
+          ),
+        }))
+        .catch(() => null);
+      console.error(JSON.stringify({ setup, responses }));
       await page
         .screenshot({
           path: path.join(path.dirname(fixturePath), 'setup-release-failure.png'),
