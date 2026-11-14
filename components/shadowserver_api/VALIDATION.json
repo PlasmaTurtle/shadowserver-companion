@@ -1,0 +1,40 @@
+{
+  "module": "shadowserver-reports",
+  "version": "0.1.0",
+  "verified_at_utc": "2026-11-09T00:29:12.951961+00:00",
+  "status": "offline_validated_live_acceptance_pending",
+  "test_environment": {
+    "python": "3.12.14",
+    "system": "Linux",
+    "machine": "x86_64"
+  },
+  "tests": {
+    "run": 111,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "passed": true
+  },
+  "external_socket_connections_blocked": true,
+  "tested_installed_wheel": true,
+  "wheel_matches_source": true,
+  "wheel": {
+    "filename": "shadowserver_reports-0.1.0-py3-none-any.whl",
+    "sha256": "38372f32fa76626d3d8a0901952ddec2ae4193a7f5d947c89d1aa60e9bc4bcd9",
+    "bytes": 41468
+  },
+  "runtime_dependencies": [],
+  "build_backend": "setuptools (84.2.1)",
+  "live_api_verified": false,
+  "native_windows_verified": false,
+  "companion_modified": false,
+  "companion_integration": false,
+  "offline_demo_verified": "Real module pipeline: first acquisition, repeat content reuse, changed-content revision, query completeness unknown; every account and record synthetic.",
+  "pending": [
+    "Actual key/secret and organizational entitlements",
+    "Real selector and pagination behavior",
+    "One emailed-report comparison",
+    "Native Windows credential-store and filesystem run",
+    "Workstation proxy and certificate behavior"
+  ]
+}

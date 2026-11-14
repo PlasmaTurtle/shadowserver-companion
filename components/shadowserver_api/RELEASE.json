@@ -1,0 +1,12 @@
+{
+  "module": "shadowserver-reports",
+  "version": "0.1.0",
+  "status": "offline_validated_live_acceptance_pending",
+  "credential_assumption": "reports access to the existing organizational subscription",
+  "live_api_verified": false,
+  "native_windows_verified": false,
+  "companion_integration": false,
+  "companion_stable_version": "0.8.0",
+  "runtime_dependencies": [],
+  "python_requires": ">=3.11"
+}
