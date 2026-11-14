@@ -111,7 +111,7 @@ def prepare_snapshot(snapshot, candidates):
         stamp = datetime.fromisoformat(source["retrieved_at"].replace("Z", "+00:00"))
         if stamp.tzinfo is None:
             raise ValueError()
-    except (ValueError, KeyError):
+    except ValueError, KeyError:
         raise ValueError("Contact retrieval date must include its timezone") from None
     contacts = []
     for candidate in candidates:

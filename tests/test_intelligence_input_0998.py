@@ -76,9 +76,9 @@ def test_invalid_response_does_not_leak_via_fallback_or_attempts(tmp_path, monke
     monkeypatch.setattr(
         acquisition,
         "_response_get",
-        lambda url, **k: response(invalid, content_type="text/html")
-        if "nist.gov" in url
-        else response(valid),
+        lambda url, **k: (
+            response(invalid, content_type="text/html") if "nist.gov" in url else response(valid)
+        ),
     )
     store = Store(tmp_path / "data")
     result = service.verify(store, ID)

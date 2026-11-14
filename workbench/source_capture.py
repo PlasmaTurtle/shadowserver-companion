@@ -237,7 +237,7 @@ def capture_sources(store, data):
         try:
             instant = datetime.fromisoformat(str(value).replace("Z", "+00:00"))
             return instant.astimezone(timezone.utc) if instant.tzinfo else None
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             return None
 
     if selected_ids:

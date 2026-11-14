@@ -124,7 +124,7 @@ def extract(attribution, root):
             path += "/" + part.replace("~", "~0").replace("/", "~1")
             if isinstance(current, dict) and "vcardArray" in current:
                 candidates.append((current, path))
-    except (ValueError, TypeError, KeyError, IndexError):
+    except ValueError, TypeError, KeyError, IndexError:
         return None
     for entity, path in reversed(candidates):
         details = _organization(entity, path)

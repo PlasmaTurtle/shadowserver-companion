@@ -36,7 +36,7 @@ class WebsiteCaptureJobs:
                 host = web_url("https://" + value).split("/")[2]
                 if host not in hosts:
                     hosts.append(host)
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 continue
         return lead, hosts
 

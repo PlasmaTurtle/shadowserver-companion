@@ -23,7 +23,7 @@ def _load(path):
         if path.is_symlink() or not path.is_file() or path.stat().st_size > 4096:
             return None
         return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError):
+    except OSError, ValueError:
         return None
 
 

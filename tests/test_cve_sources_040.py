@@ -251,9 +251,9 @@ def test_risk_failed_refresh_retains_good_data_and_original_dates(tmp_path, monk
 def test_incomplete_catalog_never_establishes_negative_membership(tmp_path, monkeypatch):
     monkeypatch.setattr(
         "workbench.intelligence.acquisition._response_get",
-        lambda url, **k: response(nvd())
-        if "services.nvd" in url
-        else response({"vulnerabilities": []}),
+        lambda url, **k: (
+            response(nvd()) if "services.nvd" in url else response({"vulnerabilities": []})
+        ),
     )
     result = sources.enrich(Store(tmp_path), ID)
     assert result["kev"] is None and result["epss"] is None

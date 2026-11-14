@@ -94,7 +94,7 @@ def recover_reports(store):
                         (manifest["report_id"], case_id, manifest.get("draft_revision", -1)),
                     )
                 store.log(db, "recovered", "Recovered a completed report package", lead_id)
-        except (OSError, ValueError, KeyError, TypeError, sqlite3.IntegrityError):
+        except OSError, ValueError, KeyError, TypeError, sqlite3.IntegrityError:
             continue
 
 
@@ -150,5 +150,5 @@ def recover_closings(store):
                     case["entity_id"],
                     case["id"],
                 )
-        except (OSError, ValueError, KeyError, TypeError, sqlite3.IntegrityError):
+        except OSError, ValueError, KeyError, TypeError, sqlite3.IntegrityError:
             continue

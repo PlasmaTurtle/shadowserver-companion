@@ -132,7 +132,7 @@ def _stamp(as_of):
 def _stale(checked, clock):
     try:
         return not checked or (clock - parse_date(checked)).total_seconds() > 172800
-    except (TypeError, ValueError, OverflowError):
+    except TypeError, ValueError, OverflowError:
         return True
 
 
@@ -203,7 +203,7 @@ def _snapshot_cve(identifier, value):
         item["warnings"].append("Cached KEV membership is invalid")
     try:
         _json(item)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         item = _empty_cve(identifier, "invalid")
         item["warnings"].append("Cached CVE snapshot is not valid JSON evidence")
     return item
@@ -276,10 +276,10 @@ def vet_cves(workspace_root, cve_ids, *, as_of=None):
                                 source={**source, "record_sha256": row["raw_sha256"]},
                                 last_modified=row["modified"],
                             )
-                        except (TypeError, ValueError, KeyError, AttributeError):
+                        except TypeError, ValueError, KeyError, AttributeError:
                             item.update(status="invalid")
                             item["warnings"].append("Local CVE record failed validation")
-        except (OSError, sqlite3.Error, TypeError, ValueError):
+        except OSError, sqlite3.Error, TypeError, ValueError:
             for item in result.values():
                 if item["status"] == "missing":
                     item["status"] = "unavailable"
@@ -333,7 +333,7 @@ def vet_cves(workspace_root, cve_ids, *, as_of=None):
                                 "stale": epss_state["stale"],
                                 "record_sha256": row["raw_sha256"],
                             }
-                        except (TypeError, ValueError):
+                        except TypeError, ValueError:
                             item["warnings"].append("Local EPSS record failed validation")
                     for row in db.execute(f"SELECT * FROM kev WHERE id IN ({placeholders})", chunk):
                         item = result[row["id"]]
@@ -353,13 +353,13 @@ def vet_cves(workspace_root, cve_ids, *, as_of=None):
                                 "stale": kev_state["stale"],
                                 "record_sha256": row["raw_sha256"],
                             }
-                        except (TypeError, ValueError):
+                        except TypeError, ValueError:
                             item["kev"] = None
                             item["warnings"].append("Local KEV record failed validation")
                 if not kev_complete:
                     for item in result.values():
                         item["warnings"].append("Local KEV feed is unavailable or incomplete")
-        except (OSError, sqlite3.Error, TypeError, ValueError, KeyError, AttributeError):
+        except OSError, sqlite3.Error, TypeError, ValueError, KeyError, AttributeError:
             for item in result.values():
                 item["warnings"].append("Local risk catalog could not be read completely")
     for item in result.values():
@@ -405,7 +405,7 @@ def _present(value):
 def _timestamp(value):
     try:
         return isinstance(value, (datetime, date)) or bool(parse_date(str(value)))
-    except (TypeError, ValueError, OverflowError):
+    except TypeError, ValueError, OverflowError:
         return False
 
 
@@ -435,7 +435,7 @@ def _data(fields, normalized):
     port = fields.get("port")
     try:
         endpoint = not isinstance(port, bool) and str(port).isdigit() and 1 <= int(port) <= 65535
-    except (ValueError, TypeError, OverflowError):
+    except ValueError, TypeError, OverflowError:
         endpoint = False
     provenance = (
         isinstance(source_hash, str)

@@ -37,7 +37,7 @@ def origin_tuple(value):
             parsed.hostname.lower(),
             parsed.port or (443 if parsed.scheme == "https" else 80),
         )
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return None
 
 

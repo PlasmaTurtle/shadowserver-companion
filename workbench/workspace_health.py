@@ -389,7 +389,7 @@ def _inspect_workspace(root):
         try:
             checkpoint("Measuring " + name + " storage")
             storage[name] = _storage(root / name)
-        except (OSError, ValueError):
+        except OSError, ValueError:
             storage[name] = {
                 "status": "error",
                 "message": "Storage contains an unsafe or unreadable path",
@@ -397,14 +397,14 @@ def _inspect_workspace(root):
     for name, path in (("reference_data", reference), ("restore_points", restore_dir(root))):
         try:
             storage[name] = _storage(path)
-        except (OSError, ValueError):
+        except OSError, ValueError:
             storage[name] = {
                 "status": "error",
                 "message": "Storage contains an unsafe or unreadable path",
             }
     try:
         backup = backup_status(root)
-    except (OSError, ValueError, json.JSONDecodeError):
+    except OSError, ValueError, json.JSONDecodeError:
         backup = {"last_export": None, "restore_points": [], "status": "unreadable"}
     warnings = []
     if backup.get("status") == "unreadable":
@@ -427,7 +427,7 @@ def _inspect_workspace(root):
 
     try:
         cleanup = plan(root)
-    except (OSError, sqlite3.Error, ValueError):
+    except OSError, sqlite3.Error, ValueError:
         cleanup = {
             "available": False,
             "message": "Cleanup is unavailable until database compatibility and integrity are restored.",

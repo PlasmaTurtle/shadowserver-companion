@@ -40,7 +40,7 @@ def _timestamp(value):
         if value.tzinfo is None:
             value = value.replace(tzinfo=timezone.utc)
         return value.timestamp()
-    except (ValueError, TypeError, OverflowError):
+    except ValueError, TypeError, OverflowError:
         return float("-inf")
 
 
@@ -240,7 +240,7 @@ def reference_records(raw, source=None):
             try:
                 url = urlsplit(value.get("url", ""))
                 valid = url.scheme in ("http", "https") and bool(url.netloc)
-            except (ValueError, TypeError):
+            except ValueError, TypeError:
                 valid = False
             if valid:
                 records.append(

@@ -54,7 +54,7 @@ def _age(stamp):
         return (
             datetime.now(timezone.utc) - datetime.fromisoformat(stamp.replace("Z", "+00:00"))
         ).total_seconds()
-    except (TypeError, ValueError, AttributeError):
+    except TypeError, ValueError, AttributeError:
         return float("inf")
 
 
@@ -66,7 +66,7 @@ def _intact(store, record):
         return hashlib.sha256(store.path(path).read_bytes()).hexdigest() == (
             record.get("body_sha256") or record.get("sha256")
         )
-    except (ValueError, OSError):
+    except ValueError, OSError:
         return False
 
 
@@ -137,7 +137,7 @@ def catalog_record(store, cve_id):
         ):
             return value
         return None
-    except (OSError, sqlite3.Error, ValueError, TypeError, KeyError):
+    except OSError, sqlite3.Error, ValueError, TypeError, KeyError:
         # An unavailable reference cache does not remove the existing API fallback.
         return None
 
@@ -155,7 +155,7 @@ def _capture_catalog(store, cve_id, public_url):
         if not retrieved_at or not url:
             return None
         body = json.dumps(raw, ensure_ascii=False, sort_keys=True, allow_nan=False).encode("utf-8")
-    except (ValueError, KeyError, TypeError, AttributeError):
+    except ValueError, KeyError, TypeError, AttributeError:
         return None
     stamp, revision = now(), uid()
     relative = f"evidence/cve/{cve_id}-{revision}.json"
@@ -195,7 +195,7 @@ def risk_fingerprint(store, key):
         from ..cve_catalog.risk import RiskStore
 
         return RiskStore(store.root).fingerprint(key)
-    except (OSError, sqlite3.Error, ValueError, TypeError, KeyError):
+    except OSError, sqlite3.Error, ValueError, TypeError, KeyError:
         return None
 
 
@@ -209,7 +209,7 @@ def risk_current_state(store, key):
         from ..cve_catalog.risk import RiskStore
 
         return RiskStore(store.root).status()[provider]
-    except (OSError, sqlite3.Error, ValueError, TypeError, KeyError):
+    except OSError, sqlite3.Error, ValueError, TypeError, KeyError:
         return None
 
 
@@ -227,7 +227,7 @@ def _capture_local_risk(store, key, public_url):
         if not origin.get("url") or not origin.get("retrieved_at"):
             return None
         body = json.dumps(raw, ensure_ascii=False, sort_keys=True, allow_nan=False).encode()
-    except (OSError, sqlite3.Error, ValueError, TypeError, KeyError):
+    except OSError, sqlite3.Error, ValueError, TypeError, KeyError:
         return None
     revision, extracted_at = uid(), now()
     relative = f"evidence/risk/{revision}.json"
@@ -393,7 +393,7 @@ def _response_metadata(headers):
     if retry_after and not re.fullmatch(r"[0-9]{1,10}", retry_after):
         try:
             retry_after = parsedate_to_datetime(retry_after).isoformat()
-        except (TypeError, ValueError, OverflowError):
+        except TypeError, ValueError, OverflowError:
             retry_after = ""
         else:
             # retry_delay expects an HTTP date, so retain only the canonical
@@ -610,7 +610,7 @@ def _cached_json(store, key, url, *, refresh=False, cancel_event=None):
             # The mutable lookup projection cannot supply facts under another
             # response's proof, even when its JSON still has a valid shape.
             cached_raw = retained_risk_data(store, key, proof)
-        except (OSError, ValueError, KeyError, TypeError, AttributeError):
+        except OSError, ValueError, KeyError, TypeError, AttributeError:
             # A pre-0.7 capture may lack completeness evidence. Its raw bytes
             # remain historical evidence, but it cannot answer a new lookup.
             intact = False

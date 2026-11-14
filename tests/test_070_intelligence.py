@@ -208,9 +208,9 @@ def test_only_complete_negative_catalog_establishes_nonmembership(tmp_path, monk
     original = acquisition._response_get
     monkeypatch.setattr(
         "workbench.intelligence.acquisition._response_get",
-        lambda url, **kw: response(kev((OTHER,)))
-        if url == acquisition.KEV_URL
-        else original(url, **kw),
+        lambda url, **kw: (
+            response(kev((OTHER,))) if url == acquisition.KEV_URL else original(url, **kw)
+        ),
     )
     result = sources.enrich(Store(tmp_path), ID)
     assert result["kev"] is False and result["kev_catalog_complete"]

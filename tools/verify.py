@@ -222,7 +222,7 @@ def main():
                                     ) as response:
                                         if response.status == 200:
                                             break
-                                except (OSError, ValueError, KeyError):
+                                except OSError, ValueError, KeyError:
                                     time.sleep(0.2)
                             else:
                                 raise RuntimeError(

@@ -25,7 +25,7 @@ def report_snapshot(db, report):
         ):
             return None
         return value
-    except (OSError, ValueError, KeyError, TypeError):
+    except OSError, ValueError, KeyError, TypeError:
         return None
 
 

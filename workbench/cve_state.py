@@ -34,7 +34,7 @@ def _instant(value):
         # Evidence capture is an event instant. A naive date is not proof that
         # it happened after another captured record.
         return instant.astimezone(timezone.utc) if instant.tzinfo is not None else None
-    except (ValueError, OverflowError):
+    except ValueError, OverflowError:
         return None
 
 

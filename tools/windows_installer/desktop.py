@@ -80,7 +80,7 @@ def existing_instance(port: int, workspace: Path, demo: bool, *, timeout: float 
         ):
             return None
         return f"http://127.0.0.1:{port}/#launch=" + token
-    except (OSError, ValueError, TypeError, KeyError):
+    except OSError, ValueError, TypeError, KeyError:
         return None
 
 

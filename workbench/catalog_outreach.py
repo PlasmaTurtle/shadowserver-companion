@@ -86,7 +86,7 @@ def reference_summaries(root, cve_ids):
                 )
                 for row in db.execute(query, batch):
                     result[row["id"]] = dict(row)
-    except (OSError, ValueError, sqlite3.Error):
+    except OSError, ValueError, sqlite3.Error:
         return {}
     return result
 
@@ -172,7 +172,7 @@ def decorate_observations(root, rows):
         from .cve_catalog.risk import RiskStore
 
         risks = RiskStore(root).batch(values)
-    except (ImportError, AttributeError, OSError, ValueError, sqlite3.Error):
+    except ImportError, AttributeError, OSError, ValueError, sqlite3.Error:
         pass
     for row in rows:
         findings = []

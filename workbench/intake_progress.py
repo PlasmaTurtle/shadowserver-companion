@@ -12,7 +12,7 @@ def catalog_readiness(root):
 
     try:
         status = CatalogStorage(root).status()
-    except (OSError, ValueError, sqlite3.Error):
+    except OSError, ValueError, sqlite3.Error:
         return {"state": "unavailable", "total": 0, "bootstrap_complete": False}
     state = (
         "missing"

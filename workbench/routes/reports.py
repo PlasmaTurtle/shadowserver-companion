@@ -106,7 +106,7 @@ def register(app, *, store, cases, get_lead):
                     "supporting-appendix.pdf",
                     "supporting-appendix.docx",
                 } <= manifest["files"].keys()
-            except (ValueError, OSError, KeyError, TypeError):
+            except ValueError, OSError, KeyError, TypeError:
                 pass
         return rows
 

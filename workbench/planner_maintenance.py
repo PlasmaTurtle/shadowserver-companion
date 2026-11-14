@@ -23,7 +23,7 @@ def status(root):
     try:
         value = json.loads(_path(root).read_text(encoding="utf-8"))
         return value if isinstance(value, dict) else {"state": "not_run"}
-    except (OSError, ValueError):
+    except OSError, ValueError:
         return {"state": "not_run"}
 
 
@@ -36,7 +36,7 @@ def run(store, force=False):
         current = time.time()
         try:
             last_attempt = float(previous.get("attempt_epoch", 0))
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             last_attempt = 0
         if not force and current - last_attempt < _MIN_INTERVAL:
             return {**previous, "deferred": True}

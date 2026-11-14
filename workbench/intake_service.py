@@ -222,7 +222,7 @@ class IntakeService:
                     continue
                 added += not self.enqueue(path.name, content)["duplicate"]
                 self.inbox_seen[path.name] = signature
-            except (ValueError, OSError):
+            except ValueError, OSError:
                 LOG.exception("Could not import inbox file %s", path.name)
         return added
 

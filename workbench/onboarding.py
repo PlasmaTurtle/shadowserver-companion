@@ -119,7 +119,7 @@ class SetupService:
             if not isinstance(value, dict) or not isinstance(value.get("steps", {}), dict):
                 raise ValueError
             return {"version": SCHEMA_VERSION, "completed": False, "steps": {}, **value}
-        except (ValueError, TypeError):
+        except ValueError, TypeError:
             return {
                 "version": SCHEMA_VERSION,
                 "completed": False,

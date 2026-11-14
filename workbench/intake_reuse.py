@@ -41,7 +41,7 @@ def _age(stamp, current):
             return None
         age = (current - value.astimezone(timezone.utc)).total_seconds()
         return age if age >= 0 else None
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return None
 
 
@@ -96,7 +96,7 @@ def _proof_matches(proof, root, evidence_store):
             proof.get("protocol", "RDAP"),
         )
         return record.protocol == "RDAP" and record.find_domain(root) is not None
-    except (KeyError, ValueError, TypeError, AttributeError):
+    except KeyError, ValueError, TypeError, AttributeError:
         return False
 
 

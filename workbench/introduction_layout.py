@@ -307,7 +307,7 @@ def layout_introduction(model, width=PAGE_WIDTH, height=PAGE_HEIGHT):
         try:
             selected = date.fromisoformat(value)
             value = selected.strftime("%B ") + str(selected.day) + selected.strftime(", %Y")
-        except (TypeError, ValueError):
+        except TypeError, ValueError:
             pass
         add(value, label="Date:", indent=78, after=10)
     add(model["subject"], label="Subject:", indent=78, after=2)

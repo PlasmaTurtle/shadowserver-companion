@@ -579,11 +579,13 @@ def write_evidence_reader(data, root):
         selected.sort(key=lambda e: e.get("kind") == "attribution_history")
         if code == "D":
             selected.sort(
-                key=lambda entry: 0
-                if entry.get("kind") == "reference"
-                else 2
-                if entry.get("kind") == "closing_resource"
-                else 1
+                key=lambda entry: (
+                    0
+                    if entry.get("kind") == "reference"
+                    else 2
+                    if entry.get("kind") == "closing_resource"
+                    else 1
+                )
             )
         anchor = "records-" + code.lower()
         count = (
@@ -869,7 +871,7 @@ def write_evidence_reader(data, root):
             continue
         try:
             value = json.loads(file.read_text(encoding="utf-8"))
-        except (UnicodeDecodeError, json.JSONDecodeError):
+        except UnicodeDecodeError, json.JSONDecodeError:
             raw_cards.append(
                 _card(
                     "source-" + str(len(raw_cards) + 1),

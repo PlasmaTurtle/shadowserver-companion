@@ -17,7 +17,7 @@ def display_time(value):
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
         if parsed.tzinfo is not None:
             return parsed.astimezone(timezone.utc).strftime("%b %d, %Y at %H:%M:%S UTC")
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         pass
     return str(value)
 

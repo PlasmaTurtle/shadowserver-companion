@@ -44,5 +44,5 @@ def observed(entry, fallback):
         return (
             stamp.replace(tzinfo=stamp.tzinfo or timezone.utc).astimezone(timezone.utc).isoformat()
         )
-    except (ValueError, TypeError):
+    except ValueError, TypeError:
         return fallback
