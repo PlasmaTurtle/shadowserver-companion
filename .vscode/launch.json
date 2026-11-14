@@ -1,0 +1,16 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Companion: isolated synthetic demo",
+      "type": "debugpy",
+      "request": "launch",
+      "program": "${workspaceFolder}/run.py",
+      "cwd": "${workspaceFolder}",
+      "args": ["--demo", "--data-dir", "${workspaceFolder}/build/ide-demo", "--port", "8880"],
+      "env": {"PYTHONPATH": "${workspaceFolder}/components/attribution/src"},
+      "console": "integratedTerminal",
+      "justMyCode": true
+    }
+  ]
+}
