@@ -1,6 +1,6 @@
 """Chaos uses independent install/data identities without migrating private folders."""
 
-from contextlib import nullcontext
+from contextlib import nullcontext, closing
 import importlib.util
 import json
 from pathlib import Path
@@ -291,7 +291,7 @@ def test_chaos_schema_guard_checks_only_chaos_workspace(tmp_path, monkeypatch):
     upgrade.check_workspace_compatibility(data)
     chaos = tmp_path / "local/ShadowserverCompanionChaos/data/workbench.sqlite3"
     chaos.parent.mkdir(parents=True)
-    with sqlite3.connect(chaos) as db:
+    with closing(sqlite3.connect(chaos)) as db, db:
         db.execute("PRAGMA user_version=999")
     with pytest.raises(upgrade.UpgradeError, match="schema 999"):
         upgrade.cleanup(root, staged)

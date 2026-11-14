@@ -92,7 +92,7 @@ exports. Report hashes verify file consistency, not independent authorship.
 
 ## 0.9.85 audit and remediation
 
-See `docs/AUDIT_0985.md` for source review, scanner triage, regression evidence and
+See `docs/history/reviews/AUDIT_0985.md` for source review, scanner triage, regression evidence and
 remaining acceptance limits. Request bytes are bounded before JSON parsing and
 multipart spooling. New screenshot previews are hashed at acquisition and checked
 before viewing, certification and backup restoration. Legacy evidence without a
@@ -181,3 +181,4 @@ record selected for a certified notification.
   and failure recovery. These integrity checks do not provide publisher signing.
 
 TLP:AMBER
+

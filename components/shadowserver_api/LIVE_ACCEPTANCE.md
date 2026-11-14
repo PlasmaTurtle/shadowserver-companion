@@ -1,5 +1,7 @@
 # Live acceptance — pending credentials
 
+> **Historical record.** This checklist predates the Eclipse integration. Its pending-credentials and standalone scope are historical; see [integration status](README.md#integration-status) and [application validation](../../VALIDATION.md) for context.
+
 Status: NOT RUN. All existing automated tests use synthetic fixtures. Existing emailed report access is the design assumption; actual API entitlements are discovered from the key.
 
 1. On a Windows workstation, install the included wheel and run the offline demo in a new folder. Enter the key and secret using `--profile outreach configure`; confirm storage/retrieval across a new terminal and deletion under a disposable test profile. Never put real credentials in chat, command arguments, source files, or captured evidence.
@@ -14,3 +16,4 @@ Status: NOT RUN. All existing automated tests use synthetic fixtures. Existing e
 Acceptance record fields: module version, Python version, Windows version, date/time UTC, credential profile label, tested subscription/type/date range, safe request counts, acquisition hash/size, outcome per step, and unresolved behavior. Never include the actual key, secret, or usable download identifier.
 
 Only after these checks should the module be treated as live-accepted. Companion integration remains a separate future change.
+

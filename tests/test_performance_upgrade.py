@@ -160,7 +160,8 @@ def test_unrelated_cache_writes_keep_base_but_other_process_evidence_invalidates
     eclipse = Eclipse(store)
     original = _base(eclipse)
     command = """import sqlite3,sys
-with sqlite3.connect(sys.argv[1]) as db:
+from contextlib import closing
+with closing(sqlite3.connect(sys.argv[1])) as db, db:
  db.execute(sys.argv[2],tuple(sys.argv[3:]))
 """
     subprocess.run(

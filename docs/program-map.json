@@ -1791,8 +1791,8 @@
       "path": "static/modules/navigation.js",
       "module": "static/modules/navigation.js",
       "owner": "browser",
-      "lines": 389,
-      "sha256": "7c9f8dde50d44cbae4c4db0286b8258491a5e760683490c2ea65acbbc5ff1a32",
+      "lines": 392,
+      "sha256": "0427478f081ff22e0a2a63dbb2caa402932030ecf0727b800f8158285c53839f",
       "imports": [],
       "symbols": [
         {
@@ -1802,7 +1802,7 @@
         },
         {
           "name": "start",
-          "line": 287,
+          "line": 290,
           "kind": "export"
         }
       ]
@@ -2644,8 +2644,8 @@
       "path": "tools/release_policy.py",
       "module": "tools.release_policy",
       "owner": "distribution",
-      "lines": 213,
-      "sha256": "d8b014e3c604e6bd7323813cfc89e246169f53efcda1ab4e1d605422a91f4ce1",
+      "lines": 218,
+      "sha256": "c29105f1e80f06f9c3dd1a0ba6e95f2cf04c424d21ff0752ed5d0362204774d1",
       "imports": [],
       "symbols": [
         {
@@ -2749,8 +2749,8 @@
       "path": "tools/verify.py",
       "module": "tools.verify",
       "owner": "distribution",
-      "lines": 271,
-      "sha256": "665f4208b594fe92f6e3b8ce4ced2611aa222b71e5d05f6991af30d5050cb00e",
+      "lines": 274,
+      "sha256": "7f51689f64100993b46cb88552703fad111e4a55f925168ae8f4c738aa74396c",
       "imports": [
         "workbench.local_session"
       ],
@@ -2846,45 +2846,45 @@
       "path": "tools/windows_installer/build.py",
       "module": "tools.windows_installer.build",
       "owner": "distribution",
-      "lines": 405,
-      "sha256": "ed351376c6772479227acde3391a212349e0f18835f2c8644fffba859b0fb48d",
+      "lines": 407,
+      "sha256": "7b00eda0fd4accbf66df1527800bd97e739a1a65cb89a2f23d2a6488d8ca5166",
       "imports": [
         "workbench.release"
       ],
       "symbols": [
         {
           "name": "sha256",
-          "line": 66,
+          "line": 68,
           "kind": "function"
         },
         {
           "name": "copy_source",
-          "line": 74,
+          "line": 76,
           "kind": "function"
         },
         {
           "name": "extract_runtime",
-          "line": 91,
+          "line": 93,
           "kind": "function"
         },
         {
           "name": "validate_wheels",
-          "line": 107,
+          "line": 109,
           "kind": "function"
         },
         {
           "name": "uninstall_inventory",
-          "line": 126,
+          "line": 128,
           "kind": "function"
         },
         {
           "name": "installer_definitions",
-          "line": 155,
+          "line": 157,
           "kind": "function"
         },
         {
           "name": "main",
-          "line": 170,
+          "line": 172,
           "kind": "function"
         }
       ]
@@ -2960,83 +2960,83 @@
       "path": "tools/windows_installer/upgrade_cleanup.py",
       "module": "tools.windows_installer.upgrade_cleanup",
       "owner": "distribution",
-      "lines": 548,
-      "sha256": "aee88aca41fdbeaefc24d0efc67c846819e45966b184f67a152d25bd8368a4b5",
+      "lines": 550,
+      "sha256": "bbf95d19205d0a3accd997faf0f7b9d919418003fd2cbfdf9851f830776f3102",
       "imports": [],
       "symbols": [
         {
           "name": "UpgradeError",
-          "line": 79,
+          "line": 81,
           "kind": "class"
         },
         {
           "name": "member_parts",
-          "line": 83,
+          "line": 85,
           "kind": "function"
         },
         {
           "name": "read_inventory",
-          "line": 135,
+          "line": 137,
           "kind": "function"
         },
         {
           "name": "manifest_edition",
-          "line": 168,
+          "line": 170,
           "kind": "function"
         },
         {
           "name": "manifest_identity",
-          "line": 176,
+          "line": 178,
           "kind": "function"
         },
         {
           "name": "check_workspace_compatibility",
-          "line": 188,
+          "line": 190,
           "kind": "function"
         },
         {
           "name": "safe_target",
-          "line": 224,
+          "line": 226,
           "kind": "function"
         },
         {
           "name": "sha256",
-          "line": 241,
+          "line": 243,
           "kind": "function"
         },
         {
           "name": "generated_caches",
-          "line": 249,
+          "line": 251,
           "kind": "function"
         },
         {
           "name": "remove_caches",
-          "line": 282,
+          "line": 284,
           "kind": "function"
         },
         {
           "name": "repair_without_inventory",
-          "line": 317,
+          "line": 319,
           "kind": "function"
         },
         {
           "name": "uninstall",
-          "line": 385,
+          "line": 387,
           "kind": "function"
         },
         {
           "name": "remove_scheduled_task",
-          "line": 403,
+          "line": 405,
           "kind": "function"
         },
         {
           "name": "cleanup",
-          "line": 421,
+          "line": 423,
           "kind": "function"
         },
         {
           "name": "main",
-          "line": 510,
+          "line": 512,
           "kind": "function"
         }
       ]
@@ -3074,8 +3074,8 @@
       "path": "workbench/accretion.py",
       "module": "workbench.accretion",
       "owner": "intake-jobs",
-      "lines": 758,
-      "sha256": "05b55ba550ef541f0c965262db3b01c778eeb4f280f20521526049806f9ffbc3",
+      "lines": 764,
+      "sha256": "67392e4445ed061942ac50a06ba6e6fbc30163b7aa170d16b831fa27184a9fe3",
       "imports": [
         "workbench.cve_catalog.risk",
         "workbench.cve_catalog.storage",
@@ -3086,32 +3086,32 @@
       "symbols": [
         {
           "name": "policy_defaults",
-          "line": 49,
+          "line": 50,
           "kind": "function"
         },
         {
           "name": "normalize_policy",
-          "line": 63,
+          "line": 64,
           "kind": "function"
         },
         {
           "name": "policy_hash",
-          "line": 111,
+          "line": 112,
           "kind": "function"
         },
         {
           "name": "vet_cves",
-          "line": 211,
+          "line": 212,
           "kind": "function"
         },
         {
           "name": "score_lead",
-          "line": 507,
+          "line": 513,
           "kind": "function"
         },
         {
           "name": "score_leads",
-          "line": 726,
+          "line": 732,
           "kind": "function"
         }
       ]

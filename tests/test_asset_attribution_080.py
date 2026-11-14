@@ -1,5 +1,7 @@
 """Asset retries retain scope and evidence; choosing evidence is an explicit edit."""
 
+from contextlib import closing
+
 import io
 import json
 import sqlite3
@@ -234,7 +236,7 @@ def test_corrupt_saved_evidence_is_not_supported_or_adoptable(client, app):
     )
     assert selected.status_code == 200
     snapshot_id = saved["result"]["evidence"][0]["snapshot_id"]
-    with sqlite3.connect(app.state.store.root / "attribution.sqlite3") as db:
+    with closing(sqlite3.connect(app.state.store.root / "attribution.sqlite3")) as db, db:
         for (name,) in db.execute(
             "SELECT name FROM sqlite_master WHERE type='trigger' AND tbl_name='snapshots'"
         ):

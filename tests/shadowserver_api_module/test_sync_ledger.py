@@ -1,3 +1,4 @@
+from contextlib import closing
 from dataclasses import replace
 from datetime import date
 import hashlib
@@ -97,7 +98,7 @@ class SyncLedgerTests(unittest.TestCase):
         self.tmp.cleanup()
 
     def rows(self, table):
-        with sqlite3.connect(self.path) as db:
+        with closing(sqlite3.connect(self.path)) as db:
             db.row_factory = sqlite3.Row
             return [dict(r) for r in db.execute("SELECT * FROM " + table)]
 

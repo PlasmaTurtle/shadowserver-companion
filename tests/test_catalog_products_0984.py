@@ -1,5 +1,7 @@
 """Product applicability, local indexing, distinct facets and immutable revision boundaries."""
 
+from contextlib import closing
+
 import copy
 import hashlib
 import json
@@ -282,7 +284,7 @@ def test_risk_refresh_cannot_change_a_selected_query_generation(tmp_path, monkey
     c = Catalog(tmp_path / "data")
     put(c, record("CVE-2026-1000", kev=True))
     path = c.folder / "risk.sqlite3"
-    with sqlite3.connect(path) as db:
+    with closing(sqlite3.connect(path)) as db, db:
         db.execute("PRAGMA journal_mode=WAL")
         db.executescript(
             "CREATE TABLE kev(id TEXT PRIMARY KEY,raw_json TEXT,raw_sha256 TEXT);CREATE TABLE epss(id TEXT PRIMARY KEY,score REAL,percentile REAL,score_date TEXT,model_version TEXT,raw_sha256 TEXT);CREATE TABLE metadata(key TEXT PRIMARY KEY,value TEXT)"
@@ -297,7 +299,7 @@ def test_risk_refresh_cannot_change_a_selected_query_generation(tmp_path, monkey
 
     def refresh_after_snapshot(db):
         context = original(db)
-        with sqlite3.connect(path) as writer:
+        with closing(sqlite3.connect(path)) as writer, writer:
             writer.execute("DELETE FROM kev")
             writer.execute(
                 "UPDATE metadata SET value=? WHERE key='kev'",
@@ -327,10 +329,10 @@ def test_identical_feed_repairs_a_tampered_raw_record(tmp_path):
 def test_seed_copy_restores_wal_before_background_indexing(tmp_path):
     c = Catalog(tmp_path / "data")
     put(c, record())
-    with sqlite3.connect(c.db) as db:
+    with closing(sqlite3.connect(c.db)) as db, db:
         assert db.execute("PRAGMA journal_mode=DELETE").fetchone()[0] == "delete"
     assert c.index_status()["ready"]
-    with sqlite3.connect(c.db) as db:
+    with closing(sqlite3.connect(c.db)) as db, db:
         assert db.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
 
 
@@ -344,7 +346,7 @@ def test_older_release_updates_invalidate_and_rebuild_derived_data(tmp_path):
     value["affected"][0]["affectedData"][0]["product"] = "Changed product"
     value["lastModified"] = "2026-11-12T00:00:00Z"
     raw = json.dumps(value, sort_keys=True)
-    with sqlite3.connect(c.db) as old_release:
+    with closing(sqlite3.connect(c.db)) as old_release, old_release:
         old_release.execute(
             "UPDATE records SET raw_json=?,raw_sha256=?,modified=? WHERE id=?",
             (raw, hashlib.sha256(raw.encode()).hexdigest(), value["lastModified"], value["id"]),
@@ -363,7 +365,7 @@ def test_older_delete_and_reused_rowid_insert_are_reindexed(tmp_path):
     put(c, old)
     c.build_index()
     raw = json.dumps(new, sort_keys=True)
-    with sqlite3.connect(c.db) as previous:
+    with closing(sqlite3.connect(c.db)) as previous, previous:
         previous.execute("DELETE FROM records WHERE id=?", (old["id"],))
         previous.execute(
             "INSERT INTO records VALUES(?,?,?,?,?,?,?,?,?,?)",
