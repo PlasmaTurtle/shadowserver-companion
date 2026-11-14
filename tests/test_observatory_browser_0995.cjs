@@ -106,6 +106,9 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
       'Keyboard mass selection resolves into scoped Atlas and returns to the same field, object, camera and revision.',
     );
 
+    // A selected field object intentionally scopes traditional views. Clear it
+    // before checking that unselected modes preserve the overview's scope.
+    await page.getByRole('button', { name: 'Clear selection', exact: true }).click();
     const unchanged = await counts();
     for (const mode of ['atlas', 'pulse', 'records', 'field']) {
       await page.locator('.ec-views [data-ec-view="' + mode + '"]').click();
