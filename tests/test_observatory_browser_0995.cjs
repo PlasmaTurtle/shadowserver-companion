@@ -155,14 +155,16 @@ const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
     );
     await screenshot('0100-entity-map');
     await page.locator('.ec-views [data-ec-view="records"]').click();
+    const reloadedResponse = fieldRequest();
     await page.reload();
+    const reloaded = await (await reloadedResponse).json();
     await ready();
     assert.equal(await page.locator('#eclipse').getAttribute('data-view'), 'records');
     checks.push('Traditional modes share scope; an explicit preferred mode survives reload.');
 
     const record = page.locator('#ec-record-list [data-ec-row]').first();
     const recordId = await record.getAttribute('data-ec-row');
-    const selectedRecord = initial.records.items.find((item) => item.id === recordId);
+    const selectedRecord = reloaded.records.items.find((item) => item.id === recordId);
     assert(selectedRecord, 'The current record comes from the shared canonical page');
     const detailPath = new URL(
       selectedRecord.detail_url || '/api/eclipse/observations/' + encodeURIComponent(recordId),
