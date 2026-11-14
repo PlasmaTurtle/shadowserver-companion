@@ -36,7 +36,7 @@
 - Fix ignored-contact adoption and missing profile phone fallback. Add schema 16 for outreach drafts; validate saved preparation and scope during backup/restore.
 - Bind report packages and closing snapshots to their database identities, verify mutable CVE/risk summaries against retained source bytes, align reference freshness and schema gates, and keep excluded CVEs out of notification coverage.
 - Preserve inspection of an independently verified historical snapshot when rendered files are missing; complete-package delivery and transfer checks remain enforced.
-- Read case lists from one consistent snapshot and remove quadratic observation-scope counting. Document the remaining condition-level approval-history gap and measured database growth/query recommendations in `docs/DATABASE_AUDIT_0101.md`.
+- Read case lists from one consistent snapshot and remove quadratic observation-scope counting. Document the remaining condition-level approval-history gap and measured database growth/query recommendations in `docs/history/reviews/DATABASE_AUDIT_0101.md`.
 - Preserve entity-map behavior, installation/data identity, dependencies, protected approved template, source evidence and historical report files. Candidate status remains pending exact-version Windows acceptance.
 
 # 0.10.0 — Entity Map
@@ -52,7 +52,7 @@
 - Distinguish current saved profile geography from dated report fallback geography
   governed by the selected observation cutoff.
 - Review clustered-marker interaction, selection, filtering and detail provenance
-  against the entity contract in docs/OBSERVATORY_ENTITY_MAP_0100.md.
+  against the entity contract in docs/history/design/OBSERVATORY_ENTITY_MAP_0100.md.
 - Retain the existing installation and data identity, dependency pins and schema.
   This release remains a candidate; see VALIDATION.md for the actual verification
   status and HOME_VALIDATION.md for native Windows acceptance.
@@ -173,7 +173,7 @@
 - Limit frost to HUD surfaces, protect report paper, and remove internal temperature text from new PDF/DOCX products.
 - Open Observatory immediately with the shared animated background and a loading/retry state.
 - Refresh the official schema inventory; support agreed exposure adapters and real numeric-leading finding tags.
-- Check 98,777 real rows across 17 downloaded files. Live DNS attribution was blocked by automatic approval review; see the explicit acceptance limits in docs/RELEASE_0991.md.
+- Check 98,777 real rows across 17 downloaded files. Live DNS attribution was blocked by automatic approval review; see the explicit acceptance limits in docs/history/releases/RELEASE_0991.md.
 - Upgrade to schema 13; retain scoring weights, dependency pins, edition identity and prior-version fixes.
 
 # 0.9.90 — Component versions and report start dates (2026-11-12)
@@ -184,7 +184,7 @@
 - Date new narratives from the notification case's recorded start date; preserve saved narrative revisions and frozen/certified evidence.
 - Allow current-policy re-evaluation of retained originals without erasing previous import decisions.
 - Replay the actual 4,313-row report through intake: 1,401 observations admitted across 404 domain groups, with 1,022 using component versions. Live attribution and the user's local CVE catalog were not part of that isolated replay.
-- Retain schema 12, scoring weights, dependency pins and the 0.9.89 download compatibility fix. See docs/RELEASE_0990.md.
+- Retain schema 12, scoring weights, dependency pins and the 0.9.89 download compatibility fix. See docs/history/releases/RELEASE_0990.md.
 
 # 0.9.89 — Shadowserver report download compatibility (2026-11-12)
 
@@ -192,7 +192,7 @@
 - Validate original bytes before publishing the report or receipt; retain CSV syntax, gzip, byte-count, hash, redirect and credential protections.
 - Add download and application-import regression coverage for mislabeled attachments and actual HTML/JSON/XML error bodies.
 - Keep schema 12, scoring, UI, Windows runtime and dependencies unchanged.
-- See docs/RELEASE_0989.md for live verification and installation details.
+- See docs/history/releases/RELEASE_0989.md for live verification and installation details.
 
 # 0.9.88 — Accretion intake calibration (2026-11-11)
 
@@ -203,7 +203,7 @@
 - Match uppercase and IDNA attribution domains canonically across imports, review and restored evidence while retaining exact result identity checks.
 - Compare independently recorded admission and temperature expectations across 1,000 intended-valid and 1,000 intended-invalid synthetic records.
 - Keep provisional weights, saved report priorities, historical evidence, schema 12 and runtime/dependency pins unchanged.
-- See docs/RELEASE_0988.md and the final VALIDATION.md entry for the test scope and results.
+- See docs/history/releases/RELEASE_0988.md and the final VALIDATION.md entry for the test scope and results.
 
 # 0.9.87 — Accretion intake and Dark Matter (2026-11-12)
 
@@ -212,7 +212,7 @@
 - Rank Leads by aggregate; carry snapshots through case scope, certification and discreet finished-product markings.
 - Persist usable rejected observations as Dark Matter; add Library browsing, Observatory filters and exact-root historical association.
 - Add optional city/product outreach focus, transparent factors, bounded catalog/disposition reads and neutral legacy handling.
-- Add schema 12 and verify upgrade/restore without regenerating historical reports. See docs/RELEASE_0987.md.
+- Add schema 12 and verify upgrade/restore without regenerating historical reports. See docs/history/releases/RELEASE_0987.md.
 
 # 0.9.86 — Focused data-path performance (2026-11-11)
 
@@ -265,7 +265,7 @@
 - Add semantic zoom, count-weighted relationships, recurrence marks, expanding map clusters, a numeric temporal matrix, persistent source selection and a mobile inspector to Eclipse.
 - Rebuild internal evidence readers as finding-first dossiers with exact grouping and explicit provenance links. Version the neutral unknown-severity treatment for new report layouts while preserving historical revisions.
 - Add Library reading mode, an Activity chronology and clearly separated recipient/internal package downloads.
-- Isolate Dark Matter's installation, workspace, restore points, credentials, shortcuts and ports 8881/8882 from both earlier editions. Keep the release unstable pending Windows acceptance. See [release details](docs/RELEASE_0982.md).
+- Isolate Dark Matter's installation, workspace, restore points, credentials, shortcuts and ports 8881/8882 from both earlier editions. Keep the release unstable pending Windows acceptance. See [release details](docs/history/releases/RELEASE_0982.md).
 
 # 0.9.81 Chaos - Isolated comparison and observation workspace (2026-11-11)
 
@@ -275,7 +275,7 @@
 - Rebuild Eclipse Observatory around Field, Atlas and Pulse with Finding, Shared IP, Organization, Service and Version lenses. Preserve source provenance, unknown locations/dates and visible coverage limits; co-occurrence is not an ownership or compromise conclusion.
 - Simplify contact results and refine fax/recruitment classification while preserving historical source evidence and immediate blank-field suggestions.
 - Add offline search, category filters and explicitly selected-file SHA-256 comparison to new internal evidence readers. Preserve historical packages and the established recipient PDF/DOCX layout.
-- Retain fast content freezes, schema 10 and existing dependency pins. Keep Chaos unstable; native Windows, live API and live contact-site acceptance remain pending. See [release details](docs/RELEASE_0981.md) and [executed validation](VALIDATION.md).
+- Retain fast content freezes, schema 10 and existing dependency pins. Keep Chaos unstable; native Windows, live API and live contact-site acceptance remain pending. See [release details](docs/history/releases/RELEASE_0981.md) and [executed validation](VALIDATION.md).
 
 # 0.9.8 - Independent records and readable evidence (2026-11-11)
 
@@ -299,7 +299,7 @@
 Adds ten cited recipient one-pagers, exact report-family selection, supported
 intake adapters, evidence-appropriate narrative copy and optional sender titles.
 Preserves previous frozen/certified reports and selection defaults.
-See docs/RELEASE_096.md for report priorities and scope, VALIDATION.md for executed
+See docs/history/releases/RELEASE_096.md for report priorities and scope, VALIDATION.md for executed
 checks. Release remains unstable pending this exact build's Windows acceptance.
 
 # 0.9.5 — Daily workflow, report execution and recovery · UNSTABLE
@@ -513,3 +513,4 @@ checks. Release remains unstable pending this exact build's Windows acceptance.
 - Added labeled-sample evaluation and integration tests for migrations, entity merges, reference failures, response integrity, and the production RDAP adapter.
 
 The workbench previously displayed `1.0.0` without a coordinated release sequence. This release standardizes the requested project version to **0.2.0**. The embedded standalone Attribution Module remains **0.1.0**, since its core code has not changed.
+

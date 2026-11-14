@@ -18,6 +18,19 @@ The installed app writes new logs to the sibling `data-logs` folder (`data-demo-
 
 Use one app process per workspace on a local disk. Import limits are 2 GB compressed, 8 GB expanded, and 100,000 archive members. The app rejects links, junctions, unsafe or duplicate paths, and unsupported newer schemas.
 
+## Installation and retained identity
+
+The installed program uses `%LOCALAPPDATA%\Programs\ShadowserverCompanionDarkMatter`;
+working records use `%LOCALAPPDATA%\ShadowserverCompanionDarkMatter\data`.
+These legacy names preserve the existing workspace and credential identity.
+Separate historical Companion and Chaos installations are not searched, merged,
+or copied automatically. Use the explicit backup and recovery procedures below.
+
+The 0.12.0 Guided Setup candidate retains database schema 20 and stores setup
+progress in existing settings. Older workspaces still undergo the migrations
+needed to reach that schema. Do not open an upgraded workspace with an older app.
+
+
 ## Health and storage
 
 Select **Check workspace**. A background job shows its current phase and can be cancelled. Settings preferences remain editable; checking does not migrate databases, repair records, refresh feeds or change retained evidence. It checks:
