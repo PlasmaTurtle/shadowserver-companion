@@ -95,7 +95,7 @@ jobs:
           assert not missing, 'Install Poppler and add its bin directory to PATH: ' + ', '.join(missing)"
       - name: Run backend and Attribution shard
         run: >-
-          python -m pytest -q --maxfail=1 -p tools.pytest_shard
+          python -m pytest -v --maxfail=1 -p tools.pytest_shard
           --ci-shard ${{ matrix.shard }} --ci-shards 4
           --junitxml=backend.xml --durations=15
       - name: Retain backend results and shard inventory
