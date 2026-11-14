@@ -123,6 +123,8 @@ list deterministically. Each test belongs to one shard on each operating system.
 The jobs retain a JUnit result and `shard-manifest.json`, including the selected
 tests, so a failure identifies a smaller reproducible group. Backend jobs install
 Python dependencies and Poppler; they do not install Node or Chromium.
+Backend logs name each test, and pytest prints all thread stacks when a test takes
+more than two minutes. This diagnostic does not skip the test or change its result.
 
 Browser jobs retain their JSON verification summaries. Core runs local-session,
 workspace workflow and accessibility checks against an isolated demo workspace;
@@ -132,7 +134,7 @@ browser group remains a partial verification, even when it passes.
 To reproduce one failed group locally:
 
 ```text
-python -m pytest -q --maxfail=1 -p tools.pytest_shard --ci-shard 2 --ci-shards 4 --junitxml=backend.xml --durations=15
+python -m pytest -v --maxfail=1 -p tools.pytest_shard --ci-shard 2 --ci-shards 4 --junitxml=backend.xml --durations=15
 python tools/verify.py --only-browser --browser-suite setup --report browser.json
 ```
 
