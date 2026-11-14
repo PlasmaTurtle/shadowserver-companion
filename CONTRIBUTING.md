@@ -56,3 +56,14 @@ Do not add a license or redistribute third-party assets without confirming the
 applicable rights and retained notices. Release publication follows the existing
 release gates and version-specific workstation acceptance in
 [HOME_VALIDATION.md](HOME_VALIDATION.md).
+
+
+## Maintain the documentation
+
+Update the guide that owns the changed behavior in the same pull request. Use the
+[documentation index](docs/README.md#keep-the-documentation-dependable) to choose
+its home. The README is an introduction; release narratives and dated audits
+belong in [history](docs/history/README.md), and current instructions belong in
+the maintained guides. Verify local links, heading anchors, and distribution
+allowlists after moving or adding a page. Keep historical test results scoped to
+the build that produced them.

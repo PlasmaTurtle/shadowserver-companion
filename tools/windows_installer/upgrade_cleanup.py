@@ -48,6 +48,8 @@ APP_FILES = {
     "ARCHITECTURE.md",
     "DEVELOPMENT.md",
     "SECURITY.md",
+    "CONTRIBUTING.md",
+    "SUPPORT.md",
     "requirements-constraints.txt",
 }
 PROTECTED = {

@@ -1,4 +1,8 @@
-# Shadowserver Eclipse architecture · 0.9.98
+# Shadowserver Eclipse architecture
+
+This reference describes application boundaries and ownership. Use
+[Development](DEVELOPMENT.md) for setup and verification, and
+[release metadata](RELEASE.json) for the current version and acceptance state.
 
 Open [the interactive program map](docs/program-map.html) to select a component,
 trace its imports, inspect source files and public symbols, and find relevant
@@ -84,7 +88,7 @@ The component registry enforces stdlib-only shared-security imports and prevents
 upward application dependencies. `docs/INPUT_VALIDATION.md` documents the callable
 contracts and the response-to-storage/export boundaries.
 
-## Existing useful components
+## Component boundaries
 
 The Attribution Module already has its own API, CLI, policy, store, tests,
 package version and wheel. Its bounded HTTP transport is also used by CVE
@@ -108,7 +112,7 @@ ECLIPSE still exposes its renderer through `window.Eclipse`. These runtime
 relationships are described in the registry; the static import graph cannot
 infer them.
 
-## Lifecycle direction after extraction
+## Lifecycle and transaction ownership
 
 The former seven-module import cycle is removed. No cycle allowlist remains.
 Public facades (`Store`, `SectionReviews`, `reporting`, `closing`) retain call
@@ -150,7 +154,7 @@ between rename and commit is reconciled by startup recovery. Closing publication
 retains its existing cleanup/recovery behavior. Compatibility facades pass renderer
 functions explicitly so preview/finalization test substitution stays consistent.
 
-## Remaining maintenance work
+## Extension constraints
 
 - Intake and publication/recovery services still contain some aggregate SQL.
   Extract these only while preserving their import and filesystem crash protocols.
@@ -163,9 +167,8 @@ functions explicitly so preview/finalization test substitution stays consistent.
 - The older intake CLI has a legacy network path; production uses Attribution.
   Retiring/migrating that path needs deliberate CLI compatibility validation.
 
-No new product features, source explainers or separate services are part of this
-maintenance release. A zero-cycle source graph is a useful guard, not a claim
-that all runtime/data coupling or maintenance work has disappeared.
+A zero-cycle source graph is a useful guard; runtime and data coupling still
+require explicit review when extending these boundaries.
 
 ## Rules enforced by code
 
@@ -186,11 +189,12 @@ make a failing check pass. No runtime dependency is added by this tooling.
 
 Application release, Attribution package, database schema, snapshot schema,
 renderer identity, template version and source-adapter policy are separate
-contracts. Contact discovery adds candidate records and captured website evidence
+contracts. Contact discovery adds candidate records, derived contact facts and provenance
 without rewriting historical report packages or transferring the stable release
 approval. The discovery package reads public website content; application services
-own persistence, review decisions and explicit contact adoption. The separately
-planned Shadowserver API module is not connected by this upgrade.
+own persistence, review decisions and explicit contact adoption. Shadowserver API
+acquisition uses the integrated client described below and passes imported reports
+through the application's intake workflow.
 
 Original rows and captured provider records remain open-ended data. Internal
 annotations describe them without truncating fields. Retrieval never silently
@@ -201,10 +205,12 @@ and transactions.
 See [validation](VALIDATION.md) for executed checks and
 [security scope](SECURITY.md) for workstation and distribution limits.
 
-The release channel is recorded in `RELEASE.json`. It remains **unstable** until
-version-specific home confirmation is recorded; passing tests cannot promote it.
+The release channel and version-specific Windows acceptance are recorded in
+`RELEASE.json`. The current channel is **candidate**; the earlier accepted Windows
+baseline does not accept changed code. Passing automated tests cannot promote a
+release without the required version-specific confirmation.
 
-## Guidance used in this maintenance pass
+## Design references
 
 - [SQLite isolation](https://www.sqlite.org/isolation.html): one snapshot for related
   reads, one writer transaction for cross-record changes. File availability is
@@ -222,7 +228,7 @@ version-specific home confirmation is recorded; passing tests cannot promote it.
 These references inform the implementation; concurrency, failure-injection and
 real-browser checks establish its actual behavior. They are not a certification.
 
-## 0.9.8 ownership
+## Lead, report and API ownership
 
 `lead_queue.py` and `lead_queue_migration.py` own pending intake associations and
 explicit notification start/add. `repositories/entities.py` and the entity service
@@ -240,3 +246,4 @@ readable, including their existing artwork.
 `routes/shadowserver_api.py` provides authenticated local endpoints. The standalone client, including the 0.1.1 download MIME compatibility fix, lives in `workbench/shadowserver_reports`; its source manifest
 and acceptance notes are in `components/shadowserver_api`. Account secrets use
 session memory or Windows credential storage, outside the workspace database.
+
