@@ -106,6 +106,43 @@ configuration and is not reformatted by the root project.
 The approved template file is excluded from formatting deliberately. Its bytes are
 protected by regression tests. Do not edit it as a cosmetic cleanup.
 
+## CI stages and focused reruns
+
+GitHub Actions runs source checks once, then runs backend and browser jobs
+independently on Ubuntu and Windows. The final **CI result** succeeds only when
+every stage succeeds; a skipped or canceled stage cannot produce a passing result.
+
+| Stage         | Scope                                                                                                                   |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Source checks | Dependency integrity, release identity, program map, Python and frontend formatting/lint, and frontend module contracts |
+| Backend       | Four shards per operating system, covering all collected Python and standalone Attribution tests                        |
+| Browser       | Separate Core, Observatory and Setup jobs per operating system                                                          |
+
+Backend shards keep whole test modules together and partition the sorted module
+list deterministically. Each test belongs to one shard on each operating system.
+The jobs retain a JUnit result and `shard-manifest.json`, including the selected
+tests, so a failure identifies a smaller reproducible group. Backend jobs install
+Python dependencies and Poppler; they do not install Node or Chromium.
+
+Browser jobs retain their JSON verification summaries. Core runs local-session,
+workspace workflow and accessibility checks against an isolated demo workspace;
+Observatory and Setup each use their own dedicated synthetic fixture. A single
+browser group remains a partial verification, even when it passes.
+
+To reproduce one failed group locally:
+
+```text
+python -m pytest -q --maxfail=1 -p tools.pytest_shard --ci-shard 2 --ci-shards 4 --junitxml=backend.xml --durations=15
+python tools/verify.py --only-browser --browser-suite setup --report browser.json
+```
+
+Use the shard number and operating system from the failed job. Browser suite
+choices are `core`, `observatory` and `setup`. After a transient infrastructure
+failure, GitHub's **Re-run failed jobs** reruns the failed jobs and the final result
+without repeating already successful independent jobs. A new code commit starts
+fresh checks for that commit. The full local verification command above remains
+available; staged CI does not replace exact-version native Windows acceptance.
+
 ## Source configuration
 
 A source deployment may supply `NVD_API_KEY` for catalog acquisition. Do not commit
@@ -290,4 +327,3 @@ and app polling. Existing backend commands continue independently after teardown
 The official SQLite, Python and MDN references and the transaction-mode rationale
 are linked in `ARCHITECTURE.md`. Run `tests/test_maintenance_075.py` and the full
 frontend runner when changing these boundaries.
-
