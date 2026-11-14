@@ -298,8 +298,11 @@ def test_dark_matter_installer_definitions_namespace_every_managed_surface():
         ("chaos", "dark_matter", "shadowserver-eclipse"),
     ],
 )
+@pytest.mark.parametrize(
+    "source_bytes", [b"# synthetic release source\n", b"# synthetic release source\r\n"]
+)
 def test_source_zip_extracts_into_distinct_program_directory(
-    tmp_path, monkeypatch, edition, variant, prefix
+    tmp_path, monkeypatch, edition, variant, prefix, source_bytes
 ):
     import importlib.util
     import zipfile
@@ -312,7 +315,7 @@ def test_source_zip_extracts_into_distinct_program_directory(
     source = tmp_path / "synthetic-source"
     source.mkdir()
     (source / "VERSION").write_text("0.9.82")
-    (source / "run.py").write_text("# synthetic release source\n")
+    (source / "run.py").write_bytes(source_bytes)
     release = {"version": "0.9.82", "channel": "unstable", "edition": edition, "variant": variant}
     output = tmp_path / "Companion-chaos-unstable-darkmatter.zip"
     monkeypatch.setattr(builder, "ROOT", source)
@@ -323,7 +326,7 @@ def test_source_zip_extracts_into_distinct_program_directory(
     builder.main()
     with zipfile.ZipFile(output) as archive:
         assert {name.split("/")[0] for name in archive.namelist()} == {prefix}
-        assert archive.read(prefix + "/run.py") == b"# synthetic release source\n"
+        assert archive.read(prefix + "/run.py") == source_bytes
         manifest = json.loads(archive.read(prefix + "/release-manifest.json"))
         assert manifest["release"]["variant"] == variant
 
