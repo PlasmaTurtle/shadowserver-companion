@@ -12,7 +12,7 @@
     "lint": "node tests/check_frontend_syntax.cjs"
   },
   "devDependencies": {
-    "playwright": "1.62.1",
-    "prettier": "3.6.2"
+    "playwright": "1.65.0",
+    "prettier": "3.9.10"
   }
 }

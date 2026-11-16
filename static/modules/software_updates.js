@@ -89,12 +89,12 @@ export function install(ctx) {
   function unsaved() {
     return Boolean(
       ctx.state.editor?.dirty ||
-        ctx.state.entities?.dirty ||
-        ctx.state.workflow?.workflowDirty ||
-        ctx.actions.hasUnsavedSettings?.() ||
-        ctx.actions.hasUnsavedSetup?.() ||
-        ctx.actions.hasUnsavedLibrary?.() ||
-        ctx.actions.hasUnsavedOutreach?.(),
+      ctx.state.entities?.dirty ||
+      ctx.state.workflow?.workflowDirty ||
+      ctx.actions.hasUnsavedSettings?.() ||
+      ctx.actions.hasUnsavedSetup?.() ||
+      ctx.actions.hasUnsavedLibrary?.() ||
+      ctx.actions.hasUnsavedOutreach?.(),
     );
   }
 
