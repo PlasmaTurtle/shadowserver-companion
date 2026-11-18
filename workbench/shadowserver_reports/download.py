@@ -1,0 +1,390 @@
+"""Unsigned, bounded acquisition of complete original report files.
+
+Raw bytes are immutable and content addressed. A separate immutable receipt is
+written for every successful acquisition, including identical downloads. Only
+syntactic CSV validation is performed; fields and source dates are not changed.
+"""
+from __future__ import annotations
+
+import codecs
+import csv
+from datetime import datetime, timezone
+import gzip
+import hashlib
+from http.client import HTTPException
+import io
+import json
+import math
+import os
+from pathlib import Path
+import re
+import shutil
+import socket
+import ssl
+import tempfile
+from urllib.error import HTTPError, URLError
+from urllib.parse import unquote, urlsplit
+from urllib.request import HTTPRedirectHandler, HTTPSHandler, ProxyHandler, Request, build_opener
+import uuid
+import zlib
+
+from .control import Operation
+from .errors import ConfigurationError, DownloadError, StorageError, BudgetExceeded
+from .models import DownloadReceipt, ReportDescriptor
+
+DOWNLOAD_ORIGIN = "https://dl.shadowserver.org"
+_CHUNK = 64 * 1024
+_MAX_HEADER_BYTES = 256 * 1024
+_DEFAULT_MAX = 256 * 1024 * 1024
+_WINDOWS_RESERVED = {"CON", "PRN", "AUX", "NUL", "CONIN$", "CONOUT$"} | {
+    f"{name}{number}" for name in ("COM", "LPT") for number in "123456789¹²³"
+}
+
+
+class _NoRedirect(HTTPRedirectHandler):
+    def redirect_request(self, req, fp, code, msg, headers, newurl):
+        return None
+
+
+def _download_url(identifier):
+    """Append an opaque capability without encoding away its query delimiter."""
+    if not isinstance(identifier, str) or not identifier or len(identifier) > 8192:
+        raise DownloadError("The report download identifier is invalid.")
+    if any(ord(char) < 33 or ord(char) > 126 for char in identifier) or "#" in identifier or "\\" in identifier:
+        raise DownloadError("The report download identifier is invalid.")
+    if identifier.startswith(("/", "?")):
+        raise DownloadError("The report download identifier is invalid.")
+    url = DOWNLOAD_ORIGIN + "/" + identifier
+    parts = urlsplit(url)
+    decoded_path = unquote(parts.path[1:])
+    if parts.scheme != "https" or parts.netloc != "dl.shadowserver.org" or parts.fragment:
+        raise DownloadError("The report download origin is invalid.")
+    if not decoded_path or "/" in decoded_path or "\\" in decoded_path or decoded_path in (".", ".."):
+        raise DownloadError("The report download identifier is invalid.")
+    return url
+
+
+def _validate_filename(name):
+    if not isinstance(name, str) or not name or len(name) > 255:
+        raise DownloadError("The server report filename is invalid.")
+    if any(ord(char) < 32 or ord(char) == 127 for char in name) or re.search(r'[<>:"/\\|?*]', name):
+        raise DownloadError("The server report filename is unsafe.")
+    if name.rstrip(" .") != name or name in (".", "..") or name.split(".", 1)[0].upper() in _WINDOWS_RESERVED:
+        raise DownloadError("The server report filename is unsafe.")
+    lower = name.lower()
+    if lower.endswith(".csv.gz"):
+        return ".csv.gz"
+    if lower.endswith(".csv"):
+        return ".csv"
+    raise DownloadError("Only CSV and gzip-compressed CSV reports are supported.")
+
+
+class _CheckedReader(io.RawIOBase):
+    """Check cancellation during both compressed and decompressed streaming."""
+    def __init__(self, source, operation, maximum=None):
+        self.source = source
+        self.operation = operation
+        self.maximum = maximum
+        self.count = 0
+
+    def readable(self):
+        return True
+
+    def readinto(self, buffer):
+        self.operation.check()
+        data = self.source.read(min(len(buffer), _CHUNK))
+        self.count += len(data)
+        if self.maximum is not None and self.count > self.maximum:
+            raise BudgetExceeded("Uncompressed report size budget exceeded.")
+        buffer[:len(data)] = data
+        return len(data)
+
+
+def _validate_header(header):
+    if not header or len(header) < 2 or any(not value.strip() for value in header) or len(set(header)) != len(header):
+        raise DownloadError("The report needs at least two unique, nonempty CSV headers.")
+    if any(value.lstrip().startswith(("<", "{", "[")) for value in header):
+        raise DownloadError("The download is an error document instead of a CSV report.")
+    if any(any(ord(char) < 32 and char not in "\t\r\n" for char in value) for value in header):
+        raise DownloadError("The report CSV headers contain unsupported control characters.")
+
+
+class _HeaderGate:
+    """Validate a bounded decoded CSV header before any response bytes reach disk.
+
+    Service MIME labels are not reliable. Gzip is checked as gzip and inspected
+    after bounded decompression; the complete file still passes _rows before
+    publication. Pending transport bytes are bounded independently as well.
+    """
+    def __init__(self, compressed):
+        self.decoder = zlib.decompressobj(31) if compressed else None
+        self.prefix = bytearray()
+        self.pending = bytearray()
+        self.ready = False
+
+    def accept(self, chunk, *, final=False):
+        if self.ready:
+            return chunk
+        self.pending.extend(chunk)
+        if len(self.pending) > _MAX_HEADER_BYTES:
+            raise DownloadError("The report CSV header exceeds its supported size.")
+        try:
+            decoded = self.decoder.decompress(chunk, _MAX_HEADER_BYTES + 1 - len(self.prefix)) if self.decoder else chunk
+        except zlib.error:
+            raise DownloadError("The report compression does not match its CSV filename.") from None
+        self.prefix.extend(decoded)
+        if len(self.prefix) > _MAX_HEADER_BYTES:
+            # Only the first record matters here; limit parser input, not a
+            # high compression ratio for the rest of an otherwise valid file.
+            self.prefix = self.prefix[:_MAX_HEADER_BYTES]
+        significant = bytes(self.prefix).removeprefix(b"\xef\xbb\xbf").lstrip()
+        if significant.startswith((b"<", b"{", b"[")):
+            raise DownloadError("The download is an error document instead of a CSV report.")
+        if not final and b"\n" not in self.prefix and b"\r" not in self.prefix:
+            if len(self.prefix) >= _MAX_HEADER_BYTES:
+                raise DownloadError("The report CSV header exceeds its supported size.")
+            return b""
+        try:
+            # A transport chunk may end in the middle of a UTF-8 value after
+            # the header. Only a complete invalid sequence is an early error.
+            text = codecs.getincrementaldecoder("utf-8-sig")().decode(self.prefix, final=final)
+            header = next(csv.reader(io.StringIO(text, newline=""), strict=True), None)
+        except UnicodeDecodeError as error:
+            if not final and error.reason == "unexpected end of data":
+                return b""
+            raise DownloadError("The report CSV header is not valid UTF-8.") from None
+        except csv.Error:
+            if not final and len(self.prefix) < _MAX_HEADER_BYTES:
+                return b""
+            raise DownloadError("The report CSV header is malformed.") from None
+        _validate_header(header)
+        self.ready = True
+        retained = bytes(self.pending)
+        self.pending.clear()
+        self.prefix.clear()
+        return retained
+
+
+def _rows(path, operation, max_uncompressed, compressed):
+    """CSV syntax validation does not assert a particular Shadowserver schema."""
+    try:
+        with Path(path).open("rb") as raw:
+            if compressed is None:
+                compressed = raw.read(2) == b"\x1f\x8b"
+                raw.seek(0)
+            checked_raw = io.BufferedReader(_CheckedReader(raw, operation))
+            source = gzip.GzipFile(fileobj=checked_raw) if compressed else checked_raw
+            bounded = io.BufferedReader(_CheckedReader(source, operation, max_uncompressed))
+            with io.TextIOWrapper(bounded, encoding="utf-8-sig", newline="") as text:
+                reader = csv.reader(text, strict=True)
+                header = next(reader, None)
+                # Shadowserver reports are multi-column tables. A single-line
+                # plaintext failure must not pass as a one-column empty report.
+                _validate_header(header)
+                for row in reader:
+                    operation.check()
+                    if not row:
+                        continue
+                    if len(row) != len(header):
+                        raise DownloadError("The report contains a malformed CSV row.")
+                    yield dict(zip(header, row))
+            if compressed:
+                source.close()
+            checked_raw.close()
+    except (csv.Error, UnicodeError, EOFError, zlib.error):
+        raise DownloadError("The report is not a supported, well-formed UTF-8 CSV file.") from None
+    except gzip.BadGzipFile:
+        raise DownloadError("The gzip report is invalid or truncated.") from None
+
+
+def iter_rows(path, *, operation=None, max_file_bytes=_DEFAULT_MAX):
+    """Yield header-keyed strings without coercing or dropping unknown columns.
+
+    Compressed bytes are detected by their gzip signature. Validation is lazy:
+    consuming the entire iterator validates the entire file. The standard CSV
+    parser's field limit (normally 128 KiB) is deliberately retained. A report
+    must have at least two named columns, including when it has no data rows.
+    """
+    if type(max_file_bytes) is not int or max_file_bytes <= 0:
+        raise ConfigurationError("Report size limit must be a positive integer.")
+    yield from _rows(path, operation or Operation(), max_file_bytes, None)
+
+
+def _internal_directory(root, name):
+    directory = root / name
+    if directory.is_symlink():
+        raise StorageError("A report storage directory is an unsafe symbolic link.")
+    directory.mkdir(mode=0o700, exist_ok=True)
+    if not directory.is_dir():
+        raise StorageError("A report storage directory is unavailable.")
+    return directory
+
+
+def _hash_existing(path, operation):
+    if path.is_symlink() or not path.is_file():
+        raise StorageError("An existing report storage object is unsafe.")
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        while True:
+            operation.check()
+            chunk = stream.read(_CHUNK)
+            if not chunk:
+                return digest.hexdigest()
+            digest.update(chunk)
+
+
+def _refresh_read_timeout(response, request_timeout, operation):
+    """Refresh urllib's live socket deadline before each one-read operation.
+
+    A custom opener must itself honor the timeout contract. The access to the
+    stdlib response socket is deliberately optional for in-memory test backends.
+    """
+    remaining = min(request_timeout, operation.remaining())
+    raw = getattr(getattr(response, "fp", None), "raw", None)
+    sock = getattr(raw, "_sock", None)
+    if sock is not None:
+        sock.settimeout(remaining)
+
+
+class ReportDownloader:
+    """Download with an independent unsigned transport; never follow redirects.
+
+    The default opener does not inherit proxies from the process environment.
+    Pass an explicitly configured unsigned opener when a proxy is required.
+    Download failures are never retried here: invalid capabilities can trigger
+    provider blocking, so the caller must deliberately refresh/retry a catalog.
+    """
+    def __init__(self, root, *, opener=None, request_timeout=20, max_file_bytes=_DEFAULT_MAX):
+        if not isinstance(request_timeout, (int, float)) or not math.isfinite(request_timeout) or request_timeout <= 0:
+            raise ConfigurationError("Download request timeout must be finite and positive.")
+        if type(max_file_bytes) is not int or max_file_bytes < 1:
+            raise ConfigurationError("Report size limit must be a positive integer.")
+        self.root = Path(root).expanduser()
+        self.request_timeout = request_timeout
+        self.max_file_bytes = max_file_bytes
+        self._opener = opener  # Default context is constructed lazily.
+
+    def download_report(self, report: ReportDescriptor, *, operation=None, schema_reference=None):
+        operation = operation or Operation()
+        operation.check()
+        suffix = _validate_filename(report.filename)
+        url = _download_url(report.download_id)
+        temporary = None
+        try:
+            self.root.mkdir(mode=0o700, parents=True, exist_ok=True)
+            root = self.root.resolve()
+            data_directory = _internal_directory(root, "reports")
+            receipt_directory = _internal_directory(root, "receipts")
+            partial_directory = _internal_directory(root, ".partial")
+            opener = self._opener or build_opener(ProxyHandler({}), HTTPSHandler(context=ssl.create_default_context()), _NoRedirect())
+            request = Request(url, headers={"Accept": "text/csv,application/gzip,application/octet-stream", "Accept-Encoding": "identity", "User-Agent": "shadowserver-reports/0.1.0"}, method="GET")
+            operation.request()
+            try:
+                response = opener.open(request, timeout=min(self.request_timeout, operation.remaining()))
+            except HTTPError as error:
+                try:
+                    error.close()
+                except OSError:
+                    pass
+                raise DownloadError("The report download failed; refresh the catalog before retrying an expired or invalid link.") from None
+            except (URLError, TimeoutError, socket.timeout, OSError):
+                raise DownloadError("The report download failed; refresh the catalog before retrying an expired or invalid link.") from None
+            with response:
+                status = getattr(response, "status", None)
+                if status is None:
+                    status = response.getcode()
+                if status != 200:
+                    raise DownloadError("The download server did not return a complete report.")
+                if hasattr(response, "geturl") and response.geturl() != url:
+                    raise DownloadError("Report download redirects are not permitted.")
+                # The live service can label valid CSV attachments text/html.
+                # MIME labels are advisory: preserve the bounded original bytes
+                # and validate the complete CSV below before publishing either
+                # the file or its receipt. _rows also rejects HTML/JSON/XML bodies.
+                if response.headers.get("Content-Encoding", "identity").strip().lower() not in ("", "identity"):
+                    raise DownloadError("Unexpected HTTP content encoding; original report bytes cannot be verified.")
+                length_header = response.headers.get("Content-Length")
+                try:
+                    expected_length = None if length_header is None else int(length_header)
+                except (TypeError, ValueError):
+                    raise DownloadError("The report response has an invalid byte count.") from None
+                if expected_length is not None and (expected_length < 0 or expected_length > self.max_file_bytes):
+                    raise BudgetExceeded("Report download exceeds its file size budget.")
+                fd, temporary_name = tempfile.mkstemp(prefix="report-", suffix=".part", dir=partial_directory)
+                temporary = Path(temporary_name)
+                digest = hashlib.sha256()
+                total = 0
+                gate = _HeaderGate(suffix == ".csv.gz")
+                read = getattr(response, "read1", response.read)
+                with os.fdopen(fd, "wb") as output:
+                    while True:
+                        operation.check()
+                        try:
+                            _refresh_read_timeout(response, self.request_timeout, operation)
+                            chunk = read(min(_CHUNK, self.max_file_bytes - total + 1))
+                        except (OSError, EOFError, ValueError, HTTPException):
+                            raise DownloadError("The report transfer was interrupted.") from None
+                        if not chunk:
+                            break
+                        operation.consume_bytes(len(chunk))
+                        total += len(chunk)
+                        if total > self.max_file_bytes:
+                            raise BudgetExceeded("Report download exceeds its file size budget.")
+                        if shutil.disk_usage(root).free < len(chunk):
+                            raise StorageError("There is insufficient free space for the report.")
+                        output.write(gate.accept(chunk))
+                        digest.update(chunk)
+                    output.write(gate.accept(b"", final=True))
+                    output.flush()
+                    os.fsync(output.fileno())
+                if expected_length is not None and total != expected_length:
+                    raise DownloadError("The report transfer did not match its declared byte count.")
+                if total == 0:
+                    raise DownloadError("The report download was empty.")
+            with temporary.open("rb") as probe:
+                is_gzip = probe.read(2) == b"\x1f\x8b"
+            if is_gzip != (suffix == ".csv.gz"):
+                raise DownloadError("The report compression does not match its CSV filename.")
+            for _ in _rows(temporary, operation, self.max_file_bytes, is_gzip):
+                pass
+            operation.check()
+            sha256 = digest.hexdigest()
+            target = data_directory / (sha256 + suffix)
+            reused = False
+            # A hard link publishes atomically without ever replacing an object.
+            # Temporary and final directories are on the same selected filesystem.
+            try:
+                os.link(temporary, target)
+            except FileExistsError:
+                if _hash_existing(target, operation) != sha256:
+                    raise StorageError("An existing report failed its stored content hash check.")
+                reused = True
+            receipt = DownloadReceipt(
+                path=str(target), original_filename=report.filename,
+                subscription=report.subscription, report_type=report.report_type,
+                report_date=report.report_date, retrieved_at=datetime.now(timezone.utc).isoformat(),
+                size_bytes=total, sha256=sha256, source_fingerprint=report.source_fingerprint,
+                logical_id=report.logical_id, schema_reference=schema_reference,
+                validation="csv_valid", reused=reused,
+            )
+            receipt_name = f"{report.logical_id[:16]}-{sha256[:16]}-{uuid.uuid4().hex}.json"
+            receipt_bytes = (json.dumps(receipt.public_dict(), ensure_ascii=False, sort_keys=True, indent=2) + "\n").encode("utf-8")
+            fd, receipt_temporary_name = tempfile.mkstemp(prefix="receipt-", suffix=".part", dir=partial_directory)
+            receipt_temporary = Path(receipt_temporary_name)
+            try:
+                with os.fdopen(fd, "wb") as output:
+                    output.write(receipt_bytes)
+                    output.flush()
+                    os.fsync(output.fileno())
+                os.link(receipt_temporary, receipt_directory / receipt_name)
+            finally:
+                receipt_temporary.unlink(missing_ok=True)
+            return receipt
+        except OSError:
+            raise StorageError("The report could not be safely stored; verify free space and filesystem hard-link support.") from None
+        finally:
+            if temporary is not None:
+                try:
+                    temporary.unlink(missing_ok=True)
+                except OSError:
+                    pass

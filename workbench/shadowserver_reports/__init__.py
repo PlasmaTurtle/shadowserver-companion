@@ -1,0 +1,14 @@
+"""Standalone Shadowserver Reports acquisition module."""
+from .control import Operation
+from .models import Credentials, ReportDescriptor, ReportSelection, QuerySpec
+from .client import ReportsClient
+from .download import ReportDownloader, iter_rows
+from .ledger import Ledger
+from .schema import SchemaStore
+from .sync import sync_once
+from .transport import SignedTransport
+
+__version__ = "0.1.2"
+__all__ = ["Credentials", "Operation", "ReportDescriptor", "ReportSelection", "QuerySpec",
+           "ReportsClient", "ReportDownloader", "iter_rows", "Ledger", "SchemaStore",
+           "sync_once", "SignedTransport"]

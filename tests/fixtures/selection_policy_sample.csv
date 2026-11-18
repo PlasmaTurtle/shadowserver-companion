@@ -1,0 +1,9 @@
+fixture_row,review_color,expected_result,hostname,ip,tag,version,region,severity,http_code
+1,yellow,prelookup_pass,example.com,192.0.2.1,eol-php,7.3.25,North Carolina,critical,200
+2,yellow,prelookup_pass,mail.example.com,192.0.2.1,eol-php,7.3.25,North Carolina,critical,200
+3,yellow,prelookup_pass,mail2.example.com,192.0.2.1,eol-php,7.3.25,North Carolina,critical,200
+4,yellow,prelookup_pass,portal.example.com,192.0.2.1,eol-php,7.3.25,North Carolina,critical,200
+5,red,filtered,,192.0.2.1,eol-php,7.3.25,North Carolina,critical,200
+6,red,filtered,example.org,192.0.2.1,eol-php,7.3.25,North Carolina,critical,200
+7,red,filtered,example.net,192.0.2.1,eol-php,7.3.25,North Carolina,critical,200
+8,red,filtered,invalid,192.0.2.1,eol-php,7.3.25,North Carolina,critical,200

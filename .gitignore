@@ -1,0 +1,34 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.venv/
+.venv314/
+node_modules/
+build/
+dist/
+data/
+data-demo/
+*.sqlite3*
+*.log
+
+*.egg-info/
+
+# Local credentials and overrides (examples remain reviewable).
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+
+# Local verification output; never commit operational workspaces or logs.
+/verification*.json
+/backend.xml
+/dependency-integrity.json
+/playwright-report/
+/test-results/
+.coverage
+htmlcov/
+.DS_Store
+Thumbs.db

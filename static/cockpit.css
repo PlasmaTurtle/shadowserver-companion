@@ -1,0 +1,179 @@
+/* Frost belongs to individual HUD surfaces. Document paper stays light. */
+:root[data-theme='dark'] {
+  --cockpit-surface: rgba(9, 18, 32, 0.96);
+  --cockpit-dense: rgba(9, 18, 32, 0.96);
+  --cockpit-rule: rgba(139, 184, 221, 0.2);
+}
+:root[data-theme='dark']
+  :is(.panel, .catalog-panel, .dossier-panel, .dm-brief, .modal, .modal-card, .command-palette):not(
+    .document-paper,
+    .document-paper *
+  ) {
+  background: var(--cockpit-surface);
+  border-color: var(--cockpit-rule);
+  box-shadow:
+    0 16px 48px #0003,
+    inset 0 1px 0 #e3f4ff08;
+}
+:root[data-theme='dark']
+  :is(
+    .topbar,
+    .sidebar,
+    .editor-header,
+    .editor-tabs,
+    .report-section-nav,
+    .catalog-toolbar,
+    .catalog-tabs
+  ):not(.document-paper, .document-paper *) {
+  background: rgba(9, 18, 32, 0.95);
+  border-color: var(--cockpit-rule);
+}
+:root[data-theme='dark']
+  :is(
+    .table-wrap,
+    .catalog-table-wrap,
+    .catalog-record,
+    .catalog-products,
+    .catalog-detail,
+    .evidence-card,
+    .workflow-card,
+    .contact-card,
+    .record-row,
+    .dm-list
+  ):not(.document-paper, .document-paper *) {
+  background: var(--cockpit-dense);
+}
+:root[data-theme='dark'] :is(thead, th):not(.document-paper *) {
+  background: #111d30;
+}
+:root[data-theme='dark'] :is(input, textarea, select):not(.document-paper *) {
+  background-color: #0c1728;
+}
+:root[data-theme='dark'] .panel .panel:not(.document-paper *) {
+  background: rgba(11, 22, 38, 0.94);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
+}
+@supports ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  :root[data-theme='dark'] {
+    --cockpit-surface: rgba(9, 18, 32, 0.86);
+  }
+  :root[data-theme='dark']
+    :is(.panel, .modal, .command-palette):not(.document-paper, .document-paper *) {
+    backdrop-filter: blur(12px) saturate(110%);
+    -webkit-backdrop-filter: blur(12px) saturate(110%);
+  }
+  :root[data-theme='dark'] .panel .panel:not(.document-paper *) {
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+}
+#eclipse :is(.ec-inspector, .ec-command, .ec-controls, .ec-mast, .ec-legend, .ec-timeline) {
+  background: rgba(9, 18, 32, 0.95);
+  border-color: rgba(139, 184, 221, 0.2);
+}
+.website-capture {
+  display: flex;
+  gap: 12px;
+  align-items: end;
+  flex-wrap: wrap;
+  margin-bottom: 18px;
+}
+.website-capture .field {
+  flex: 1;
+  min-width: 180px;
+}
+.website-capture-status {
+  flex-basis: 100%;
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+.capture-provenance {
+  margin: 10px 0;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.capture-provenance dl {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 6px 12px;
+}
+.capture-provenance dd {
+  margin: 0;
+}
+.capture-provenance code {
+  word-break: break-all;
+}
+.manual-evidence {
+  margin: 14px 0;
+}
+.manual-evidence > summary {
+  cursor: pointer;
+  margin-bottom: 14px;
+}
+@media print {
+  * {
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
+
+/* Transparent layout shells leave open space between the instruments. */
+:root[data-theme='dark']
+  :is(
+    #main,
+    .catalog-layout,
+    .entity-dossier,
+    .dossier-index,
+    .lead-dossier,
+    .lead-index,
+    .investigation-workbench,
+    .dm-workspace,
+    .dm-workbench,
+    .investigations-board
+  ) {
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+:root[data-theme='dark']
+  :is(
+    .section-rail,
+    .dossier-section,
+    .dossier-connections,
+    .dossier-record,
+    .accretion-score,
+    .lead-lenses,
+    .dossier-index-tools
+  ) {
+  background: var(--cockpit-surface);
+  border-color: var(--cockpit-rule);
+}
+:root[data-theme='dark'] .investigation-workbench .section-rail {
+  border: 1px solid var(--cockpit-rule);
+  border-radius: 10px;
+  padding: 16px;
+}
+#eclipse :is(.ec-lenses, .ec-space-key, .ec-scene-controls, .ec-tooltip, .ec-filter-popover) {
+  background: rgba(9, 18, 32, 0.96);
+}
+:root[data-theme='dark'] .document-paper {
+  color-scheme: light;
+}
+:root[data-theme='dark']
+  .document-paper
+  :is(.panel, .panel-head, .panel-body, .table-wrap, .approved-text, .report-addresses) {
+  background: transparent;
+  color: var(--text);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+:root[data-theme='dark'] .document-paper :is(thead, th) {
+  background: #edf2f3;
+  color: #172b38;
+}

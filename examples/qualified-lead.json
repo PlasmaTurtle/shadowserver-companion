@@ -1,0 +1,95 @@
+{
+  "schema_version": 2,
+  "notification_id": "e34eeb5dc14c4f20848ad74a7fafeeb4",
+  "entity_id": "e34eeb5dc14c4f20848ad74a7fafeeb4",
+  "entity_name": "Harbor Point Group",
+  "hostname": "harborpoint.example",
+  "hostnames": [
+    {
+      "name": "harborpoint.example",
+      "root_domain": "harborpoint.example"
+    },
+    {
+      "name": "mail.harborpoint.example",
+      "root_domain": "harborpoint.example"
+    }
+  ],
+  "attribution_entry_id": "6fce0ed3a655fd4c26391956d030ad06a3a9773dd59b3db3bf1028c9788c9c0d",
+  "validated_leads": [
+    {
+      "hostname": "harborpoint.example",
+      "entries": [
+        {
+          "id": "6fce0ed3a655fd4c26391956d030ad06a3a9773dd59b3db3bf1028c9788c9c0d",
+          "source": {
+            "workbook": "demonstration-observations.csv",
+            "sheet": "CSV",
+            "row": 16,
+            "fields": {
+              "timestamp": "2026-11-05T16:53:56.420195+00:00",
+              "ip": "192.0.2.50",
+              "protocol": "tcp",
+              "port": 443,
+              "hostname": "harborpoint.example",
+              "tag": "eol-php",
+              "version": "7.3.25",
+              "asn": 64496,
+              "geo": "US",
+              "region": "North Carolina",
+              "city": "Asheville",
+              "http": "PHP/7.3.25",
+              "source_note": "SYNTHETIC DEMONSTRATION \u2014 not a Shadowserver observation"
+            }
+          },
+          "ip": "192.0.2.50",
+          "private_ip": false
+        },
+        {
+          "id": "8f4e058c73af876e39082a06a1059657e99c22d49dfe0696ffd2b0c63660ce88",
+          "source": {
+            "workbook": "demonstration-observations.csv",
+            "sheet": "CSV",
+            "row": 18,
+            "fields": {
+              "timestamp": "2026-11-05T16:53:56.420205+00:00",
+              "ip": "192.0.2.52",
+              "protocol": "tcp",
+              "port": 443,
+              "hostname": "harborpoint.example",
+              "tag": "eol-php",
+              "version": "7.3.25",
+              "asn": 64496,
+              "geo": "US",
+              "region": "North Carolina",
+              "city": "Asheville",
+              "http": "PHP/7.3.25",
+              "source_note": "SYNTHETIC DEMONSTRATION \u2014 not a Shadowserver observation"
+            }
+          },
+          "ip": "192.0.2.52",
+          "private_ip": false
+        }
+      ]
+    }
+  ],
+  "whois": [
+    {
+      "ip": "192.0.2.50",
+      "registry": "DEMONSTRATION RECORD",
+      "source_url": "https://example.com/registration-demo",
+      "retrieved_at": "2026-11-06T16:53:56.461027Z",
+      "protocol": "SYNTHETIC",
+      "attribution": {
+        "root_domain": "harborpoint.example",
+        "matched_domain": "harborpoint.example",
+        "field": "record.demo_contact",
+        "value": "contact@harborpoint.example"
+      },
+      "record": {
+        "notice": "Synthetic evidence for demonstration only. No registry lookup was performed.",
+        "demo_contact": "contact@harborpoint.example",
+        "name": "Harbor Point Group"
+      }
+    }
+  ]
+}

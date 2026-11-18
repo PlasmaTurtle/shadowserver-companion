@@ -1,0 +1,148 @@
+{APP_NAME} {APP_DISPLAY_VERSION} - WINDOWS INSTALLATION
+
+{RELEASE_NOTICE}
+Workstation validation record: app\HOME_VALIDATION.md
+
+START AND STOP
+Open {APP_NAME} from the Start menu or desktop. The launcher opens your
+workspace in the default browser at http://127.0.0.1:{APP_PORT}.
+Keep its console window open while working. Closing the browser tab does
+not stop the local application. Press Ctrl+C in the console to stop it.
+Opening the shortcut again reopens the matching running workspace, or waits
+briefly for an application that is still starting.
+{DEMO_NAME} uses a separate fictional workspace on port {DEMO_PORT}.
+
+FIRST USE
+The first-run setup guides you through API connections, agency and analyst
+identity, jurisdiction, and optional retrieval schedules. Choose a listed agency
+or enter another organization. Your title is optional. API credentials may be
+skipped for a manual-import workspace and added later in Settings.
+Use Remember on this Windows account when credentials should be available on
+later launches or for closed-app schedules. Each user supplies their own keys;
+installation does not include account credentials or pass them on a command line.
+Existing configured workspaces keep their saved choices. Revisit setup and
+individual settings from Settings when your role, jurisdiction or APIs change.
+
+In Library, select Download catalog. The initial download uses compressed
+annual NVD feeds, followed by API updates; allow 10 GiB of free disk space.
+Saved catalog records are retained if you pause; Resume download continues
+the remaining work.
+Wait for complete catalog coverage before importing reports for lead scoring.
+Library shows download, indexing and update status, including any failure.
+Daily reference updates can run while the local application is open; an
+enabled Windows schedule can also run them while the application is closed.
+
+IMPORT AND WORK
+In Shadowserver Data > API, choose a subscription and reports, then Import
+selected. Files accepts XLSX, XLSM, CSV and CSV.gz reports; the inbox folder
+also remains available. Accretion shows the progress of intake and qualification.
+The Leads view presents qualified work. Entities retains organization and
+contact information; Investigations contains notification work.
+
+Workspace presents current work and follow-ups. Observatory opens into the
+Dark Matter Field by default. Select an object, then choose a contextual view
+such as Locations, Products, Assets & findings or History. Back restores the
+prior view and selection. Atlas, Pulse and Records remain directly available;
+Observatory remembers a directly selected view preference.
+
+Review the recipient report before delivery. Complete required sections and
+freeze them before certification. Certified snapshots retain the content and
+supporting evidence used for that revision. Internal outreach temperature is
+shown on recipient documents only as a small color marker. The final package
+also contains internal evidence, chronology and priority records; select the
+recipient report rather than sending the entire internal package by default.
+Record contact attempts and delivery in the investigation, then complete the
+closing report when appropriate.
+
+SCHEDULED INTAKE
+Open Shadowserver Data > API > Scheduled intake. Choose report and reference
+sources, the first check time, recheck interval and recent-date window, then
+save the schedule. Run now provides a manual check. Scheduled report runs
+finish after Accretion completes, and their results appear in the same view.
+
+Enable closed-app runs registers an optional current-user Windows task.
+Windows checks hourly while that user is signed in; the saved schedule decides
+which work is due. The task requires saved credentials, network access and a
+running computer. It does not run as a system service or while signed out.
+Late reports and missed checks are reconsidered on later runs. Review status
+and errors rather than assuming every scheduled retrieval succeeded.
+
+WORKING RECORDS
+Open Start > {APP_NAME} > Working data, or enter this in Explorer:
+  %LOCALAPPDATA%\{APP_ID}\data
+
+Original imports, evidence, databases and certified/closing reports live here,
+outside the installed program. Demo records use the sibling data-demo folder;
+application logs use sibling data-logs. Do not combine workspace folders manually.
+
+BACKUP AND RECOVERY
+In Settings, select Export data and keep the resulting ZIP in a separate
+location. Import data replaces the destination workspace; inspect the summary,
+then restart to apply the staged change. Cancel staged change is available
+before restart. Export from the old application and import through Settings
+when moving from the source ZIP edition or another supported installation.
+
+Exports undergo an isolated restore check. The limits are 2 GiB compressed,
+8 GiB expanded and 100,000 archive members. An export that exceeds a limit
+stops with an explanation. Local catalog caches can be downloaded again;
+workspace exports are not a substitute for keeping account credentials.
+
+A restore point is saved before replacement imports and database schema
+upgrades; the latest three are retained in sibling data-restore-points.
+Settings offers these for download and normal import. If current data is
+damaged, Import can explicitly skip creating its restore point; the incoming
+backup is still checked. Delete workspace data also removes managed restore
+points. Copies you exported elsewhere are unaffected. Data recovery does not
+roll the installed program back to an earlier version.
+
+UPDATE OR UNINSTALL
+Export a backup first. Use Settings to review an available software update
+and install it. The in-app update flow closes the local app, retains records,
+installs the update and reopens the workspace after success.
+
+For manual installation or uninstall, disable closed-app runs if enabled,
+then stop {APP_NAME} and Demo. An active scheduled run may need to finish or
+yield before installation can proceed. Run the new installer to update or
+repair the existing application.
+
+If the installer offers a fresh start, retain data unless you intend to remove
+that workspace. The deletion choice requires confirmation. Silent installs
+retain data. Uninstall removes installed program files, generated Python caches
+and shortcuts while preserving working records and unrecognized files. A fresh
+maintenance runtime allows setup to repair missing or damaged old Python files;
+you should not need to delete the application folder by hand after a normal
+uninstall. Re-enable a desired closed-app schedule after an update; check its
+saved status and next run.
+
+SYSTEM AND DISTRIBUTION
+Windows 10/11, x64. Setup includes its Python runtime and dependencies; it
+requires no separate Python, Node, Word, or network download during installation.
+The installer is unsigned and runs for the current Windows user without
+requesting administrator privileges. Managed-workstation policy may require
+software approval. Software updates are checked and installed through Settings
+with your explicit choice. The update view includes release details before
+installation.
+Network access is required for API downloads, public registration/DNS lookups,
+contact discovery, website capture and reference updates.
+
+Records and reports use TLP:AMBER. Source-specific sharing restrictions still
+apply. The application provides handling marks; it does not determine your
+authority to share a particular record.
+
+TROUBLESHOOTING
+If another program or workspace occupies the local port, close that program
+or resolve the conflict before retrying. If a scheduled run is finishing its
+current request, wait briefly and reopen the shortcut. Do not remove workspace
+lock files to force a second writer to start.
+
+Start menu shortcuts include Application logs and Check installation.
+Settings offers Check workspace and Export diagnostic summary. The summary
+excludes report contents, contacts, credentials and logs. To check bundled
+libraries without opening working records, run from the installation folder:
+  runtime\python.exe -I -B app\desktop.py --self-test
+
+Full documentation: app\README.md
+Build documentation: app\tools\windows_installer\README.md
+Third-party notices: Third-party notices.txt and runtime\LICENSE.txt
+
+{EDITION_NOTICE}

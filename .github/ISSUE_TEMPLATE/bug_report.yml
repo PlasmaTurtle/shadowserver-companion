@@ -1,0 +1,64 @@
+name: Bug report
+description: Report a reproducible application defect using synthetic data.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check the User Guide and existing issues first. Use fictional examples.
+        Do not include credentials, launcher/session URLs, real intake data,
+        case evidence, databases, contact lists or backups. Follow SECURITY.md
+        for suspected vulnerabilities; issues are not a confidential channel.
+  - type: input
+    id: version
+    attributes:
+      label: Application version
+      description: Include the full release version or source commit.
+      placeholder: 0.12.0 release candidate
+    validations:
+      required: true
+  - type: input
+    id: operating-system
+    attributes:
+      label: Operating system
+      description: Include the Windows version and architecture, or development OS.
+    validations:
+      required: true
+  - type: dropdown
+    id: installation
+    attributes:
+      label: Installation method
+      options:
+        - Windows installer
+        - Source checkout or source ZIP
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Use synthetic records. State whether it reproduces in a fresh demo workspace.
+      placeholder: |
+        1. Open ...
+        2. Select ...
+        3. Observe ...
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behavior
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: Actual behavior
+      description: Include only a short, redacted error excerpt if helpful.
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Note recent upgrades or a workaround, without sharing operational data.

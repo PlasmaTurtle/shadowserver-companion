@@ -1,0 +1,116 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PIP_DISABLE_PIP_VERSION_CHECK: '1'
+  PYTHONUTF8: '1'
+
+jobs:
+  verify:
+    name: Full verification (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2025]
+    steps:
+      - name: Preserve source bytes during checkout
+        run: git config --global core.autocrlf false
+      - name: Check out source
+        uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.14'
+      - name: Set up Node
+        uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '24'
+          package-manager-cache: false
+      - name: Verify bundled dependency integrity
+        run: python tools/check_dependencies.py --output dependency-integrity.json
+      - name: Install development dependencies
+        run: python -m pip install -r requirements-dev.txt
+      - name: Install frontend development dependencies
+        run: npm ci --ignore-scripts
+      - name: Install PDF test utilities (Linux)
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install --yes poppler-utils
+      - name: Install PDF test utilities (Windows)
+        if: runner.os == 'Windows'
+        run: choco install poppler --yes --no-progress
+      - name: Verify PDF test utilities are on PATH
+        run: >-
+          python -c "import shutil; required = ('pdftotext', 'pdftoppm', 'pdffonts', 'pdfinfo');
+          missing = [name for name in required if not shutil.which(name)];
+          assert not missing, 'Install Poppler and add its bin directory to PATH: ' + ', '.join(missing)"
+      - name: Install Chromium and OS dependencies
+        run: npx --no-install playwright install --with-deps chromium
+      # Scope the user-namespace exception to this exact Playwright executable.
+      # https://chromium.googlesource.com/chromium/src/+/main/docs/security/apparmor-userns-restrictions.md
+      - name: Configure sandboxed Chromium (Linux)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          browser_path="$(node -e "process.stdout.write(require('playwright').chromium.executablePath())")"
+          test -x "$browser_path"
+          cat <<EOF | sudo tee /etc/apparmor.d/playwright-chromium
+          abi <abi/4.0>,
+          include <tunables/global>
+          profile playwright-chromium "$browser_path" flags=(unconfined) {
+            userns,
+          }
+          EOF
+          sudo apparmor_parser -r /etc/apparmor.d/playwright-chromium
+          echo "CHROMIUM_EXECUTABLE=$browser_path" >> "$GITHUB_ENV"
+      - name: Run complete source, browser, backend and Attribution verification
+        env:
+          PYTEST_ADDOPTS: --junitxml=backend.xml --durations=15
+        run: python tools/verify.py --check-timeout 4500 --report verification.json
+      - name: Retain complete verification results
+        if: always()
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: verification-${{ matrix.os }}
+          path: |
+            verification.json
+            backend.xml
+            dependency-integrity.json
+          if-no-files-found: ignore
+          retention-days: 14
+
+  result:
+    name: CI result
+    if: always()
+    needs: verify
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Require both complete runs to pass
+        env:
+          VERIFICATION_RESULT: ${{ needs.verify.result }}
+        run: |
+          python3 - <<'PY'
+          import os
+
+          result = os.environ["VERIFICATION_RESULT"]
+          print(f"Full verification: {result}")
+          if result != "success":
+              raise SystemExit("CI is incomplete or failed; both operating systems must pass.")
+          PY

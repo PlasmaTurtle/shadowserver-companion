@@ -1,0 +1,28 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Companion: verify everything",
+      "type": "process",
+      "command": "${command:python.interpreterPath}",
+      "args": ["tools/verify.py", "--report", "build/verification.json"],
+      "group": {"kind": "test", "isDefault": true},
+      "problemMatcher": []
+    },
+    {
+      "label": "Companion: regenerate program map",
+      "type": "process",
+      "command": "${command:python.interpreterPath}",
+      "args": ["tools/program_map.py", "--write"],
+      "problemMatcher": []
+    },
+    {
+      "label": "Companion: backend tests",
+      "type": "process",
+      "command": "${command:python.interpreterPath}",
+      "args": ["-m", "pytest", "-q"],
+      "group": "test",
+      "problemMatcher": []
+    }
+  ]
+}

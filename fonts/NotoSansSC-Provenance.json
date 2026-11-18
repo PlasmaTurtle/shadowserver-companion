@@ -1,0 +1,9 @@
+{
+  "source_url": "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf",
+  "license_url": "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanssc/OFL.txt",
+  "source_sha256": "a3041811a78c361b1de50f953c805e0244951c21c5bd412f7232ef0d899af0da",
+  "output_sha256": "f5282e82e9d2820ff8a05669bd9d5cb23424728542c44d7bee51243473af17a9",
+  "transformation": "fontTools 4.61.1 instantiateVariableFont wght=400; family renamed Companion Noto Sans SC",
+  "license": "SIL Open Font License 1.1",
+  "filename": "NotoSansSC-Regular.ttf"
+}

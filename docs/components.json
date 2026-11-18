@@ -1,0 +1,822 @@
+{
+  "schema": 1,
+  "description": "Owned source components; actual Python/ES imports are generated. Runtime dynamic dispatch and SQL relationships require the explicit contracts below.",
+  "components": [
+    {
+      "id": "browser",
+      "name": "Browser workspace",
+      "kind": "UI components",
+      "paths": [
+        "static/*.js",
+        "static/modules/*.js"
+      ],
+      "entry": "static/app.js:createApplication",
+      "contract": "Owns per-instance browser state and feature handlers. events.js owns delegated listeners; navigation owns routes/bootstrap. Uses authenticated HTTP and explicit teardown; action registry and ECLIPSE global remain integration boundaries.",
+      "tests": [
+        "npm test",
+        "npm run lint",
+        "tests/test_contacts_browser_090.cjs",
+        "tests/test_admission_ui_0110.cjs",
+        "tests/test_entity_lifecycle_ui_0110.cjs",
+        "tests/test_workspace_health_ui_0110.cjs"
+      ],
+      "next_work": "Define ECLIPSE and renderer asset interfaces before independent packaging; preserve dirty and freeze contracts."
+    },
+    {
+      "id": "api",
+      "name": "Local API & startup",
+      "kind": "Application boundary",
+      "paths": [
+        "run.py",
+        "workbench/api.py",
+        "workbench/api_models.py",
+        "workbench/routes/*.py",
+        "workbench/demo.py",
+        "workbench/request_limits.py",
+        "workbench/onboarding.py",
+        "workbench/software_updates.py"
+      ],
+      "entry": "workbench.api:create_app",
+      "contract": "Composes Store, jobs and workflow services; validates HTTP requests and launcher sessions. Existing routes and response shapes stay stable.",
+      "tests": [
+        "tests/test_api_structure_071.py",
+        "tests/test_local_session_072.py",
+        "tests/test_api_070.py"
+      ],
+      "next_work": ""
+    },
+    {
+      "id": "intake",
+      "name": "Scan records & validation",
+      "kind": "Reusable internal package",
+      "paths": [
+        "workbench/intake/*.py",
+        "workbench/report_profiles.py",
+        "workbench/provider_policy.py"
+      ],
+      "entry": "workbench.intake:read_entries / EntryValidator",
+      "contract": "Streams complete source rows and applies configured policy. No registry requests, database initialization or background worker. Reader policy and notification eligibility remain separate.",
+      "tests": [
+        "tests/test_excel_intake.py",
+        "tests/test_intake_profiles_070.py",
+        "tests/test_empty_rows_050.py"
+      ],
+      "next_work": "Separate release only if another application needs these contracts; preserve original fields and row numbers."
+    },
+    {
+      "id": "intake-jobs",
+      "name": "Accretion intake processing",
+      "kind": "Application service",
+      "paths": [
+        "workbench/intake_service.py",
+        "workbench/attribution_bridge.py",
+        "workbench/registry_profile.py",
+        "workbench/intake_progress.py",
+        "workbench/asset_attribution.py",
+        "workbench/api_import.py",
+        "workbench/api_acquisition.py",
+        "workbench/accretion.py",
+        "workbench/dark_matter.py",
+        "workbench/lead_frontier.py",
+        "workbench/intake_reuse.py",
+        "workbench/attribution_approval.py",
+        "workbench/attribution_approval_evidence.py",
+        "workbench/attribution_reconciliation.py",
+        "workbench/scheduling.py",
+        "workbench/schedule_handoff.py",
+        "workbench/windows_schedule.py",
+        "workbench/api_jurisdiction.py"
+      ],
+      "entry": "IntakeService.process / RegistrationAttribution.qualify",
+      "contract": "Owns strict import gates, bulk local CVE vetting, versioned Quality/Urgency/temperature snapshots and persistent usable-observation dispositions. Preserves original files, policy history, attribution jobs and explicit notification workflow. Durable analyst identity approvals remain separate from each endpoint's immutable evidence.",
+      "tests": [
+        "tests/test_workbench.py",
+        "tests/test_attribution_review.py",
+        "tests/test_release_020.py",
+        "tests/test_accretion_intake.py",
+        "tests/test_accretion_scoring.py",
+        "tests/test_attribution_reuse_0998.py",
+        "tests/test_attribution_approval_reuse.py",
+        "tests/test_attribution_reconciliation.py"
+      ],
+      "next_work": "Extract qualification-job persistence after stabilizing the transaction boundary."
+    },
+    {
+      "id": "attribution",
+      "name": "Attribution Module",
+      "kind": "Independent library",
+      "paths": [
+        "components/attribution/src/attribution/*.py"
+      ],
+      "entry": "attribution.AttributionModule.attribute",
+      "contract": "Own database, immutable RDAP/DNS evidence, matching policy and CLI. No imports from the workbench. Versioned independently (0.2.6).",
+      "tests": [
+        "components/attribution/tests"
+      ],
+      "next_work": "Its bounded HTTP transport is also reused by CVE capture; a future shared transport package requires both consumers to migrate together."
+    },
+    {
+      "id": "contact-discovery",
+      "name": "Published contact discovery",
+      "kind": "Reusable internal package",
+      "paths": [
+        "workbench/contact_discovery/*.py"
+      ],
+      "entry": "ContactDiscovery.discover / DiscoveryLimits / FetchResponse",
+      "contract": "Bounded static discovery from the associated entity domain and its apex/www counterpart. Supported media, strict encoding and HTTP framing are checked before parsing; original bodies never leave the engine. External contact destinations retain first-party provenance. No database writes, JavaScript execution or outbound messages.",
+      "tests": [
+        "tests/test_contact_discovery_090.py"
+      ],
+      "next_work": "Keep parsing and transport fixture-testable; contact review and adoption belong to application services."
+    },
+    {
+      "id": "contact-review",
+      "name": "Entity contacts and discovery jobs",
+      "kind": "Application service",
+      "paths": [
+        "workbench/contact_records.py",
+        "workbench/contact_jobs.py",
+        "workbench/contact_evidence.py",
+        "workbench/contact_outcomes.py",
+        "workbench/contact_input.py",
+        "workbench/outreach_preparation.py"
+      ],
+      "entry": "ContactRecords / ContactDiscoveryJobs",
+      "contract": "Entity-owned known and discovered contacts, typed derived evidence, source and artifact integrity checks, value-bound history, and explicit fill of blank fields. Untrusted website bodies are never persisted as contact records.",
+      "tests": [
+        "tests/test_contacts_store_090.py",
+        "tests/test_contacts_api_090.py",
+        "tests/test_contacts_invariants_090.py",
+        "tests/test_contacts_end_to_end_090.py"
+      ],
+      "next_work": "Preserve source provenance, contact history and backup compatibility."
+    },
+    {
+      "id": "adapters",
+      "name": "CVE parsing & signals",
+      "kind": "Reusable internal modules",
+      "paths": [
+        "workbench/intelligence/adapters.py",
+        "workbench/intelligence/identifiers.py",
+        "workbench/cve_intelligence.py",
+        "workbench/intelligence_models.py",
+        "workbench/cve_state.py"
+      ],
+      "entry": "summarize / summarize_nvd / identifiers",
+      "contract": "Normalizes captured provider JSON and evaluates signal labels. No HTTP, filesystem, case edits or database dependency.",
+      "tests": [
+        "tests/test_070_intelligence.py",
+        "tests/test_cve_state_070.py",
+        "tests/test_modules_073.py"
+      ],
+      "next_work": ""
+    },
+    {
+      "id": "sources",
+      "name": "Source acquisition & bank",
+      "kind": "Application service",
+      "paths": [
+        "workbench/intelligence/__init__.py",
+        "workbench/intelligence/acquisition.py",
+        "workbench/intelligence/service.py",
+        "workbench/cve_sources.py",
+        "workbench/source_jobs.py",
+        "workbench/intelligence/local.py",
+        "workbench/intelligence/selection.py"
+      ],
+      "entry": "workbench.cve_sources:verify / enrich",
+      "contract": "Acquisition owns bounded capture and provider decisions; SourceRepository owns cache/revision SQL. Enrichment carries each response with its captured provenance. Fetching never adopts a revision into a notification.",
+      "tests": [
+        "tests/test_cve_sources_040.py",
+        "tests/test_security_sources_072.py",
+        "tests/test_070_intelligence.py",
+        "tests/test_maintenance_075.py",
+        "tests/test_evidence_registry_0110.py"
+      ],
+      "next_work": "Independent packaging still requires a workspace/file capture interface; do not duplicate the shared bounded transport."
+    },
+    {
+      "id": "workflow",
+      "name": "Cases & section review",
+      "kind": "Application services",
+      "paths": [
+        "workbench/cases.py",
+        "workbench/case_migration.py",
+        "workbench/section_validation.py",
+        "workbench/services/*.py",
+        "workbench/reviews/*.py",
+        "workbench/entity_review.py",
+        "workbench/outreach_policy.py",
+        "workbench/finding_history.py",
+        "workbench/workspace_queue.py",
+        "workbench/lead_queue.py",
+        "workbench/search.py",
+        "workbench/workspace_brief.py",
+        "workbench/entity_dns.py",
+        "workbench/entity_validation.py",
+        "workbench/case_guidance.py",
+        "workbench/entity_adoption.py"
+      ],
+      "entry": "Cases / SectionReviews / DraftService",
+      "contract": "Owns draft/adoption/review/certification/recovery/contact policy and workflow transitions. CaseRepository owns case queries and scope/contact persistence; services retain caller-owned transaction boundaries.",
+      "tests": [
+        "tests/test_cases.py",
+        "tests/test_section_validation_050.py",
+        "tests/test_api_structure_071.py",
+        "tests/test_maintenance_074.py",
+        "tests/test_maintenance_075.py",
+        "tests/test_entity_lifecycle_0110.py",
+        "tests/test_ownership_matrix_0110.py",
+        "tests/test_certification_concurrency_0110.py",
+        "tests/test_report_recovery_parity_0110.py"
+      ],
+      "next_work": "Intake and publication services still have persistence statements; extract aggregate operations when their boundary is clear."
+    },
+    {
+      "id": "content",
+      "name": "Report content & evidence",
+      "kind": "Internal document model",
+      "paths": [
+        "workbench/approved_template.py",
+        "workbench/outreach_template.py",
+        "workbench/notification_narrative.py",
+        "workbench/notification_narrative_v1.py",
+        "workbench/notification_narrative_v2.py",
+        "workbench/content_bank.py",
+        "workbench/report_contracts.py",
+        "workbench/report_drafts.py",
+        "workbench/report_layouts.py",
+        "workbench/report_snapshot.py",
+        "workbench/report_composition.py",
+        "workbench/source_capture.py",
+        "workbench/exhibit_models.py",
+        "workbench/appendix.py",
+        "workbench/appendix_view.py",
+        "workbench/attribution_display.py",
+        "workbench/introduction_model.py",
+        "workbench/vulnerability_model.py",
+        "workbench/attribution_model.py",
+        "workbench/information_model.py",
+        "workbench/closing_page_model.py",
+        "workbench/information_pages.py",
+        "workbench/information_reference_data.py",
+        "workbench/report_explainer_data.py",
+        "workbench/report_explainers.py",
+        "workbench/notification_narrative_v4.py",
+        "workbench/notification_narrative_v5.py",
+        "workbench/finding_explainers.py",
+        "workbench/finding_explainer_data.py",
+        "workbench/appendix_compact.py",
+        "workbench/sender_identity.py",
+        "workbench/lead_export_model.py",
+        "workbench/recipient_edition.py"
+      ],
+      "entry": "report_snapshot.snapshot / report_composition.compose",
+      "contract": "Builds the report snapshot, citations, exhibits and appendix from selected records. Approved wording is preserved. Snapshot assembly still evaluates current section reviews.",
+      "tests": [
+        "tests/test_composition_070.py",
+        "tests/test_citation_integrity_072.py",
+        "tests/test_template_041.py",
+        "tests/test_report_explainers_096.py"
+      ],
+      "next_work": "Source explainers belong here, keyed to captured source usage, after first-party wording/citation review."
+    },
+    {
+      "id": "output",
+      "name": "Document rendering & packaging",
+      "kind": "Internal document services",
+      "paths": [
+        "workbench/reporting.py",
+        "workbench/report_renderers.py",
+        "workbench/report_package.py",
+        "workbench/report_certification.py",
+        "workbench/exhibit_rendering.py",
+        "workbench/closing.py",
+        "workbench/work_log.py",
+        "workbench/unicode_fonts.py",
+        "workbench/print_policy.py",
+        "workbench/presentation.py",
+        "workbench/closing_renderers.py",
+        "workbench/introduction_layout.py",
+        "workbench/introduction_renderers.py",
+        "workbench/vector_layout.py",
+        "workbench/document_fonts.py",
+        "workbench/exhibit_masters.py",
+        "workbench/vulnerability_layout.py",
+        "workbench/attribution_layout.py",
+        "workbench/information_layout.py",
+        "workbench/closing_page_layout.py",
+        "workbench/closing_page_renderers.py",
+        "workbench/appendix_layout.py",
+        "workbench/appendix_renderers.py",
+        "workbench/report_operations.py",
+        "workbench/text_justification.py",
+        "workbench/word_justification.py",
+        "workbench/report_execution.py",
+        "workbench/report_worker.py",
+        "workbench/information_pages_layout.py",
+        "workbench/evidence_reader.py",
+        "workbench/evidence_reader_assets.py",
+        "workbench/evidence_dossier.py",
+        "workbench/package_exhibits.py"
+      ],
+      "entry": "workbench.reporting:render_pdf / render_docx / finalize",
+      "contract": "Rendering consumes snapshots; package assembly stages and hashes output. Public compatibility facades delegate publication to services. Historical output is never regenerated on read.",
+      "tests": [
+        "tests/test_report_pipeline_071.py",
+        "tests/test_rendering_070.py",
+        "tests/test_export_security_072.py",
+        "tests/test_document_editions_0110.py"
+      ],
+      "next_work": "Keep renderers separate from publication. A standalone renderer needs an asset resolver and explicit font/presentation inputs."
+    },
+    {
+      "id": "workspace",
+      "name": "Workspace records",
+      "kind": "Persistence facade",
+      "paths": [
+        "workbench/store.py",
+        "workbench/migrations.py",
+        "workbench/workspace.py",
+        "workbench/workspace_defaults.py",
+        "workbench/repositories/*.py",
+        "workbench/asset_attribution_migration.py",
+        "workbench/workspace_data.py",
+        "workbench/workspace_data_attribution.py",
+        "workbench/workspace_data_captures.py",
+        "workbench/contact_migration.py",
+        "workbench/workspace_data_contacts.py",
+        "workbench/lead_queue_migration.py",
+        "workbench/case_conditions.py",
+        "workbench/workspace_lock.py",
+        "workbench/awareness*.py",
+        "workbench/observation_scope.py",
+        "workbench/analytical_index.py",
+        "workbench/artifact_registry.py",
+        "workbench/evidence_registry.py",
+        "workbench/evidence_registry_migration.py",
+        "workbench/lifecycle_migration.py",
+        "workbench/ownership.py",
+        "workbench/planner_maintenance.py",
+        "workbench/workspace_health.py",
+        "workbench/workspace_health_jobs.py",
+        "workbench/workspace_maintenance.py",
+        "workbench/workspace_recovery.py",
+        "workbench/workspace_read.py"
+      ],
+      "entry": "Store.transaction / Store.path",
+      "contract": "Workspace owns connections, read snapshots, paths, migrations and write transaction scope. Repositories own entity/case projections and mutations, source cache, artifact checks and review writes. Store is the compatibility composition facade.",
+      "tests": [
+        "tests/test_schema_integrity.py",
+        "tests/test_stabilization_071.py",
+        "tests/test_maintenance_074.py",
+        "tests/test_maintenance_075.py",
+        "tests/test_admission_0110.py",
+        "tests/test_evidence_registry_0110.py",
+        "tests/test_workspace_health_recovery_0110.py"
+      ],
+      "next_work": "Remaining intake/publication SQL is explicit in its services; preserve crash recovery and shared transaction boundaries during later extraction."
+    },
+    {
+      "id": "observatory",
+      "name": "ECLIPSE read model",
+      "kind": "Read-oriented component",
+      "paths": [
+        "workbench/eclipse.py",
+        "workbench/intelligence_index.py",
+        "workbench/observatory_intelligence.py",
+        "workbench/catalog_outreach.py",
+        "workbench/observatory_view.py",
+        "workbench/observatory_field.py",
+        "workbench/observatory_queries.py"
+      ],
+      "entry": "Eclipse.view / Eclipse.observation",
+      "contract": "One revision-scoped, read-only presentation of canonical findings, source-event density, current workflow and local reference risk. Filters precede bounded graph/map/history summaries and paged findings; exact source evidence is retrieved on demand. No qualification, network requests or case mutations.",
+      "tests": [
+        "tests/test_eclipse.py",
+        "tests/test_eclipse_api.py",
+        "tests/test_eclipse_ui.cjs",
+        "tests/test_performance_upgrade.py"
+      ],
+      "next_work": "Keep spatial and traditional views on the same scoped revision; preserve exact observation provenance through historical cutoff and contextual navigation."
+    },
+    {
+      "id": "foundation",
+      "name": "Shared primitives & safety",
+      "kind": "Internal support modules",
+      "paths": [
+        "workbench/primitives.py",
+        "workbench/local_session.py",
+        "workbench/package_integrity.py",
+        "workbench/image_evidence.py",
+        "workbench/__init__.py",
+        "workbench/release.py",
+        "workbench/compact_json.py",
+        "workbench/crypto_policy.py",
+        "workbench/runtime_logging.py",
+        "workbench/artifact_identity.py",
+        "workbench/source_references.py",
+        "workbench/package_files.py",
+        "workbench/svg_resources.py"
+      ],
+      "entry": "now / uid / dump; LocalSessions; validated_inventory",
+      "contract": "Small helpers and safety boundaries with no business-workflow imports. These are separate modules sharing an ownership category, not a mandatory base class.",
+      "tests": [
+        "tests/test_local_session_072.py",
+        "tests/test_export_security_072.py",
+        "tests/test_modules_073.py"
+      ],
+      "next_work": ""
+    },
+    {
+      "id": "distribution",
+      "name": "Build & verification",
+      "kind": "Developer tooling",
+      "paths": [
+        "tools/*.py",
+        "tools/windows_installer/*.py"
+      ],
+      "entry": "tools/verify.py / tools/build_release.py",
+      "contract": "Owns dependency locks, source/installer allowlists, release verification and this generated map. Does not ship analyst workspaces.",
+      "tests": [
+        "tests/test_dependency_security_072.py",
+        "tests/test_upgrade_cleanup_072.py",
+        "tests/test_release_privacy_070.py",
+        "tests/test_maintenance_074.py"
+      ],
+      "next_work": ""
+    },
+    {
+      "id": "legacy",
+      "name": "Original intake CLI",
+      "kind": "Compatibility entry point",
+      "paths": [
+        "excel_intake.py"
+      ],
+      "entry": "excel_intake.main",
+      "contract": "Preserves original CLI/import contracts. Reuses the new intake package. Its older RDAP client is not used by the web application.",
+      "tests": [
+        "tests/test_excel_intake.py"
+      ],
+      "next_work": "Deprecate or migrate its network client to Attribution in a separate behavioral change; do not confuse it with the production lookup path."
+    },
+    {
+      "id": "shadowserver-reports",
+      "name": "Shadowserver Reports client",
+      "kind": "Vendored independent acquisition module",
+      "paths": [
+        "workbench/shadowserver_reports/*.py"
+      ],
+      "entry": "ReportsClient / ReportDownloader / SignedTransport",
+      "contract": "Original standalone 0.1.0 source preserved with SHA-256 manifest. Signed read-only API and bounded unsigned report downloads; no Companion records or UI dependencies. Windows credentials remain in the current-user OS store.",
+      "tests": [
+        "tests/shadowserver_api_module",
+        "tests/test_api_acquisition_098.py"
+      ],
+      "next_work": "Authenticated account and native Windows acceptance once API credentials are available."
+    },
+    {
+      "id": "cve-catalog",
+      "name": "Local CVE catalog",
+      "kind": "Reusable reference-data service",
+      "paths": [
+        "workbench/cve_catalog/*.py"
+      ],
+      "entry": "Catalog / CatalogManager",
+      "contract": "Maintains local NVD records, product/version and field indexes, semantic changes, CVSS assessments, daily bulk EPSS and CISA KEV. Resumable background work and immutable case extracts keep reference updates separate from report evidence.",
+      "tests": [
+        "tests/test_cve_catalog_0983.py"
+      ],
+      "next_work": ""
+    },
+    {
+      "id": "website-capture",
+      "name": "Website viewport capture",
+      "kind": "Bounded acquisition and application service",
+      "paths": [
+        "workbench/website_capture/*.py",
+        "workbench/website_jobs.py"
+      ],
+      "entry": "WebsiteCaptureJobs / capture_website",
+      "contract": "Explicit reported-hostname viewport jobs in an ephemeral installed browser. Public-address pinned GETs, bounded resource budgets and immutable provenance. Attachment rechecks frozen sections; never renders reports or edits frozen evidence.",
+      "tests": [
+        "tests/test_website_capture_0985.py"
+      ],
+      "next_work": "Native Windows Edge acceptance and browser profiling."
+    },
+    {
+      "id": "aegis",
+      "name": "Aegis (shared security)",
+      "kind": "Shared internal package",
+      "paths": [
+        "workbench/aegis/*.py"
+      ],
+      "entry": "scan_buffer / scan_text / bounded_security_call / strict_json_loads / decode_bounded_text",
+      "contract": "Shared stdlib-only input primitives: bounded local antimalware execution, typed scan receipts/errors, strict JSON and MIME/text validation. No provider schemas, network acquisition, workspace state, UI or case workflow.",
+      "tests": [
+        "tests/test_modules_073.py",
+        "tests/test_content_scan_0998.py",
+        "tests/test_security_json_0998.py",
+        "tests/test_security_text_0998.py"
+      ],
+      "next_work": "Keep provider semantics in adapters and add shared-policy regression tests before extending callers."
+    }
+  ],
+  "rules": [
+    {
+      "name": "Intake has no application or provider dependency",
+      "source": [
+        "workbench.intake"
+      ],
+      "allow_internal": [
+        "workbench.intake"
+      ],
+      "deny_external": [
+        "requests",
+        "httpx",
+        "socket",
+        "sqlite3",
+        "fastapi",
+        "urllib.request"
+      ]
+    },
+    {
+      "name": "Primitives stay independent",
+      "source": [
+        "workbench.primitives"
+      ],
+      "allow_internal": [],
+      "deny_external": [
+        "requests",
+        "httpx",
+        "socket",
+        "sqlite3",
+        "fastapi",
+        "urllib.request"
+      ]
+    },
+    {
+      "name": "Pure CVE adapters do not acquire or persist",
+      "source": [
+        "workbench.intelligence.adapters",
+        "workbench.intelligence.identifiers",
+        "workbench.cve_intelligence",
+        "workbench.intelligence_models",
+        "workbench.cve_state"
+      ],
+      "allow_internal": [
+        "workbench.intelligence.adapters",
+        "workbench.intelligence.identifiers",
+        "workbench.cve_intelligence",
+        "workbench.intelligence_models",
+        "workbench.cve_state"
+      ],
+      "deny_external": [
+        "requests",
+        "httpx",
+        "socket",
+        "sqlite3",
+        "fastapi",
+        "urllib.request"
+      ]
+    },
+    {
+      "name": "Acquisition cannot reach case workflow",
+      "source": [
+        "workbench.intelligence.acquisition"
+      ],
+      "allow_internal": [
+        "workbench.intelligence.adapters",
+        "workbench.primitives",
+        "workbench.cve_intelligence",
+        "attribution",
+        "workbench.repositories.sources",
+        "workbench.cve_catalog",
+        "workbench.aegis"
+      ],
+      "deny": [
+        "workbench.store",
+        "workbench.api",
+        "workbench.cases",
+        "workbench.reporting",
+        "workbench.report_snapshot",
+        "workbench.intelligence.service"
+      ],
+      "allow_exact": [
+        "workbench"
+      ]
+    },
+    {
+      "name": "Standalone attribution cannot import workbench",
+      "source": [
+        "attribution"
+      ],
+      "deny": [
+        "workbench",
+        "excel_intake"
+      ]
+    },
+    {
+      "name": "Application does not import legacy CLI",
+      "source": [
+        "workbench"
+      ],
+      "deny": [
+        "excel_intake"
+      ]
+    },
+    {
+      "name": "Observatory does not import intake or source jobs",
+      "source": [
+        "workbench.eclipse",
+        "workbench.intelligence_index"
+      ],
+      "deny": [
+        "workbench.intake_service",
+        "workbench.cve_sources",
+        "workbench.intelligence.acquisition",
+        "workbench.intelligence.service",
+        "workbench.source_jobs"
+      ],
+      "deny_external": [
+        "requests",
+        "httpx",
+        "socket",
+        "sqlite3",
+        "fastapi",
+        "urllib.request"
+      ]
+    },
+    {
+      "name": "Repositories never coordinate workflow",
+      "source": [
+        "workbench.repositories"
+      ],
+      "allow_internal": [
+        "workbench.primitives",
+        "workbench.package_integrity",
+        "workbench.repositories",
+        "workbench.entity_review",
+        "workbench.compact_json",
+        "workbench.outreach_policy",
+        "workbench.finding_history",
+        "workbench.intake.identity",
+        "workbench.case_conditions",
+        "workbench.intake.versions",
+        "workbench.awareness",
+        "workbench.observation_scope",
+        "workbench.artifact_identity",
+        "workbench.artifact_registry",
+        "workbench.evidence_registry",
+        "workbench.ownership",
+        "workbench.awareness_admission"
+      ],
+      "deny_external": [
+        "requests",
+        "httpx",
+        "socket",
+        "fastapi",
+        "urllib.request"
+      ],
+      "allow_exact": [
+        "workbench"
+      ]
+    },
+    {
+      "name": "Workspace infrastructure stays below workflow",
+      "source": [
+        "workbench.workspace",
+        "workbench.workspace_defaults"
+      ],
+      "allow_internal": [
+        "workbench.migrations",
+        "workbench.workspace_defaults",
+        "workbench.primitives",
+        "workbench.planner_maintenance"
+      ]
+    },
+    {
+      "name": "Review projection cannot invoke review commands",
+      "source": [
+        "workbench.reviews"
+      ],
+      "deny": [
+        "workbench.store",
+        "workbench.cases",
+        "workbench.services",
+        "workbench.report_snapshot",
+        "workbench.reporting",
+        "workbench.section_validation"
+      ],
+      "deny_external": [
+        "requests",
+        "httpx",
+        "socket",
+        "fastapi",
+        "urllib.request"
+      ]
+    },
+    {
+      "name": "Case records do not import lifecycle facades",
+      "source": [
+        "workbench.cases"
+      ],
+      "deny": [
+        "workbench.store",
+        "workbench.section_validation",
+        "workbench.services",
+        "workbench.reporting",
+        "workbench.closing"
+      ]
+    },
+    {
+      "name": "Content snapshot does not depend on mutation services",
+      "source": [
+        "workbench.report_snapshot"
+      ],
+      "deny": [
+        "workbench.store",
+        "workbench.section_validation",
+        "workbench.services",
+        "workbench.reporting"
+      ]
+    },
+    {
+      "name": "Source repository is independent of case records",
+      "source": [
+        "workbench.repositories.sources"
+      ],
+      "allow_internal": [
+        "workbench.primitives",
+        "workbench.repositories.records",
+        "workbench.evidence_registry"
+      ]
+    },
+    {
+      "name": "Contact discovery does not mutate casework",
+      "source": [
+        "workbench.contact_discovery"
+      ],
+      "deny": [
+        "workbench.store",
+        "workbench.workspace",
+        "workbench.repositories",
+        "workbench.services",
+        "workbench.cases",
+        "workbench.reporting",
+        "workbench.report_snapshot",
+        "workbench.section_validation"
+      ],
+      "deny_external": [
+        "sqlite3",
+        "fastapi"
+      ]
+    },
+    {
+      "name": "Reports acquisition module remains independent",
+      "source": [
+        "workbench.shadowserver_reports"
+      ],
+      "allow_internal": [
+        "workbench.shadowserver_reports"
+      ]
+    },
+    {
+      "name": "Aegis remains independent",
+      "source": [
+        "workbench.aegis"
+      ],
+      "allow_internal": [
+        "workbench.aegis"
+      ],
+      "stdlib_only": true,
+      "deny_external": [
+        "requests",
+        "httpx",
+        "socket",
+        "sqlite3",
+        "fastapi",
+        "urllib.request"
+      ]
+    },
+    {
+      "name": "Approval evidence cannot coordinate workflow",
+      "source": [
+        "workbench.attribution_approval_evidence"
+      ],
+      "allow_internal": [
+        "workbench.attribution_bridge",
+        "attribution"
+      ],
+      "deny_external": [
+        "requests",
+        "httpx",
+        "socket",
+        "sqlite3",
+        "fastapi",
+        "urllib.request"
+      ]
+    }
+  ],
+  "known_cycles": []
+}

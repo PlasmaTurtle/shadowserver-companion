@@ -1,0 +1,9 @@
+{
+  "zone": "America/New_York",
+  "package": "tzdata",
+  "package_version": "2026.6",
+  "iana_version": "2026f",
+  "source_url": "https://pypi.org/project/tzdata/2026.6/",
+  "sha256": "d7f2206b3a45989fc9ad63d558922532fa7352280d5f87176bf1db79cb1d1fa9",
+  "purpose": "Offline ZoneInfo fallback for Windows; original scan timestamps are preserved in the appendix."
+}

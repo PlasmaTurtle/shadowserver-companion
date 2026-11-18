@@ -1,0 +1,20 @@
+/* Work previews share the existing HUD without changing the scene or header. */
+.dm-workspace .dm-lead-preview {
+  margin-bottom: 28px;
+}
+.dm-workspace .dm-lead-row {
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 12px;
+  padding: 18px 0;
+}
+.dm-workspace .dm-lead-row strong {
+  font-size: 17px;
+  overflow-wrap: anywhere;
+}
+.dm-workspace .dm-lead-row p {
+  overflow-wrap: anywhere;
+}
+.dm-workspace .dm-lead-row .dm-next {
+  display: flex;
+  margin-top: 8px;
+}

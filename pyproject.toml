@@ -1,0 +1,22 @@
+[tool.ruff]
+target-version = "py314"
+line-length = 100
+extend-exclude = ["workbench/approved_template.py", "wheelhouse", "build", "dist", "components", "workbench/shadowserver_reports"]
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+
+[tool.ruff.lint.per-file-ignores]
+# Launchers and test harnesses deliberately establish a local import path.
+"run.py" = ["E402"]
+"tools/*.py" = ["E402"]
+"tools/windows_installer/*.py" = ["E402"]
+"tests/*.py" = ["E402", "F401", "F811"] # pytest fixture imports and argument injection
+"tools/windows_installer/desktop.py" = ["F401"] # import-only installed-runtime smoke checks
+
+[tool.pytest.ini_options]
+testpaths = ["tests", "components/attribution/tests"]
+pythonpath = [".", "tests", "components/attribution/src"]
+# A stalled native call should leave thread stacks in the test output.
+faulthandler_timeout = 120
+
