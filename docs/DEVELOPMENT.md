@@ -55,16 +55,15 @@ module's guide, issue tracker and changelog.
    reference using [established implementations](#established-implementations-and-reference-behavior).
    Use synthetic cases for reproducible faults and actual outputs for integration,
    rendering or network behavior. Identify the expected result and verification
-   command before editing; preserve the original failing examples.
+   command before editing; preserve the original failing examples. For work expected
+   to exceed 50 authored lines, record the [framework decision](#framework-decisions-for-work-over-50-lines)
+   in the owning issue before implementation.
 3. **Bound the change.** Identify public interfaces, transaction ownership,
    evidence/resource bytes and compatibility paths that must survive. A move,
    policy change and data migration are distinct changes; do not silently combine
    them. Cross-module work names a primary owner and the affected interfaces.
-   Prefer the established implementation with thin application-specific integration.
-   Document the demonstrated gap before replacing its behavior with custom code.
-   A smaller diff is not a reason to retain a defective approach. Record material
-   tradeoffs in the owning issue or interface guide, including speed, resource
-   lifetime, security and maintenance costs.
+   Keep application-specific integration with the owner and reuse the selected
+   implementation through its supported interface.
 4. **Implement one reviewable responsibility.** Keep source, module tests and
    resources with their owner. Update the owning guide when a contract or command
    changes. Link common instructions instead of copying them into each module.
@@ -126,8 +125,8 @@ permissions and safety controls. Track useful outcomes and resource use, not ret
 Prefer native platform capabilities or maintained libraries for common tasks,
 with thin application integration. Before replacing a transport, scheduler,
 parser, retry system or other general mechanism, demonstrate the requirement the
-established implementation cannot meet. Record a material exception in its owning
-guide or issue; routine choices need no separate design document or approval.
+established implementation cannot meet. Record the basis for a custom replacement
+in the owning issue. The size threshold below also applies when adopting a library.
 
 Compare the existing failure with an independent working reference: official
 documentation, a working example or an explicit domain rule. Use representative
@@ -146,6 +145,38 @@ agent-written restrictions and audit conclusions are not permanent requirements.
 Establish working end-to-end behavior with normal platform defaults first, then
 assess security, data and performance improvements against concrete needs and
 ordinary functionality. Do not invent controls that defeat the feature's purpose.
+
+### Framework decisions for work over 50 lines
+
+Before starting an implementation expected to exceed 50 authored lines of code,
+research established options and record the decision. If an initially smaller
+change grows, pause before writing line 51. This applies to every module, shared
+infrastructure, tests, and build or maintenance tools. Count new and rewritten
+lines for one capability across files, commits, pull requests and contributors,
+including delegated or AI-written code. Deletions do not offset authored lines.
+Unmodified vendor code, generated output and formatting-only changes are excluded.
+
+Keep a short, dated entry in the owning module's issue register, or the project
+issue register for shared work. Link that entry in the pull request. A previous
+decision can be reused by linking it and confirming that its requirements,
+platform and evidence still apply. Record enough for a reviewer to reproduce the choice.
+
+- **Need.** Identify the user-visible result, supported environment and the
+  requirement that determines whether an implementation fits.
+- **Alternatives and evidence.** Check what the project already uses and compare
+  it with the best applicable platform feature, maintained tool or framework.
+  Cite the version evaluated and official documentation or upstream source.
+  Where the documentation leaves a material question open, run the smallest
+  representative comparison and record its inputs, command and observed outcome.
+- **Decision.** Use the supported implementation directly or through a thin
+  adapter when it meets the need. To build or keep a custom implementation, or
+  to replace an established one, identify the precise gap or measured tradeoff,
+  explain why configuration or a thin adapter cannot resolve it, and bound the
+  custom part. Relevant evidence can include packaging size, security support,
+  runtime cost or maintenance effort. State when to revisit the decision.
+
+A passing local test shows how the chosen code behaved. It cannot establish a
+limitation in a framework that the test never exercised.
 
 ### Where work runs
 

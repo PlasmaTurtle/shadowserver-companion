@@ -5,7 +5,8 @@ state/session helpers, theme/accessibility primitives, fonts, and shared documen
 geometry/rendering utilities. This guide is for maintaining those shared contracts.
 
 [Module issues](ISSUES.md) · [Changelog](CHANGELOG.md) · [Architecture](../../../docs/ARCHITECTURE.md) ·
-[Maintenance workflow](../../../docs/DEVELOPMENT.md#maintenance-workflow)
+[Maintenance workflow](../../../docs/DEVELOPMENT.md#maintenance-workflow) ·
+[Framework decisions over 50 lines](../../../docs/DEVELOPMENT.md#framework-decisions-for-work-over-50-lines)
 
 ## Start here
 

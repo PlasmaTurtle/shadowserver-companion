@@ -5,7 +5,8 @@ activity presentation. This guide covers how to maintain those views without
 changing the originating events.
 
 [Module issues](ISSUES.md) · [Changelog](CHANGELOG.md) · [Architecture](../../../docs/ARCHITECTURE.md) ·
-[Maintenance workflow](../../../docs/DEVELOPMENT.md#maintenance-workflow)
+[Maintenance workflow](../../../docs/DEVELOPMENT.md#maintenance-workflow) ·
+[Framework decisions over 50 lines](../../../docs/DEVELOPMENT.md#framework-decisions-for-work-over-50-lines)
 
 ## Start here
 

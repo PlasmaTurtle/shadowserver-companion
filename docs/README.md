@@ -42,7 +42,9 @@ The guide describes the module's contracts and verification. The tracker records
 problems, status and evidence. The changelog records completed changes under
 `Unreleased` until they ship under an application version. Add the entry in the
 same change as the implementation. See [Building a release](DEVELOPMENT.md#building-a-release)
-for how module entries feed the product changelog.
+for how module entries feed the product changelog. All modules use the same
+[framework decision rule for work over 50 lines](DEVELOPMENT.md#framework-decisions-for-work-over-50-lines)
+and keep the evidence in the owning issue.
 
 | Module | Maintenance guide | Issue tracker | Changelog |
 | --- | --- | --- | --- |

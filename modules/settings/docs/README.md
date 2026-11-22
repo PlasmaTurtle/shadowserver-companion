@@ -5,7 +5,8 @@ presentation, software-update checks, and update handoff. This guide covers thei
 maintenance and integration boundaries.
 
 [Module issues](ISSUES.md) · [Changelog](CHANGELOG.md) · [Architecture](../../../docs/ARCHITECTURE.md) ·
-[Maintenance workflow](../../../docs/DEVELOPMENT.md#maintenance-workflow)
+[Maintenance workflow](../../../docs/DEVELOPMENT.md#maintenance-workflow) ·
+[Framework decisions over 50 lines](../../../docs/DEVELOPMENT.md#framework-decisions-for-work-over-50-lines)
 
 ## Start here
 

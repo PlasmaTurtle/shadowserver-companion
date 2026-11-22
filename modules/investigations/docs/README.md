@@ -5,7 +5,8 @@ review, notification preparation, document composition, certification and
 retained report packages. This guide maps maintenance work to those contracts.
 
 [Architecture](../../../docs/ARCHITECTURE.md) · [Investigations issues](ISSUES.md) · [Changelog](CHANGELOG.md) ·
-[Analyst workflow](../../../docs/USER_GUIDE.md)
+[Analyst workflow](../../../docs/USER_GUIDE.md) ·
+[Framework decisions over 50 lines](../../../docs/DEVELOPMENT.md#framework-decisions-for-work-over-50-lines)
 
 ## Completed notifications
 

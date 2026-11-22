@@ -5,7 +5,8 @@ and safe lead export contracts. This guide maps maintenance work to those
 responsibilities.
 
 [Architecture](../../../docs/ARCHITECTURE.md) · [Leads issues](ISSUES.md) · [Changelog](CHANGELOG.md) ·
-[Analyst workflow](../../../docs/USER_GUIDE.md#4-review-leads-and-decide-what-deserves-outreach)
+[Analyst workflow](../../../docs/USER_GUIDE.md#4-review-leads-and-decide-what-deserves-outreach) ·
+[Framework decisions over 50 lines](../../../docs/DEVELOPMENT.md#framework-decisions-for-work-over-50-lines)
 
 ## Start here
 

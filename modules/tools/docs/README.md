@@ -6,7 +6,8 @@ implementation, tests and resources here; callers
 retain their domain workflow, UI, persistence and authorization.
 
 [Architecture](../../../docs/ARCHITECTURE.md) · [Tools tracking](ISSUES.md) · [Changelog](CHANGELOG.md) ·
-[Investigations integration](../../investigations/docs/README.md#website-loading-and-capture)
+[Investigations integration](../../investigations/docs/README.md#website-loading-and-capture) ·
+[Framework decisions over 50 lines](../../../docs/DEVELOPMENT.md#framework-decisions-for-work-over-50-lines)
 
 ## Start here
 

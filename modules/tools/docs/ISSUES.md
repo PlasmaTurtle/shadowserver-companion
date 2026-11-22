@@ -162,7 +162,23 @@ The replacement uses ordinary Chromium navigation and screenshot commands.
 The request broker and deny-only proxy are retired, and URL handling supports
 normal HTTP(S) addresses, ports, queries, fragments, IPs and IDNs. Browser
 lifetime, loading and evidence attachment remain separate responsibilities.
-No new runtime automation dependency is introduced.
+The change kept the existing runtime dependencies.
+
+**Browser driver decision review, 2026-11-22.** The oldest retained source import
+(`efccc0a`) already contained a custom Chrome DevTools Protocol client.
+The 0.12.1 release candidate (`fb66267`) still used that client for application
+capture and used Playwright for reference runs. The images and timings below
+support removing the HTTP broker. The record names the dependency saving but
+contains no comparison showing that production capture required a custom driver.
+
+Use Playwright as the baseline for ordinary navigation and screenshots. Its
+Python API supports installed Edge and Chrome channels, page navigation, and
+viewport screenshots. Evaluate any remaining protocol-specific requirement
+separately against that baseline under the shared decision rule.
+[Browser channels](https://playwright.dev/python/docs/browsers#google-chrome--microsoft-edge) ·
+[Navigation](https://playwright.dev/python/docs/api/class-page#page-goto) ·
+[Screenshots](https://playwright.dev/python/docs/screenshots) ·
+[Framework decision rule](../../../docs/DEVELOPMENT.md#framework-decisions-for-work-over-50-lines)
 
 **Maintenance lesson:** the ordinary browser reference rendered the museum
 artwork/video and bookstore page that the custom broker left incomplete. Keeping

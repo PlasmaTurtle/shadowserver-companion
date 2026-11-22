@@ -5,7 +5,8 @@ geographic reference assets, and visualization of retained observations. This
 guide covers the maintenance boundaries behind those views.
 
 [Module issues](ISSUES.md) · [Changelog](CHANGELOG.md) · [Architecture](../../../docs/ARCHITECTURE.md) ·
-[Maintenance workflow](../../../docs/DEVELOPMENT.md#maintenance-workflow)
+[Maintenance workflow](../../../docs/DEVELOPMENT.md#maintenance-workflow) ·
+[Framework decisions over 50 lines](../../../docs/DEVELOPMENT.md#framework-decisions-for-work-over-50-lines)
 
 ## Start here
 

@@ -13,12 +13,17 @@ session facts and authorization. Follow the
 
 ## Established implementations and reference behavior
 
-Prefer native capabilities or maintained libraries with thin integration. Compare
-ordinary inputs and actual outputs with an independent working reference before
-building custom machinery. Reevaluate accumulating workarounds; tests are evidence,
-not the definition of success. Apply current user direction and update superseded
-agent-written restrictions. See the complete
-[reference-behavior policy](docs/DEVELOPMENT.md#established-implementations-and-reference-behavior).
+Before starting any implementation expected to exceed 50 authored lines, research
+the established options and record the choice in the owning issue. If smaller
+work grows, record the decision before writing line 51. Count one capability
+across files, commits and delegated work. This applies to every module and
+shared tooling. To write a custom replacement, show the specific gap in the
+best established option and why a thin integration cannot meet the need.
+Follow the [framework decision rule](docs/DEVELOPMENT.md#framework-decisions-for-work-over-50-lines).
+
+Compare real inputs and outputs with the working reference. Revisit the choice
+when fixes accumulate or the reference succeeds where the implementation fails.
+See the [reference-behavior policy](docs/DEVELOPMENT.md#established-implementations-and-reference-behavior).
 
 ## Where work runs
 

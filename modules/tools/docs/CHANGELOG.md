@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Documented where the evidence for the custom capture driver ends and which
+  Playwright APIs maintainers should evaluate before extending it.
+  [Capture driver decision review](ISSUES.md#iss020-reported-host-loading-and-redirects)
+
 ## 0.12.0
 
 - Capture the reported hostname first, using the browser's native navigation

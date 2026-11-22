@@ -2,6 +2,10 @@
 
 Describe the concrete problem and what changes for the user.
 
+For an implementation over 50 authored lines, link the decision recorded before
+implementation (or before line 51 if the scope grew). If custom code replaces an
+established option, point reviewers to the evidence for that choice.
+
 ## Validation
 
 List the exact checks run and their results. Identify skipped checks and remaining

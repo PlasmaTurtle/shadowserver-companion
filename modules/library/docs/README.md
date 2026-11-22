@@ -5,7 +5,8 @@ reference content, source revisions, catalog search and reference-data tools.
 Use this guide to locate maintenance work and preserve its evidence contracts.
 
 [Module issues](ISSUES.md) · [Changelog](CHANGELOG.md) · [Architecture](../../../docs/ARCHITECTURE.md) ·
-[Project maintenance workflow](../../../docs/DEVELOPMENT.md#maintenance-workflow)
+[Project maintenance workflow](../../../docs/DEVELOPMENT.md#maintenance-workflow) ·
+[Framework decisions over 50 lines](../../../docs/DEVELOPMENT.md#framework-decisions-for-work-over-50-lines)
 
 The [November 21 audit and work sequence](ISSUES.md#november-21-library-audit)
 records reproduced correctness problems, measured performance, ownership repairs

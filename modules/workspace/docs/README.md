@@ -5,7 +5,8 @@ local sessions, backup/recovery, workspace health and common input security.
 This guide is the entry point for maintaining those responsibilities.
 
 [Architecture](../../../docs/ARCHITECTURE.md) · [Workspace issues](ISSUES.md) · [Changelog](CHANGELOG.md) ·
-[Data management runbook](DATA_MANAGEMENT.md)
+[Data management runbook](DATA_MANAGEMENT.md) ·
+[Framework decisions over 50 lines](../../../docs/DEVELOPMENT.md#framework-decisions-for-work-over-50-lines)
 
 ## Start here
 
