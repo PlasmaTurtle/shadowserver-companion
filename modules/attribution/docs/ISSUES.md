@@ -1,14 +1,41 @@
 # Attribution issues
 
-Module-owned maintenance work belongs here. Last reviewed: **2026-11-21**.
+Module-owned maintenance work belongs here. Last reviewed: **2026-11-22**.
 
 [Maintenance guide](README.md) · [Project issue index](../../../docs/ISSUES.md)
 
 ## Module work
 
-No module-owned open issues are currently recorded. Add confirmed application or
-engine work here with its scope, owner, status and completion criteria. Keep
-standalone package changes distinct from application integration changes.
+### ISS056 North Carolina business-registration import
+
+**Status:** Awaiting authorized subscription or agency access and a representative
+weekly extract. Attribution owns acquisition, refresh and matching. Entities
+owns applying reviewed matches to current profiles. This is an application
+integration separate from the standalone attribution engine.
+
+The state describes weekly CSV files, distributes a dictionary with the
+subscription, and publishes a relational layout. The published layout includes
+corporations, legal and historical names, contacts linked by role, addresses,
+filings and status lookups. The November 22 schema check created all 18 tables
+in a fresh SQLite file. Two synthetic profiles shared a display number without
+collision, and each legal name, agent, officer and office address remained
+independently addressable. The [module guide](README.md#north-carolina-business-registration-layout)
+includes the command and field mapping. [State data description](https://www.sosnc.gov/online_services/data_subscriptions/about_the_data) · [Subscription fees](https://www.sosnc.gov/fees/by_title/_data_subscriptions?area=Divisions)
+
+**Next deliverable.** Compare a licensed sample and its delivery dictionary
+with the local layout, including filenames, encoding, headers, type codes,
+source date and complete-snapshot semantics. Refresh an indexed snapshot
+atomically, preserve its source date and status, and demonstrate identical
+reimports and removal of withdrawn source rows. Keep the previous valid
+snapshot available on failure. Public interactive searches are for individual
+use. [State bulk-access guidance](https://www.sosnc.gov/online_services/search)
+
+**Acceptance.** Verify supported, ambiguous and absent matches on representative
+business IDs, legal names and addresses. Display the specific source record
+and snapshot. Prefill missing entity fields only for a supported match, retain
+manually supplied values, and exercise the existing case-snapshot adoption
+workflow. Verify the separate meanings of principal address, registered address,
+registered agent and operating contact against the sample before mapping them.
 
 ## Shared work and dependencies
 

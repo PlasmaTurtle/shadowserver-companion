@@ -83,6 +83,35 @@ unchanged. See the [streaming contract](../components/engine/REFERENCE.md#bounde
 model. It is separate from the independent engine's public models and can be
 imported without Workspace initialization.
 
+## North Carolina business-registration layout
+
+Create an empty local copy of the state's published registration schema with
+the project interpreter. Give it a new file outside the repository and the
+casework database. For example, from the repository root on Windows:
+
+```powershell
+python -m modules.attribution.tools.create_nc_registry "$env:TEMP\nc-business-registration.sqlite3"
+```
+
+The command creates the 18 export tables in a new SQLite file and preserves any
+existing destination. The [SQLite layout](../databases/nc_business_registration.sql)
+uses the state's field names, including its spellings of `Citzenship`,
+`DisolveDate` and `Desctription`. Text fields preserve leading zeros in display
+identifiers and ZIP codes. Corporate identity is `Corporations.PItemId`.
+`CorpNum` may repeat. Join `Corporations.EntityID` to `Names.EntityID` and use
+`NTypeID=1` for the current NC legal name. A reservation or previous name alone
+cannot establish a current legal identity. [Official export dictionary](https://www.sosnc.gov/documents/forms/Data_Subcriptions/Business_Registration_layout.pdf)
+
+Keep the corporation's `OfficeAddressID` and `OfficeMailingID` separate from
+addresses of its `AgentEntityID`. Use the provider's address types to identify
+registered-office roles. `CorpOfficers` contains current officer records. An
+officer or registered agent needs separate evidence before being treated as an
+operating or technical contact. [Registered agent duties](https://www.sosnc.gov/divisions/business_registration/registered_agent_links)
+
+The empty file supports schema inspection and local SQL queries. Verification of
+weekly refresh, address role codes, candidate matching and entity enrichment
+requires the authorized export tracked in [ISS056](ISSUES.md#iss056-north-carolina-business-registration-import).
+
 ## Source ownership
 
 | Location | Maintained responsibility |
