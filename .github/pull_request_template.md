@@ -16,5 +16,6 @@ or update behavior. Write "None" when this does not apply.
 
 - [ ] The diff is focused and contains no credentials, real casework or operational data.
 - [ ] Tests and documentation reflect the changed behavior, where applicable.
+- [ ] Changes to a module's behavior, interfaces or maintenance have an entry under `Unreleased` in its changelog.
 - [ ] Source/module maps and dependency manifests were updated if affected.
 - [ ] Partial verification and platform limits are stated accurately.

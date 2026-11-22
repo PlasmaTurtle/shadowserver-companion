@@ -54,5 +54,7 @@
 
 # Earlier releases
 
+The [module changelog directory](docs/README.md#module-documentation-and-tracking) links to the detailed history for each module.
+
 See the [consolidated changelog before 0.11](docs/history/releases/CHANGELOG_PRE_0.11.md)
 for 0.10.1 and earlier. Historical release claims retain their original scope.

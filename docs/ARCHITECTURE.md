@@ -59,7 +59,7 @@ modules/<name>/
   databases/    Persistence definitions, migrations and documented seed inputs
   static/       Browser JavaScript, styles, images and bundled frontend assets
   tests/        Module regressions, contract tests and feature browser fixtures
-  docs/         Responsibilities, operation notes and technical references
+  docs/         Maintenance guide, issue tracker, module changelog and references
   fonts/        Fonts owned by this module, with licenses and provenance
   schemas/      Data contracts, validation schemas and schema provenance
   resources/    Other immutable runtime resources and synthetic examples

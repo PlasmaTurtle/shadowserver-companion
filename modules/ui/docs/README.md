@@ -4,7 +4,7 @@ UI owns the application shell, navigation, delegated events, shared frontend
 state/session helpers, theme/accessibility primitives, fonts, and shared document
 geometry/rendering utilities. This guide is for maintaining those shared contracts.
 
-[Module issues](ISSUES.md) · [Architecture](../../../docs/ARCHITECTURE.md) ·
+[Module issues](ISSUES.md) · [Changelog](CHANGELOG.md) · [Architecture](../../../docs/ARCHITECTURE.md) ·
 [Maintenance workflow](../../../docs/DEVELOPMENT.md#maintenance-workflow)
 
 ## Start here

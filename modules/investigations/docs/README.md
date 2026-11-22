@@ -4,7 +4,7 @@ Investigations owns cases, drafts, scoped report observations, evidence, section
 review, notification preparation, document composition, certification and
 retained report packages. This guide maps maintenance work to those contracts.
 
-[Architecture](../../../docs/ARCHITECTURE.md) · [Investigations issues](ISSUES.md) ·
+[Architecture](../../../docs/ARCHITECTURE.md) · [Investigations issues](ISSUES.md) · [Changelog](CHANGELOG.md) ·
 [Analyst workflow](../../../docs/USER_GUIDE.md)
 
 ## Completed notifications

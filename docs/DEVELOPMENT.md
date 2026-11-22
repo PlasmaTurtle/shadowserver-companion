@@ -42,7 +42,7 @@ assets, verification and release requirements are maintained below.
 
 Use this sequence before the next refactor and for subsequent maintenance. The
 [documentation hub](README.md#module-documentation-and-tracking) links each
-module's guide and tracker.
+module's guide, issue tracker and changelog.
 
 1. **Choose the issue and owner.** Read the owning module's guide and tracker.
    Record a reproducible problem or a concrete refactor goal, affected callers,
@@ -84,8 +84,12 @@ module's guide and tracker.
    status and retain the completion date, change reference, demonstrated module
    benefit, commands/results and remaining limits. Passing checks alone does not
    establish the improvement. Identify verification-only repairs as supporting
-   work without claiming a module enhancement. Update the project issue index
-   when ownership changes.
+   work without claiming a module enhancement. For a change to module behavior,
+   interfaces or maintenance, add a short bullet under `## Unreleased` in the
+   owning module's `docs/CHANGELOG.md` in the same commit. Say what changed and
+   why it matters. Link an issue when the reader needs its evidence. Record a
+   shared change with its owner. Add a caller entry only if its own behavior changed.
+   Update the project issue index when ownership changes.
    Release acceptance remains a separate step.
 
 | Change scope | Verification to retain |
@@ -441,8 +445,20 @@ Group related commits in one release. The updater compares the three numeric
 version components and the release channel. Two candidates at the same version
 appear identical to it.
 
-Update `VERSION`, `RELEASE.json` and the release's `CHANGELOG.md` entry
-together. Build the source archive and installer from the same committed inputs.
+Review the [module changelogs](README.md#module-documentation-and-tracking)
+alongside any project-wide changes. From the repository root, compare the
+working tree with the previous release tag to see the module entries together.
+
+```text
+git diff <previous-release-tag> -- ":(glob)modules/*/docs/CHANGELOG.md"
+```
+
+In each affected module, move the entries included in this release from
+`## Unreleased` to `## X.Y.Z`. Keep pending entries under `Unreleased` and
+keep that heading ready for the next change. Use the shipped entries to write
+the user-facing highlights in the root `CHANGELOG.md`, which feeds What's New.
+Update those notes, `VERSION` and `RELEASE.json` together. Build the source
+archive and installer from the same committed inputs.
 Record the Git commit and each artifact's SHA-256 with the handoff. When
 publishing a release, tag that commit. A diagnostic retry with unchanged inputs
 can keep its version and record a separate build receipt.

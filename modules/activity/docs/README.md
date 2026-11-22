@@ -4,7 +4,7 @@ Activity owns activity routes, work-log projections and exports, and browser
 activity presentation. This guide covers how to maintain those views without
 changing the originating events.
 
-[Module issues](ISSUES.md) · [Architecture](../../../docs/ARCHITECTURE.md) ·
+[Module issues](ISSUES.md) · [Changelog](CHANGELOG.md) · [Architecture](../../../docs/ARCHITECTURE.md) ·
 [Maintenance workflow](../../../docs/DEVELOPMENT.md#maintenance-workflow)
 
 ## Start here

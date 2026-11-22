@@ -44,6 +44,18 @@ def test_current_component_ownership_and_boundaries_are_valid():
     assert analyze()["errors"] == []
 
 
+def test_each_module_has_a_discoverable_changelog():
+    registry = json.loads((ROOT / "docs/components.json").read_text(encoding="utf-8"))
+    index = (ROOT / "docs/README.md").read_text(encoding="utf-8")
+    for component in registry["components"]:
+        guide = ROOT / component["entry"]
+        changelog = guide.with_name("CHANGELOG.md")
+        assert changelog.is_file(), changelog
+        assert "## Unreleased" in changelog.read_text(encoding="utf-8").splitlines(), changelog
+        assert "](CHANGELOG.md)" in guide.read_text(encoding="utf-8"), guide
+        assert f"](../{changelog.relative_to(ROOT).as_posix()})" in index, changelog
+
+
 def miniature(tmp_path, *, bad_import=False):
     (tmp_path / "docs").mkdir()
     (tmp_path / "modules/workspace/components").mkdir(parents=True)

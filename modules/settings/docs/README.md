@@ -4,7 +4,7 @@ Settings owns guided setup, saved preferences and sender identity, settings
 presentation, software-update checks, and update handoff. This guide covers their
 maintenance and integration boundaries.
 
-[Module issues](ISSUES.md) · [Architecture](../../../docs/ARCHITECTURE.md) ·
+[Module issues](ISSUES.md) · [Changelog](CHANGELOG.md) · [Architecture](../../../docs/ARCHITECTURE.md) ·
 [Maintenance workflow](../../../docs/DEVELOPMENT.md#maintenance-workflow)
 
 ## Start here

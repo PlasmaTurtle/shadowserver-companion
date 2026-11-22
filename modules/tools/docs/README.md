@@ -5,7 +5,7 @@ identity, HTTP field parsing and filesystem operations. Each tool keeps its
 implementation, tests and resources here; callers
 retain their domain workflow, UI, persistence and authorization.
 
-[Architecture](../../../docs/ARCHITECTURE.md) · [Tools tracking](ISSUES.md) ·
+[Architecture](../../../docs/ARCHITECTURE.md) · [Tools tracking](ISSUES.md) · [Changelog](CHANGELOG.md) ·
 [Investigations integration](../../investigations/docs/README.md#website-loading-and-capture)
 
 ## Start here

@@ -4,7 +4,7 @@ Entities owns business profiles, entity validation/review, ownership and
 lifecycle, contact discovery/evidence, contact outcomes and entity history.
 This guide describes where to maintain that behavior and which contracts to keep.
 
-[Architecture](../../../docs/ARCHITECTURE.md) · [Entities tracking](ISSUES.md) ·
+[Architecture](../../../docs/ARCHITECTURE.md) · [Entities tracking](ISSUES.md) · [Changelog](CHANGELOG.md) ·
 [Analyst workflow](../../../docs/USER_GUIDE.md#5-keep-organization-records-accurate)
 
 The History tab distinguishes completed deliveries from all investigations.

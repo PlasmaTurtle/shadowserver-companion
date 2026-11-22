@@ -4,7 +4,7 @@ Library owns local CVE and risk catalogs, provider intelligence capture/parsing,
 reference content, source revisions, catalog search and reference-data tools.
 Use this guide to locate maintenance work and preserve its evidence contracts.
 
-[Module issues](ISSUES.md) · [Architecture](../../../docs/ARCHITECTURE.md) ·
+[Module issues](ISSUES.md) · [Changelog](CHANGELOG.md) · [Architecture](../../../docs/ARCHITECTURE.md) ·
 [Project maintenance workflow](../../../docs/DEVELOPMENT.md#maintenance-workflow)
 
 The [November 21 audit and work sequence](ISSUES.md#november-21-library-audit)

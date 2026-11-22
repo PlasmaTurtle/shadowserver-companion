@@ -5,7 +5,7 @@ group proof reuse, supplemental asset checks and the application's integration w
 the standalone attribution engine. Use this guide for application maintenance;
 the engine retains its independent package documentation.
 
-[Module issues](ISSUES.md) · [Architecture](../../../docs/ARCHITECTURE.md) ·
+[Module issues](ISSUES.md) · [Changelog](CHANGELOG.md) · [Architecture](../../../docs/ARCHITECTURE.md) ·
 [Project maintenance workflow](../../../docs/DEVELOPMENT.md#maintenance-workflow)
 
 ## Boundary
