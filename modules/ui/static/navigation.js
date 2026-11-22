@@ -1,4 +1,10 @@
 /** Navigation feature. Dependencies and mutable state are provided by the application context. */
+function serviceStatusLink(error) {
+  return ['ConnectionError', 'TimeoutError'].includes(error.name)
+    ? '<a class="button" href="/api/health" target="_blank" rel="noopener noreferrer">Check local service</a>'
+    : '';
+}
+
 export function install(ctx) {
   const mobileNavigation = () => window.matchMedia?.('(max-width: 760px)')?.matches || false;
 
@@ -79,6 +85,15 @@ export function install(ctx) {
     if (path.startsWith('investigations/')) target = 'workspace/notifications/' + path.slice(15);
     if (path.startsWith('case/')) target = 'workspace/notifications/' + path.slice(5);
     if (path.startsWith('lead/')) target = 'entity/' + path.slice(5);
+    if (target === 'leads' && query) {
+      const params = new URLSearchParams(query);
+      const obsolete = new Set(['known', 'new']);
+      if (obsolete.has(params.get('lens')) || obsolete.has(params.get('sort'))) {
+        if (obsolete.has(params.get('lens'))) params.set('lens', 'all');
+        if (obsolete.has(params.get('sort'))) params.set('sort', 'priority');
+        return target + '?' + params;
+      }
+    }
     return target + (query ? '?' + query : '');
   }
 
@@ -256,7 +271,8 @@ export function install(ctx) {
         main.innerHTML = ctx.actions.heading(
           'Unable to open this view',
           ctx.actions.esc(error.message),
-          '<button class="button" data-action="reload">Try again</button><a class="button" href="#workspace">Workspace</a>',
+          '<button class="button" data-action="reload">Try again</button><a class="button" href="#workspace">Workspace</a>' +
+            serviceStatusLink(error),
         );
     } finally {
       if (id === ctx.state.navigation.renderId) {
@@ -424,7 +440,7 @@ export async function start(ctx, isCurrent = () => true) {
     ctx.actions.$('#main').innerHTML = ctx.actions.heading(
       'Unable to connect',
       ctx.actions.esc(e.message),
-      '<button class="button" data-action="reload">Retry</button>',
+      '<button class="button" data-action="reload-app">Reload app</button>' + serviceStatusLink(e),
     );
   }
 }

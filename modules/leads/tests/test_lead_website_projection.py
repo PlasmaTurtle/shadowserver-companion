@@ -7,7 +7,9 @@ from modules.leads.tests.support.lead_queue import queue_import
 
 
 def test_lead_entity_and_case_share_capture_without_recapturing(client, app):
-    queue_import(client, app)
+    rows = observations()
+    rows[2]["tag"] = "CVE-2025-12345;eol-php"
+    queue_import(client, app, rows)
     lead = client.get("/api/pending-leads").json()[0]
     website = lead["website"]
     assert website and website["final_url"].startswith(("http://", "https://"))
@@ -28,6 +30,9 @@ def test_lead_entity_and_case_share_capture_without_recapturing(client, app):
     assert image.status_code == 200 and image.headers["content-type"] == "image/png"
     retained = app.state.store.one("SELECT * FROM website_captures WHERE id=?", (website["id"],))
     assert hashlib.sha256(image.content).hexdigest() == retained["preview_sha256"]
+    original = client.get(website["image_url"], params={"original": True})
+    assert original.content == app.state.store.path(retained["path"]).read_bytes()
+    assert {"eol", "cve"} == set(lead["finding_kinds"])
     result = client.post(
         "/api/pending-leads/" + lead["id"] + "/start", json={"expected_revision": lead["revision"]}
     )
@@ -93,8 +98,9 @@ def test_explicit_scope_extension_retains_original_proof_and_covers_old_and_new_
         expected_case_version=before["case"]["version"],
     )
     after = Cases(app.state.store).view(case_id)
-    assert len(before["evidence"]) == 1 and len(after["evidence"]) == 2
-    assert {item["id"] for item in before["evidence"]} < {item["id"] for item in after["evidence"]}
+    assert len(before["evidence"]) == 1 and before["evidence"] == after["evidence"]
+    assert app.state.store.one("SELECT count(*) n FROM website_captures")["n"] == 1
+    assert current["website"]["id"] == first["website"]["id"]
     extended_proof = after["domain_groups"][0]["attribution"]
     assert extended_proof["ip"] == proof["ip"] and extended_proof["result_id"] == proof["result_id"]
     assert all(coverage_matches(entry, extended_proof) for entry in after["entries"])

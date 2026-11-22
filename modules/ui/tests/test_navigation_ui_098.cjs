@@ -30,6 +30,7 @@ const { loadApplication } = require('../../../tests/frontend_harness.cjs');
   };
   const context = vm.createContext({
     console,
+    URL,
     URLSearchParams,
     structuredClone,
     location,
@@ -215,6 +216,10 @@ const { loadApplication } = require('../../../tests/frontend_harness.cjs');
   assert.equal(app.actions.canonicalRoute('reports'), 'workspace/completed');
   assert.equal(app.actions.canonicalRoute('imports?tab=api'), 'data?tab=api');
   assert.equal(app.actions.canonicalRoute('lead/e1'), 'entity/e1');
+  assert.equal(
+    app.actions.canonicalRoute('leads?status=deferred&lens=known&sort=new&page=2'),
+    'leads?status=deferred&lens=all&sort=priority&page=2',
+  );
   // The API applies text/status filters; lenses and pagination apply to that full response.
   const queueRows = Array.from({ length: 125 }, (_, index) => ({
     ...lead,
@@ -222,7 +227,7 @@ const { loadApplication } = require('../../../tests/frontend_harness.cjs');
     domain: `asset-${String(index).padStart(3, '0')}.example.com`,
     observations: index + 1,
     observed_to: '2026-11-11',
-    association_state: index < 85 ? 'known' : 'new',
+    finding_kinds: index < 80 ? ['cve'] : index < 85 ? ['cve', 'eol'] : ['eol'],
     can_start: true,
   }));
   const deferredRows = queueRows.slice(0, 3).map((row) => ({ ...row, status: 'deferred' }));
@@ -242,9 +247,11 @@ const { loadApplication } = require('../../../tests/frontend_harness.cjs');
               : queueRows),
       );
     }
-    if (url === '/api/pending-leads/l1/disposition') {
+    if (url === '/api/pending-leads/queue-044') return structuredClone(queueRows[44]);
+    if (url === '/api/pending-leads/queue-044/disposition') {
       calls.push([url, options]);
-      return { ...lead, status: options.body.status };
+      customRows = queueRows.filter((row) => !['queue-044', 'queue-043'].includes(row.id));
+      return { ...queueRows[44], status: options.body.status };
     }
     return priorApi(url, options);
   };
@@ -262,7 +269,7 @@ const { loadApplication } = require('../../../tests/frontend_harness.cjs');
   const params = new URLSearchParams({
     q,
     status: 'pending',
-    lens: 'known',
+    lens: 'cve',
     sort: 'observations',
     page: '2',
   });
@@ -281,8 +288,8 @@ const { loadApplication } = require('../../../tests/frontend_harness.cjs');
     lensLinks(middlePage).map(({ label, count }) => [label, count]),
     [
       ['All', 125],
-      ['Known entity', 85],
-      ['New entity', 40],
+      ['CVE', 85],
+      ['End of life', 45],
     ],
   );
   for (const [text, targetPage] of [
@@ -296,9 +303,9 @@ const { loadApplication } = require('../../../tests/frontend_harness.cjs');
       assert.equal(target.get(key), params.get(key));
   }
   const newLens = routeParams(
-    lensLinks(middlePage).find((item) => item.label === 'New entity').href,
+    lensLinks(middlePage).find((item) => item.label === 'End of life').href,
   );
-  assert.equal(newLens.get('lens'), 'new');
+  assert.equal(newLens.get('lens'), 'eol');
   assert.equal(newLens.get('page'), '1', 'Changing a lens resets pagination');
   for (const key of ['q', 'status', 'sort']) assert.equal(newLens.get(key), params.get(key));
   const lastPage = await app.actions.pendingLeadsPage(
@@ -309,7 +316,7 @@ const { loadApplication } = require('../../../tests/frontend_harness.cjs');
   assert.equal(renderedRows(lastPage).length, 5);
   assert.match(lastPage, /<button[^>]*disabled>Next<\/button>/);
   const fallbackPage = await app.actions.pendingLeadsPage(
-    new URLSearchParams('lens=invalid&sort=invalid&page=not-a-page'),
+    new URLSearchParams('lens=known&sort=new&page=not-a-page'),
   );
   assert.match(fallbackPage, /Page 1 of 4/);
   assert.equal(renderedRows(fallbackPage).length, 40);
@@ -320,7 +327,7 @@ const { loadApplication } = require('../../../tests/frontend_harness.cjs');
   assert(!reviewPage.includes('Resolve match'));
   assert(!reviewPage.includes('<small>Ready to start</small>'));
   const deferredPage = await app.actions.pendingLeadsPage(
-    new URLSearchParams('status=deferred&lens=known&sort=oldest'),
+    new URLSearchParams('status=deferred&lens=cve&sort=oldest'),
   );
   assert.equal(renderedRows(deferredPage).length, 3);
   assert.match(deferredPage, /<option value="deferred" selected>/);
@@ -347,12 +354,17 @@ const { loadApplication } = require('../../../tests/frontend_harness.cjs');
   const returnRoute = 'leads?' + params;
   location.hash = '#' + returnRoute;
   await app.actions.route();
-  location.hash = '#leads/l1';
+  location.hash = '#leads/queue-044';
   await app.actions.route();
   const backHref = node('#main').innerHTML.match(/class="page-back" href="([^"]+)"/)[1];
   assert.equal(decodeAttribute(backHref), '#' + returnRoute);
   await handlers.actions['defer-lead']();
-  assert.equal(location.hash, returnRoute);
+  assert.equal(
+    location.hash,
+    'leads/queue-042',
+    'Advance past the decision and concurrent removal',
+  );
+  assert.equal(app.state.navigation.returns.get('leads'), returnRoute);
   const deferred = calls.findLast(([url]) => url.endsWith('/disposition'))[1].body;
   assert.equal(deferred.expected_revision, 7);
   assert.equal(deferred.status, 'deferred');
@@ -361,14 +373,14 @@ const { loadApplication } = require('../../../tests/frontend_harness.cjs');
     {
       q: 'changed & query',
       status: 'deferred',
-      lens: 'known',
+      lens: 'cve',
       sort: 'oldest',
     },
   );
   const searched = new URLSearchParams(location.hash.split('?')[1]);
   assert.equal(searched.get('q'), 'changed & query');
   assert.equal(searched.get('status'), 'deferred');
-  assert.equal(searched.get('lens'), 'known');
+  assert.equal(searched.get('lens'), 'cve');
   assert.equal(searched.get('sort'), 'oldest');
   assert.equal(searched.has('page'), false, 'A new search starts on the first page');
 

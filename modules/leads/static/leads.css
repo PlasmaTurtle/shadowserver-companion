@@ -1,3 +1,9 @@
+.lead-sites {
+  display: grid;
+  gap: 0.25rem;
+  overflow-wrap: anywhere;
+}
+
 .lead-website {
   margin: 0 0 1.5rem;
   width: min(100%, 480px);

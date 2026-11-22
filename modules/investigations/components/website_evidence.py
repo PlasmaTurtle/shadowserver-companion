@@ -11,7 +11,7 @@ import json
 from urllib.parse import urlsplit
 
 from modules.tools.components.filesystem import read_contained_file
-from modules.tools.components.website_capture import web_url
+from modules.tools.components.website_capture import download_activity, web_url
 from modules.workspace.components.primitives import uid
 from .image_evidence import metadata_path, remove_screenshot, write_screenshot
 
@@ -44,9 +44,20 @@ def related_capture(metadata, root_domain):
         return False
 
 
+def capture_metadata(metadata):
+    """Retain capture provenance with a bounded projection of browser download events."""
+    normalized = dict(metadata)
+    if "download_activity" in normalized:
+        normalized.pop("download_activity")
+        normalized.update(download_activity(metadata))
+    return normalized
+
+
 def prepare(store, png, metadata, *, root_domain):
     """Write capture files before a short publication transaction."""
-    metadata = json.loads(json.dumps(metadata, ensure_ascii=False, allow_nan=False))
+    metadata = json.loads(
+        json.dumps(capture_metadata(metadata), ensure_ascii=False, allow_nan=False)
+    )
     requested = web_url(metadata["requested_url"])
     final = web_url(metadata["final_url"]) if metadata.get("final_url") else ""
     root = root_domain.casefold().rstrip(".")
@@ -126,12 +137,13 @@ def get(store, capture_id, *, db=None):
     return _checked(store, dict(row))[0]
 
 
-def preview(store, capture_id):
+def preview(store, capture_id, *, original=False):
     with store.read_snapshot() as db:
         row = db.execute("SELECT * FROM website_captures WHERE id=?", (capture_id,)).fetchone()
         if row is None:
             raise KeyError("Retained website capture not found")
-        return _checked(store, dict(row))[2]
+        _, raw, thumbnail, _ = _checked(store, dict(row))
+        return raw if original else thumbnail
 
 
 def source_matches(store, item):
@@ -208,6 +220,25 @@ def latest_for_entity(db, entity_id, *, root_domain=None):
         args,
     ).fetchone()
     return dict(row) if row else None
+
+
+def recent_for_host(store, entity_id, requested_url, *, since):
+    """Return a verified, bound capture for the exact request within the caller's freshness limit."""
+    with store.read_snapshot() as db:
+        row = db.execute(
+            "SELECT c.id FROM website_capture_entities e JOIN website_captures c ON c.id=e.capture_id "
+            "WHERE e.entity_id=? AND c.requested_url=? AND julianday(c.captured_at) BETWEEN julianday(?) AND julianday('now') "
+            "ORDER BY c.captured_at DESC,c.rowid DESC LIMIT 1",
+            (entity_id, requested_url, since.isoformat()),
+        ).fetchone()
+        if row:
+            try:
+                reference = get(store, row["id"], db=db)
+                if is_usable_capture(reference["capture"]):
+                    return reference
+            except (KeyError, ValueError, OSError):
+                pass
+    return None
 
 
 def projection(db, entity_id, *, root_domain=None):

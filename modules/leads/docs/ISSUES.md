@@ -1,6 +1,6 @@
 # Leads issues
 
-This tracker owns Leads maintenance work. Last reviewed: **2026-11-21**.
+This tracker owns Leads maintenance work. Last reviewed: **2026-11-22**.
 Use the [module guide](README.md) for current contracts and verification, and
 the [project register](../../../docs/ISSUES.md) for shared work and the global
 index. Follow the [issue lifecycle](../../../docs/ISSUES.md#maintaining-this-register)
@@ -19,6 +19,14 @@ Individual entries retain their module benefit, scope and focused evidence.
 | ID | Work | Status |
 | --- | --- | --- |
 | ISS007 | [Entity presentation in Leads](#iss007-entity-presentation-in-leads) | Resolved |
+| LEAD-01 through LEAD-06 | [Site and screenshot inspection, finding filters, notification history and review continuity](README.md#boundary) | Implemented |
+
+The November 22 [queue checks](../tests/test_website_thumbnail_ui.cjs) cover
+links to three different hosts, preview enlargement and a decision shared by
+both finding views. The [navigation regression](../../ui/tests/test_navigation_ui_098.cjs)
+covers filters across page boundaries and advancing past a lead removed by
+another reviewer. [Capture projection](../tests/test_lead_website_projection.py)
+checks the original image bytes and reuse when the case gains new source rows.
 
 ## ISS007 Entity presentation in Leads
 

@@ -1,5 +1,5 @@
 import { observedVersion } from '../../ui/static/shared.js';
-import { entityName } from '../../entities/static/entities.js';
+import { entityName, notificationSummary } from '../../entities/static/entities.js';
 /** Qualified lead queue, priority and explicit investigation-start presentation. No startup requests or event listeners are installed here. */
 export function install(ctx) {
   const esc = (value) => ctx.actions.esc(value ?? '');
@@ -75,20 +75,34 @@ export function install(ctx) {
 
   function websiteMarkup(lead, { compact = false } = {}) {
     const capture = lead.website;
-    if (!capture?.id || !/^https?:\/\//i.test(capture.final_url || ''))
+    let reached;
+    try {
+      reached = new URL(capture?.final_url);
+    } catch {}
+    if (!capture?.id || !['https:', 'http:'].includes(reached?.protocol))
       return '<span class="dossier-quiet">Website screenshot unavailable</span>';
     const image = '/api/website-evidence/' + encode(capture.id) + '/image';
-    return `<figure class="lead-website${compact ? ' lead-website-compact' : ''}"><a href="${esc(image)}" target="_blank" rel="noopener noreferrer" aria-label="View retained website screenshot for ${esc(lead.domain)}"><img src="${esc(image)}" alt="Website captured for ${esc(lead.domain)}" width="${compact ? 144 : 480}" height="${compact ? 90 : 300}" loading="lazy"></a><figcaption><a class="text-link" href="${esc(capture.final_url)}" target="_blank" rel="noopener noreferrer">Open website</a>${compact ? '' : `<small>Captured ${ctx.actions.stamp(capture.captured_at)}</small>`}</figcaption></figure>`;
+    return `<figure class="lead-website${compact ? ' lead-website-compact' : ''}"><a href="${esc(image)}?original=true" target="_blank" rel="noopener noreferrer" aria-label="Enlarge retained screenshot of ${esc(reached.hostname)}"><img src="${esc(image)}" alt="Website captured at ${esc(reached.hostname)}" width="${compact ? 144 : 480}" height="${compact ? 90 : 300}" loading="lazy"></a><figcaption><a class="text-link" href="${esc(capture.final_url)}" target="_blank" rel="noopener noreferrer">${esc(reached.hostname)}</a><small>Captured ${ctx.actions.stamp(capture.captured_at)}</small></figcaption></figure>`;
   }
 
-  async function pendingLeadsPage(params = new URLSearchParams()) {
+  function siteLinks(lead, compact = false) {
+    const link = (host) =>
+      /^[a-z0-9.-]+$/i.test(host)
+        ? `<a class="text-link" href="https://${esc(host)}/" target="_blank" rel="noopener noreferrer">${esc(host)}</a>`
+        : esc(host);
+    const hosts = list(lead.hostnames);
+    const visible = compact ? hosts.slice(0, 1) : hosts;
+    return `<div class="lead-sites"><small>Root site · ${link(lead.domain)}</small>${visible.map((h) => `<small>Reported host · ${link(h)}</small>`).join('')}${compact && hosts.length > 1 ? `<small>+${hosts.length - 1} reported hosts</small>` : ''}</div>`;
+  }
+
+  async function queueSelection(params) {
     const q = params.get('q') || '',
       status = params.get('status') || 'pending';
     const all = await ctx.actions.api('/api/pending-leads?' + new URLSearchParams({ q, status }));
     const lenses = [
       ['all', 'All', () => true],
-      ['known', 'Known entity', (r) => r.association_state === 'known'],
-      ['new', 'New entity', (r) => r.association_state === 'new'],
+      ['cve', 'CVE', (r) => list(r.finding_kinds).includes('cve')],
+      ['eol', 'End of life', (r) => list(r.finding_kinds).includes('eol')],
     ];
     const lens = lenses.find((item) => item[0] === params.get('lens')) || lenses[0];
     const sort = ['priority', 'latest', 'oldest', 'observations'].includes(params.get('sort'))
@@ -107,6 +121,12 @@ export function install(ctx) {
                   b.observed_to || b.created_at || '',
                 ) || a.id.localeCompare(b.id),
       );
+    return { q, status, all, lenses, lens, sort, filtered };
+  }
+
+  async function pendingLeadsPage(params = new URLSearchParams()) {
+    const renderId = ctx.state.navigation.renderId;
+    const { q, status, all, lenses, lens, sort, filtered } = await queueSelection(params);
     const totalPages = Math.max(1, Math.ceil(filtered.length / 40));
     const page = Math.min(
       totalPages,
@@ -115,6 +135,12 @@ export function install(ctx) {
     const rows = filtered.slice((page - 1) * 40, page * 40);
     const url = (changes) =>
       '#leads?' + new URLSearchParams({ q, status, lens: lens[0], sort, ...changes });
+    if (renderId === ctx.state.navigation.renderId) {
+      ctx.state.intakeLeads.queue = {
+        ids: filtered.map((item) => item.id),
+        route: url({ page }).slice(1),
+      };
+    }
     const pagination = `<div class="queue-page"><span>${filtered.length ? `${(page - 1) * 40 + 1}–${Math.min(page * 40, filtered.length)} of ${ctx.actions.num(filtered.length)}` : '0 leads'} · Page ${page} of ${totalPages}</span><div class="actions">${page > 1 ? `<a class="button small" href="${esc(url({ page: page - 1 }))}">Previous</a>` : '<button class="button small" disabled>Previous</button>'}${page < totalPages ? `<a class="button small" href="${esc(url({ page: page + 1 }))}">Next</a>` : '<button class="button small" disabled>Next</button>'}</div></div>`;
     return (
       '<section class="dossier-index lead-index">' +
@@ -145,7 +171,7 @@ export function install(ctx) {
         )
         .join(
           '',
-        )}</select><button type="submit" class="button small">Search</button></form></div>${rows.length ? `<div class="table-wrap dossier-directory lead-directory"><table><thead><tr><th>Reported hostname</th><th>Website</th><th>Outreach priority</th><th>Finding</th><th>Entity</th><th>Observations</th><th></th></tr></thead><tbody>${rows.map((r) => `<tr class="intake-priority-row" data-temperature="${Object.hasOwn(temperatures, r.intake_score?.temperature) ? r.intake_score.temperature : 'unscored'}"><td><a class="text-link" href="#leads/${encode(r.id)}"><strong>${esc(r.domain)}</strong></a><small>${list(r.ips).map(esc).join(', ')}</small></td><td>${websiteMarkup(r, { compact: true })}</td><td>${intakeTemperatureMarkup(r.intake_score)}${scoreNumber(r.intake_score?.aggregate) !== null ? `<small class="intake-score-pair">Quality ${scoreText(r.intake_score.quality)} · Urgency ${scoreText(r.intake_score.urgency)}</small>` : ''}</td><td>${list(r.findings).slice(0, 3).map(esc).join('<br>')}${list(r.findings).length > 3 ? `<small>+${r.findings.length - 3} more</small>` : ''}</td><td>${association(r)}<small>${esc(r.association_basis)}</small></td><td>${ctx.actions.num(r.observations)}<small>${ctx.actions.date(r.observed_to)}</small></td><td><button class="text-button" data-action="ignore-queue-lead" data-lead="${esc(r.id)}" data-revision="${esc(r.revision)}">Ignore</button></td></tr>`).join('')}</tbody></table></div>` : ctx.actions.empty('No leads in this view', '', ctx.actions.linkButton('#leads', 'Clear filters'))}${pagination}</section></section>`
+        )}</select><button type="submit" class="button small">Search</button></form></div>${rows.length ? `<div class="table-wrap dossier-directory lead-directory"><table><thead><tr><th>Lead and sites</th><th>Website</th><th>Outreach priority</th><th>Finding</th><th>Entity</th><th>Observations</th><th></th></tr></thead><tbody>${rows.map((r) => `<tr class="intake-priority-row" data-temperature="${Object.hasOwn(temperatures, r.intake_score?.temperature) ? r.intake_score.temperature : 'unscored'}"><td><a class="text-link" href="#leads/${encode(r.id)}"><strong>${esc(r.domain)}</strong></a>${siteLinks(r, true)}<small>${list(r.ips).map(esc).join(', ')}</small></td><td>${websiteMarkup(r, { compact: true })}</td><td>${intakeTemperatureMarkup(r.intake_score)}${scoreNumber(r.intake_score?.aggregate) !== null ? `<small class="intake-score-pair">Quality ${scoreText(r.intake_score.quality)} · Urgency ${scoreText(r.intake_score.urgency)}</small>` : ''}</td><td>${list(r.findings).slice(0, 3).map(esc).join('<br>')}${list(r.findings).length > 3 ? `<small>+${r.findings.length - 3} more</small>` : ''}</td><td>${association(r)}<small>${esc(r.association_basis)}</small>${r.notification_history ? `<small><a href="#entity/${encode(r.entity_id)}?tab=history">${notificationSummary(r.notification_history, ctx.actions)}</a></small>` : ''}</td><td>${ctx.actions.num(r.observations)}<small>${ctx.actions.date(r.observed_to)}</small></td><td><button class="text-button" data-action="ignore-queue-lead" data-lead="${esc(r.id)}" data-revision="${esc(r.revision)}">Ignore</button></td></tr>`).join('')}</tbody></table></div>` : ctx.actions.empty('No leads in this view', '', ctx.actions.linkButton('#leads', 'Clear filters'))}${pagination}</section></section>`
     );
   }
 
@@ -179,7 +205,11 @@ export function install(ctx) {
     return (
       `<section class="lead-dossier"><a class="page-back" href="#${esc(back)}">${ctx.actions.icon('back')}Leads</a>` +
       ctx.actions.heading(esc(lead.domain), '', actions) +
+      siteLinks(lead) +
       websiteMarkup(lead) +
+      (lead.entity_id
+        ? `<p>${notificationSummary(lead.notification_history, ctx.actions)} · <a class="text-link" href="#entity/${encode(lead.entity_id)}?tab=history">Notification history</a></p>`
+        : '') +
       intakeScoreMarkup(lead.intake_score) +
       (lead.delta
         ? `<p class="section-note">${ctx.actions.num(lead.delta.new || 0)} new · ${ctx.actions.num(lead.delta.repeated || 0)} recurring · ${ctx.actions.num(lead.delta.retired || 0)} retired findings</p>`
@@ -198,7 +228,40 @@ export function install(ctx) {
         )}</tbody></table></div></section><div class="actions lead-disposition">${lead.status === 'pending' ? '<button class="button" data-action="defer-lead">Defer</button><button class="text-button" data-action="dismiss-lead">Ignore</button>' : '<button class="button" data-action="restore-lead">Return to leads</button>'}</div></section>`
     );
   }
-  const actions = { intakeTemperatureMarkup, intakeScoreMarkup, pendingLeadsPage, pendingLeadPage };
+  async function nextLeadRoute(id, fallback = '') {
+    const view = ctx.state.navigation.renderId;
+    const queue = ctx.state.intakeLeads.queue;
+    const index = queue?.ids.indexOf(id) ?? -1;
+    const priorRoute =
+      index >= 0 ? queue.route : ctx.state.navigation.returns.get('leads') || 'leads';
+    const params = new URLSearchParams(priorRoute.split('?')[1]);
+    let filtered;
+    try {
+      ({ filtered } = await queueSelection(params));
+    } catch {
+      // The decision has already committed. Give the analyst a route to reload safely.
+      return fallback || priorRoute;
+    }
+    if (view !== ctx.state.navigation.renderId) return priorRoute;
+    const ids = filtered.map((item) => item.id).filter((item) => item !== id);
+    const eligible = new Set(ids);
+    // Continue the analyst's order even when another reviewer consumed the successor.
+    const next =
+      (index >= 0 ? queue.ids.slice(index + 1).find((item) => eligible.has(item)) : null) ??
+      ids[Math.min(Math.max(0, index), ids.length - 1)];
+    params.set('page', String(next ? Math.floor(ids.indexOf(next) / 40) + 1 : 1));
+    const route = 'leads?' + params;
+    ctx.state.intakeLeads.queue = { ids, route };
+    ctx.state.navigation.returns.set('leads', route);
+    return next ? 'leads/' + encode(next) : fallback || route;
+  }
+  const actions = {
+    intakeTemperatureMarkup,
+    intakeScoreMarkup,
+    pendingLeadsPage,
+    pendingLeadPage,
+    nextLeadRoute,
+  };
   Object.assign(ctx.actions, actions);
   return actions;
 }

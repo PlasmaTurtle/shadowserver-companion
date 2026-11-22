@@ -7,6 +7,21 @@ retained report packages. This guide maps maintenance work to those contracts.
 [Architecture](../../../docs/ARCHITECTURE.md) · [Investigations issues](ISSUES.md) ·
 [Analyst workflow](../../../docs/USER_GUIDE.md)
 
+## Completed notifications
+
+A notification counts once, on the first recorded delivery or acknowledgement
+of a specific certified case report to a recipient. Preparing, certifying,
+exporting, or recording an email as sent leaves the count unchanged. Later
+acknowledgements and case closure preserve the original delivery date. A new
+case delivered to the same entity adds one. Migrated reports with a recorded
+sent timestamp supply the delivery date for historical cases.
+
+`completed_notifications` in [case_queries.py](../components/services/case_queries.py)
+reads the case and revision records in the caller's database transaction. It
+returns the distinct case count, latest case and delivery date for the canonical
+entity. Requesting the case list also returns links' identifiers and delivery
+dates. Leads, Entities and Associate share this query.
+
 ## Start here
 
 | Maintenance area | Start here |
@@ -124,7 +139,7 @@ alongside the [registration rules](../../../docs/DEVELOPMENT.md#working-in-a-mod
 The [qualified-lead screenshot lifecycle](../../accretion/docs/PIPELINE.md#screenshots)
 captures during Qualify, displays a Leads thumbnail and adopts that same evidence
 into the report. Every report must include a relevant retained screenshot;
-functioning login/admin captures qualify. Cross-module implementation and verification
+login/admin captures that identify the business can qualify. Cross-module implementation and verification
 are tracked in [ISS027](../../accretion/docs/ISSUES.md#iss027-qualify-decisions-and-workflow).
 
 [`website_evidence.py`](../components/website_evidence.py) owns the pre-case artifact:
@@ -169,6 +184,11 @@ It rechecks case version and section editability before committing the validated
 hashed PNG. Functioning related login pages are included by default. Partial,
 challenge and unrelated captures remain excluded. Completion must not overwrite unsaved narrative or attach
 to a case that became frozen or was cancelled.
+
+Capture details and case history show observed download attempts with their UTC
+times and browser outcomes. When capture fails, the case history can retain that
+observation without creating a screenshot. The [Tools capture contract](../../tools/docs/README.md#website-loading-and-capture)
+defines what each outcome establishes.
 
 Use the [Tools verification guide](../../tools/docs/README.md#verification) for
 browser loading and native output checks, and

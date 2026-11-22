@@ -26,7 +26,11 @@ from modules.entities.components.api_models import (
 from modules.investigations.components.api_models import (
     CaseVersion,
 )
-from modules.investigations.components.services.case_queries import list_cases
+from modules.investigations.components.services.case_queries import (
+    completed_notifications,
+    list_cases,
+    notification_histories,
+)
 from modules.leads.components.lead_queue import LeadQueue, save_ip_association
 from ..repositories.entities import EntityRepository
 from modules.attribution.components.attribution_display import attribution_summaries
@@ -107,11 +111,11 @@ def register(app, *, store, cases, get_lead):
         return queue.detail(pending_id)
 
     @app.get("/api/website-evidence/{capture_id}/image")
-    def website_evidence_image(capture_id: str):
+    def website_evidence_image(capture_id: str, original: bool = False):
         from modules.investigations.components.website_evidence import preview
 
         try:
-            content = preview(store, capture_id)
+            content = preview(store, capture_id, original=original)
         except KeyError as error:
             raise HTTPException(404, "Website screenshot not found") from error
         except (OSError, ValueError) as error:
@@ -140,7 +144,9 @@ def register(app, *, store, cases, get_lead):
         rows = leads(q=q)
         repository = EntityRepository(store)
         with store.read_snapshot() as db:
+            histories = notification_histories(db, (row["id"] for row in rows))
             for row in rows:
+                row["notification_history"] = histories[row["id"]]
                 entity = db.execute("SELECT * FROM leads WHERE id=?", (row["id"],)).fetchone()
                 row["entity_profile"] = repository.profile(db, row["id"])
                 row["entity_review"] = repository.field_review(db, entity, row["entity_profile"])
@@ -226,7 +232,11 @@ def register(app, *, store, cases, get_lead):
         entity = store.lead(store.resolve_entity(entity_id))
         if not entity:
             raise HTTPException(404, "Business entity not found")
-        entity["cases"] = list_cases(store, entity_id=entity["id"])
+        with store.read_snapshot() as db:
+            entity["cases"] = list_cases(store, entity_id=entity["id"], db=db)
+            entity["notification_history"] = completed_notifications(
+                db, entity["id"], include_cases=True
+            )
         entity["entity_revision"] = entity["draft_revision"]
         entity["review_required"] = entity["entity_review"]["required"]
         entity["attribution_summaries"] = attribution_summaries(store, entity)

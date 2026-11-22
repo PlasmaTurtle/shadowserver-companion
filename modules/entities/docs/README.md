@@ -7,6 +7,12 @@ This guide describes where to maintain that behavior and which contracts to keep
 [Architecture](../../../docs/ARCHITECTURE.md) · [Entities tracking](ISSUES.md) ·
 [Analyst workflow](../../../docs/USER_GUIDE.md#5-keep-organization-records-accurate)
 
+The History tab distinguishes completed deliveries from all investigations.
+Entity merges move case ownership and flatten historical aliases, so the old
+and current entity links resolve to the same delivery history. The count and
+last notification date come from the
+[Investigations notification query](../../investigations/docs/README.md#completed-notifications).
+
 ## Start here
 
 | Maintenance area | Start here |

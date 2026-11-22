@@ -1,6 +1,6 @@
 # Entities tracking
 
-This tracker owns Entities maintenance work. Last reviewed: **2026-11-21**.
+This tracker owns Entities maintenance work. Last reviewed: **2026-11-22**.
 Use the [module guide](README.md) for current contracts and verification, and
 the [project register](../../../docs/ISSUES.md) for shared work and the global
 index. Follow the [issue lifecycle](../../../docs/ISSUES.md#maintaining-this-register)
@@ -11,6 +11,7 @@ when adding, resolving or deferring an item.
 | ID | Work | Status |
 | --- | --- | --- |
 | ISS044 | [Qualified website contact scope](#iss044-qualified-website-contact-scope) | Open |
+| ENT-01 | [Canonical notification history](../../investigations/docs/README.md#completed-notifications) across linked leads and merged entities | Implemented |
 
 ## ISS044 Qualified website contact scope
 

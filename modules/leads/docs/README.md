@@ -28,6 +28,18 @@ The image route verifies the retained original, preview and metadata hashes;
 opening Leads never starts a browser capture. Case creation adopts the same
 original and preview through Investigations' evidence API.
 
+The queue offers separate links for the reported hostname, its root domain from
+intake's shared domain parser and the destination actually captured. The saved
+image shows its capture time and opens at its original resolution.
+
+The CVE and End of life views use the active findings attached to each lead.
+A mixed lead appears once in each applicable view and shares its review decision
+across both. Search, status, finding type and ordering apply before pagination.
+Old Known/New filters fall back to All. Starting, deferring or ignoring a lead
+refreshes the same selection and advances to the next available lead. Starting
+the final lead opens its notification. The lead dossier shows the canonical
+entity's last delivery date and links to its completed-notification history.
+
 Qualified JSON exports carry `website_evidence` references alongside the original
 rows and attribution proof. References identify the capture, actual requested and
 loaded URLs, capture time/status and original SHA-256. Case exports identify their

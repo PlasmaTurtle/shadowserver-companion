@@ -1,6 +1,6 @@
 # Investigations issues
 
-This tracker owns Investigations maintenance work. Last reviewed: **2026-11-21**.
+This tracker owns Investigations maintenance work. Last reviewed: **2026-11-22**.
 Use the [module guide](README.md) for current contracts and verification, and
 the [project register](../../../docs/ISSUES.md) for shared work and the global
 index. Follow the [issue lifecycle](../../../docs/ISSUES.md#maintaining-this-register)
@@ -21,7 +21,13 @@ records its own verification and does not inherit that batch's completion claim.
 | --- | --- | --- |
 | ISS001 | [Capture test expectations](#iss001-capture-test-expectations) | Resolved |
 | ISS019 | [Interrupted certification state](#iss019-interrupted-certification-state) | Resolved |
+| INV-01, INV-02 | [Delivery-based notification history](README.md#completed-notifications) across revisions and closure | Implemented |
 | ISS020 | [Reported-host loading and redirects](../../tools/docs/ISSUES.md#iss020-reported-host-loading-and-redirects) | Moved to Tools |
+
+The November 22 [delivery history checks](../tests/test_cases.py) cover email
+sent before confirmation, subsequent acknowledgement, re-export, older delivered
+revisions and two successive entity merges. A pending case alongside two
+delivered cases shows two notifications in Leads and Entities.
 
 ## ISS001 Capture test expectations
 

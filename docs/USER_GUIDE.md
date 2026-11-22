@@ -113,7 +113,7 @@ Start each day in **Workspace**. Review leads, active investigations, follow-ups
 
 ### Understand Accretion
 
-Accretion is a funnel: **Filter → Qualify → Evaluate → Associate**. Filter checks supported findings and jurisdiction. Qualify requires authoritative IP/domain attribution and a functioning related website with a retained screenshot; a working login page counts. Evaluate ranks the qualified lead, then Associate publishes it and queues contact discovery. Groups awaiting review or retry stay outside active Leads until qualification completes. Retained source records remain available even when they do not pass.
+Accretion is a funnel: **Filter → Qualify → Evaluate → Associate**. Filter checks supported findings and jurisdiction. Qualify requires authoritative IP/domain attribution and a functioning related website with a retained screenshot; a login page must identify the business. Evaluate ranks the qualified lead. Associate checks prior notification history, outreach holds and external referrals before publishing and queuing contact discovery. In Data, use **External deconfliction list** to maintain a whole-domain or exact-host entry with its reference and reason. Groups awaiting review or retry stay outside active Leads until qualification completes. Retained source records remain available even when they do not pass.
 
 Some observations remain as context without becoming leads. **Settings → How rows qualify** explains required fields, jurisdiction, supported critical or locally verified KEV findings, and report-dependent version requirements. **Dark Matter** keeps complete source rows and their recorded outcomes, including malformed and excluded rows. A retained row is not itself approval for outreach. Approval of one condition does not approve every other condition from that source.
 
@@ -139,7 +139,9 @@ A saved subscription that conflicts with a changed jurisdiction pauses automatic
 
 ### Read priority as a work aid
 
-In **Leads**, filter by **Known entity** or **New entity**, search for a hostname, IP, or finding, and sort by priority or observation date. The **Outreach priority** badge uses **Cool**, **Warm**, **Hot**, and **Blazing**. **Unscored** means no usable score, not low risk.
+In **Leads**, choose **All**, **CVE**, or **End of life**, search by hostname, IP, or finding, and sort by priority or observation date. A lead with both kinds of finding appears in both views. A decision on that lead updates both views and advances to the next eligible lead in your selection. The **Outreach priority** badge uses **Cool**, **Warm**, **Hot**, and **Blazing**. **Unscored** means a usable score is unavailable.
+
+Open a lead to compare its reported hostname and root site with the hostname and time on its saved screenshot. Select the image to inspect the original. **Notification history** shows when the organization last received a certified notification and how many distinct cases reached a recorded delivery or acknowledgement.
 
 Open **Why this temperature** to inspect quality, urgency, local CVE evidence, and the saved scoring record. Review catalog warnings before relying on the ranking. Priority does not prove compromise, establish ownership, or mean a contact is ready.
 
@@ -546,6 +548,7 @@ Start with the status shown in the app and the record involved. A failed view, i
 | Library is incomplete or overdue | Read errors and successful-update dates. Resume the catalog, sync the relevant feeds, or build the product index when offered. |
 | Entity or sender changed but report did not | Review and adopt the update in the draft; reopen affected frozen sections. Historical certified reports remain unchanged. |
 | Changes are paused after restore/reset | Review the staged operation. Restart the console and app to apply it, or Cancel pending change before restart. |
+| Several views show a connection error while the console is open | Choose **Check local service** on the connection error screen, or open `/api/health` in a new tab on the same local address (normally `http://127.0.0.1:8881/api/health`). A JSON response with the application version confirms the service can answer at that moment. If it times out or the connection is refused, note the time and console message. Open Eclipse from the desktop shortcut for a fresh session. |
 | Browser session no longer works | Reopen the desktop shortcut for a fresh session. If the app cannot start, use the documented recovery path. |
 | Package files are missing | Use the documented backup recovery workflow. Import replaces the workspace, so preserve current work first. A database entry alone is not an intact package. |
 

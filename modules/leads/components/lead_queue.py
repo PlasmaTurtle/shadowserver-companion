@@ -145,13 +145,14 @@ def _awareness_scope(db, entries):
 
     if not available(db):
         return None
-    selected, labels = set(), set()
+    selected, labels, kinds = set(), set(), set()
     for entry in entries:
         active = (entry.get("normalized") or {}).get("active_conditions")
-        for fid, (condition, _) in zip(finding_ids(entry, db), conditions(entry)):
+        for fid, (condition, kind) in zip(finding_ids(entry, db), conditions(entry)):
             if active is None or condition in active:
                 selected.add(fid)
                 labels.add(condition)
+                kinds.add(kind)
     if not selected:
         return None
     from modules.accretion.components.awareness_admission import state_sql
@@ -169,7 +170,12 @@ def _awareness_scope(db, entries):
         "max(CASE WHEN approved THEN NULLIF(observed_at,'') END) last_seen FROM selected",
         (dump(sorted(selected)),),
     ).fetchone()
-    return {**dict(result), "findings": len(selected), "labels": sorted(labels)}
+    return {
+        **dict(result),
+        "findings": len(selected),
+        "labels": sorted(labels),
+        "kinds": sorted(kinds),
+    }
 
 
 class LeadQueue:
@@ -245,6 +251,11 @@ class LeadQueue:
             ),
         )
         if detail:
+            from modules.investigations.components.services.case_queries import (
+                completed_notifications,
+            )
+
+            item["notification_history"] = completed_notifications(db, row["entity_id"])
             item["entries"] = [{"id": i, **e} for i, e in zip(ids, entries)]
             item["candidate_entities"] = [e for i in candidate_ids if (e := _owner(db, i))]
             item["active_cases"] = [
@@ -262,6 +273,18 @@ class LeadQueue:
                     (ip, row["entity_id"]),
                 ):
                     item["shared_ip_associations"].append({"ip": ip, **dict(match)})
+        if scope:
+            item["finding_kinds"] = scope["kinds"]
+        else:
+            from modules.accretion.components.awareness import conditions
+
+            kinds = set()
+            for entry in entries:
+                active = (entry.get("normalized") or {}).get("active_conditions")
+                kinds.update(
+                    kind for label, kind in conditions(entry) if active is None or label in active
+                )
+            item["finding_kinds"] = sorted(kinds)
         return item
 
     def list(self, status="pending", q=""):
@@ -280,6 +303,13 @@ class LeadQueue:
                 params,
             ).fetchall()
             items = [self._project(db, r) for r in rows]
+            from modules.investigations.components.services.case_queries import (
+                notification_histories,
+            )
+
+            histories = notification_histories(db, (item["entity_id"] for item in items))
+            for item in items:
+                item["notification_history"] = histories[item["entity_id"]]
         if status and status != "all":
             items = [r for r in items if r["status"] == status]
         if q:

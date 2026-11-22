@@ -268,12 +268,17 @@ def test_certify_without_recipient_and_contact_plan_preserves_certification(clie
 
 def test_email_sent_is_pending_and_delivery_names_exact_revision(client, app):
     lead, report = certified(client, app)
+
+    def history():
+        return client.get("/api/entities/" + lead["id"]).json()["notification_history"]
+
     response = client.post(
         "/api/cases/" + lead["case_id"] + "/attempts", json=attempt(lead, report, "email_sent")
     )
     assert response.status_code == 200, response.text
     lead = response.json()
     assert lead["case"]["stage"] == "pending_notification" and lead["case"]["delivered_at"] is None
+    assert history()["count"] == 0
     payload = attempt(lead, report)
     payload["recipient"] = ""
     assert (
@@ -287,6 +292,16 @@ def test_email_sent_is_pending_and_delivery_names_exact_revision(client, app):
     assert lead["case"]["stage"] == "notification_completed"
     assert lead["attempts"][-1]["report_id"] == report["id"]
     assert lead["case"]["delivered_at"] == "2026-11-06T19:30:00Z"
+    original_history = history()
+    assert original_history["count"] == 1
+    assert original_history["last_notified_at"] == lead["case"]["delivered_at"]
+    assert original_history["last_case_id"] == lead["case_id"]
+    assert client.get("/api/reports/" + report["id"] + "/pdf").status_code == 200
+    followup = client.post(
+        "/api/cases/" + lead["case_id"] + "/attempts", json=attempt(lead, report, "acknowledged")
+    )
+    assert followup.status_code == 200
+    assert history() == original_history
     assert client.get("/api/dashboard").json()["workflow"]["delivered_total"] == 1
 
 
@@ -325,6 +340,62 @@ def test_substantive_revision_requires_certification_and_keeps_old_package(clien
         == 422
     )
     assert hashlib.sha256(path.read_bytes()).hexdigest() == digest
+
+
+def test_canonical_history_keeps_legacy_delivery_across_revisions_and_merge(client, app):
+    """An older sent revision, another closed delivery and a pending report count as two."""
+    from modules.investigations.components.services.case_queries import completed_notifications
+    from modules.leads.tests.support.lead_queue import queue_import
+    from modules.leads.components.lead_queue import LeadQueue
+    from modules.entities.components.repositories.entities import EntityRepository
+    from modules.entities.tests.support.contacts import entity_only
+    from modules.workspace.components.primitives import now
+
+    queue_import(client, app)
+    store = app.state.store
+    pending = LeadQueue(store).list()[0]
+    owner = pending["entity_id"]
+    entity_only(store, "older-owner", "older.example")
+    entity_only(store, "intermediate-owner", "intermediate.example")
+    with store.transaction() as db:
+        stamp = now()
+        # Older workspaces can retain a sent revision even when the latest one is unsent.
+        for case_id, entity, stage, delivered in (
+            ("historical", "older-owner", "pending_notification", None),
+            ("closed", owner, "closed", "2026-11-10T09:00:00Z"),
+            ("waiting", owner, "pending_notification", None),
+        ):
+            db.execute(
+                "INSERT INTO cases(id,entity_id,title,stage,created_at,updated_at,delivered_at) "
+                "VALUES(?,?,?,?,?,?,?)",
+                (case_id, entity, case_id, stage, stamp, stamp, delivered),
+            )
+        for identity, case_id, revision, sent in (
+            ("r1", "historical", 1, "2026-11-09T10:00:00Z"),
+            ("r2", "historical", 2, None),
+            ("r3", "waiting", 3, None),
+        ):
+            db.execute(
+                "INSERT INTO reports(id,lead_id,entity_id,case_id,revision,created_at,path,sent_at) "
+                "VALUES(?,?,?,?,?,?,?,?)",
+                (identity, owner, owner, case_id, revision, stamp, identity, sent),
+            )
+        EntityRepository.transfer_records(db, "older-owner", "intermediate-owner")
+        EntityRepository.transfer_records(db, "intermediate-owner", owner)
+        for alias in (owner, "older-owner", "intermediate-owner"):
+            assert completed_notifications(db, alias) == {
+                "count": 2,
+                "last_case_id": "closed",
+                "last_notified_at": "2026-11-10T09:00:00Z",
+            }
+    summary = client.get("/api/pending-leads/" + pending["id"]).json()["notification_history"]
+    assert summary["count"] == 2
+    assert client.get("/api/pending-leads").json()[0]["notification_history"] == summary
+    assert client.get("/api/entities").json()[0]["notification_history"] == summary
+    for alias in (owner, "older-owner", "intermediate-owner"):
+        history = client.get("/api/entities/" + alias).json()["notification_history"]
+        assert {k: history[k] for k in summary} == summary
+        assert [c["id"] for c in history["cases"]] == ["closed", "historical"]
 
 
 def test_closing_report_records_delivery_and_recipient_reported_action(client, app):
