@@ -2,7 +2,7 @@
 
 Module-owned maintenance work belongs here. Shared work is linked to its
 canonical tracker so status and completion evidence have one maintained home.
-Last reviewed: **2026-11-21**.
+Last reviewed: **2026-11-22**.
 
 [Maintenance guide](README.md) · [Project issue index](../../../docs/ISSUES.md)
 
@@ -27,6 +27,42 @@ Individual entries retain their module benefit, scope and evidence for later cha
 | ISS031 | [Evaluate scoring matrix and active scope](#iss031-evaluate-scoring-matrix-and-active-scope) | Resolved | Accretion; Leads participates |
 | ISS043 | [Associate scope and component boundaries](#iss043-associate-scope-and-component-boundaries) | Resolved | Accretion; Entities and Leads participate |
 | ISS046 | [Typed Accretion handoffs](#iss046-typed-accretion-handoffs) | Resolved | Accretion; Attribution, Entities, Leads and Workspace participate |
+| ISS049 | [Filter and Qualify counters](#iss049-filter-and-qualify-counters) | Resolved in source | Accretion |
+
+## ISS049 Filter and Qualify counters
+
+Filter labelled every retained row eligible, including observations kept only
+as context for another finding. Qualify showed how many groups had been checked
+without naming the unit. The Data console now shows the independently eligible
+and context row counts, the number of selected root-domain groups and how many
+of those groups Qualify checked. Import history and details follow the same
+definitions. Historical imports without a recorded context count show rows
+retained. The recent-files summary also reports retained rows.
+
+The worker used to mark progress complete even after recording deferred groups.
+It now saves the stage and lifecycle together. A deferred result shows that
+qualification needs retry, including in older import history. Data shows retry
+reasons by group count. Current imports record local browser startup failures
+separately from site-loading failures. The first local startup failure stops that
+import's qualification pass. Remaining groups stay pending until Resume import
+retries the failed group and processes the pending groups. An individual site's
+navigation failure leaves other groups free to proceed. For older imports, progress reports the
+recorded tool failure, and opening Details identifies a startup failure when
+the saved attempt contains the exact known failure. Polling reads job status and
+reason codes. It does not load observation payloads or attempt histories.
+
+In a Windows source run with 1,380 synthetic eligible rows, all 408 domain
+groups qualified. Data and Library remained usable during and after the batch.
+Group completion precedes the qualified-lead JSON export. In the repeat run
+the export acknowledgement arrived 22.62 seconds after the final sidebar sweep.
+Integration checks that inspect the exported file or remove the workspace must
+wait for the export acknowledgement as well as the qualification counts.
+
+The filter-boundary fixture follows four synthetic HTTP report rows through
+intake and its progress response. One eligible row and one context row reach
+the same root-domain job, and two rows are filtered out. The Accretion GUI
+regression checks the visible labels across different row and group totals
+and verifies the fallback for historical imports.
 
 ## ISS046 Typed Accretion handoffs
 
@@ -203,6 +239,28 @@ verification, not packaged-release acceptance. Concurrent Settings work is separ
 
 ## ISS027 Qualify decisions and workflow
 
+The November 22 intake backlog added final-page identity checks, explicit
+parking and certificate-hostname reasons, a group-wide website deadline,
+verified capture reuse, and bounded government priority in Evaluate. Associate
+now applies external referrals and case outreach holds with auditable references.
+An excluded group can pass Qualify and Evaluate and publish zero leads. Data shows
+those totals separately. See [the pipeline](PIPELINE.md#qualify) for the rules.
+
+An additional case-start check found that an excluded first hostname could
+still supply the screenshot and registration IP for an admitted sibling.
+Qualification now selects both from admissible source rows. Associate
+rechecks this evidence before publication. An exact-host referral added during
+qualification leaves the group retryable. Retrying preserves both original
+rows and attaches the surviving host's verified evidence to the case.
+
+Thirty focused Windows checks covered the November 22 changes. A real Edge
+session followed the reported URL to an anonymous login and captured the
+identified main page after fallback. The Data browser workflow created an
+exact-host referral, edited it to cover the domain, and removed it. An import
+with two eligible sibling hosts published only the unblocked host. When the
+other sibling supplied context alone, its original exclusion reason survived
+in the archive. The browser recorded zero page errors and external requests.
+
 **Core implementation delivered 2026-11-21; performance follow-ups remain open.**
 The application now executes **Filter → Qualify → Evaluate → Associate**.
 Qualify returns one complete product containing actionable source findings,
@@ -214,14 +272,14 @@ describe the implemented sequence.
 Implemented responsibilities:
 
 - Entities owns current ownership and dated transfer checks. Qualify reads that
-  context, explicit outreach holds and unsettled finding scope before browser or
+  context and unsettled finding scope before browser or
   provider work. Its current-schema path performs no per-row schema probes.
   A stable owner/episode token is checked after capture, before Evaluate and in
   Associate's transaction. Transfers cannot move reused proof to a new owner;
   transfers away and back also invalidate the product. Five reproduced automatic,
   manual and reconciliation races now reject/defer without partial publication.
 - Tools performs the full existing capture, including bounded fallback. A working
-  login page passes; blank, challenge and error output does not. Investigations
+  identified login page passes; blank, challenge and error output does not. Investigations
   retains the original/preview/metadata, serves the Leads thumbnail and adopts
   the same image into cases. Every certified report requires the relevant intact
   screenshot, including compact reports. Workspace health and restore verify

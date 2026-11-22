@@ -9,6 +9,7 @@ _NATIVE_MESSAGES = {
     "Website capture cancelled",
     "Website capture timed out",
     "Website navigation timed out",
+    "Website offered a file download",
     "Website navigation did not finish before its timeout",
     "Website viewport was still loading at the capture timeout",
     "Some visible images or video could not be displayed",
@@ -49,6 +50,10 @@ def _message(text, depth=0):
     ):
         return text
     if re.fullmatch(r"Capture browser could not complete [A-Za-z]{1,32}\.[A-Za-z]{1,64}", text):
+        return text
+    if re.fullmatch(
+        r"Capture browser exited before startup \(exit code -?\d{1,10}\)|OS error \d{1,10}", text
+    ):
         return text
     if depth >= 2:
         return None

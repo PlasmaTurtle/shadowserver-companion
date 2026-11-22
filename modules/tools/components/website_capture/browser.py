@@ -11,9 +11,12 @@ import threading
 import time
 
 from .cdp import CDP
+from .diagnostics import network_error
+from .downloads import DownloadObservations
 from .process_guard import BrowserProcessGuard
 from .transport import web_url
 from .navigation import (
+    WebsiteLoadError,
     extract_root_domain as extract_root_domain,
     load_page,
 )
@@ -22,6 +25,18 @@ from modules.workspace.components.primitives import now
 VIEWPORT = {"width": 1440, "height": 900, "deviceScaleFactor": 1, "mobile": False}
 MAX_SECONDS = 90
 STARTUP_SECONDS = 20
+
+
+class CaptureBrowserStartupError(ValueError):
+    """The local browser could not initialize before attempting a website."""
+
+
+class CaptureOperationError(ValueError):
+    """An interrupted capture with observations made before the interruption."""
+
+    def __init__(self, message, metadata):
+        super().__init__(message)
+        self.metadata = metadata
 
 
 def find_browser():
@@ -94,15 +109,28 @@ def classify_page(info, http_status, loaded, document_failed):
     return "captured"
 
 
-def capture_website(url, *, cancel_event=None, executable=None, skip_urls=(), require_usable=False):
+def capture_website(
+    url,
+    *,
+    cancel_event=None,
+    executable=None,
+    skip_urls=(),
+    require_usable=False,
+    page_check=None,
+    deadline=None,
+):
     requested_url = web_url(url)
     cancel_event = cancel_event or threading.Event()
     start = time.monotonic()
     if cancel_event.is_set():
         raise ValueError("Website capture cancelled")
-    deadline = start + STARTUP_SECONDS
-    profile = Path(tempfile.mkdtemp(prefix="companion-website-"))
+    operation_deadline = deadline if deadline is not None else float("inf")
+    deadline = min(start + STARTUP_SECONDS, operation_deadline)
+    if start >= deadline:
+        raise TimeoutError("The website capture time budget has expired")
+    profile = None
     process = client = guard = target = None
+    downloads = DownloadObservations()
     metadata = {
         "requested_url": requested_url,
         "root_domain": extract_root_domain(requested_url),
@@ -118,7 +146,7 @@ def capture_website(url, *, cancel_event=None, executable=None, skip_urls=(), re
         "fallback_used": False,
         "blocked_requests": 0,
         "resource_bytes": 0,
-        "policy": "native-browser-viewport-v2",
+        "policy": "native-browser-viewport-v3",
         "browser": "",
         "resource_failures": [],
         "content_scans": {},
@@ -129,7 +157,9 @@ def capture_website(url, *, cancel_event=None, executable=None, skip_urls=(), re
     def open_page():
         nonlocal target
         client.deadline = deadline
-        metadata["browser_stage"] = "page_setup"
+        # The first target is still about:blank. Failures configuring it precede
+        # any navigation; a later fallback target follows a site attempt.
+        metadata["browser_stage"] = "startup" if target is None else "page_setup"
         if target is not None:
             client.call("Target.closeTarget", {"targetId": target}, browser=True)
             client.session = None
@@ -148,6 +178,7 @@ def capture_website(url, *, cancel_event=None, executable=None, skip_urls=(), re
 
     try:
         metadata["browser_stage"] = "startup"
+        profile = Path(tempfile.mkdtemp(prefix="companion-website-"))
         process = subprocess.Popen(
             browser_arguments(executable or find_browser(), profile),
             stdin=subprocess.DEVNULL,
@@ -162,8 +193,9 @@ def capture_website(url, *, cancel_event=None, executable=None, skip_urls=(), re
                 raise ValueError("Website capture cancelled")
             if time.monotonic() >= deadline:
                 raise ValueError("Capture browser did not become ready in time")
-            if process.poll() is not None:
-                raise ValueError("Capture browser could not start")
+            exit_code = process.poll()
+            if exit_code is not None:
+                raise ValueError(f"Capture browser exited before startup (exit code {exit_code})")
         lines = port_file.read_text(encoding="ascii").splitlines()
         if (
             len(lines) < 2
@@ -171,17 +203,17 @@ def capture_website(url, *, cancel_event=None, executable=None, skip_urls=(), re
             or not lines[1].startswith("/devtools/browser/")
         ):
             raise ValueError("Invalid capture browser endpoint")
-        client = CDP("ws://127.0.0.1:" + lines[0] + lines[1], deadline)
+        client = CDP("ws://127.0.0.1:" + lines[0] + lines[1], deadline, downloads=downloads)
         client.cancel_event = cancel_event
         metadata["browser"] = client.call("Browser.getVersion", browser=True).get("product", "")[
             :160
         ]
+        # All capture tabs share this context. Require its policy before visiting a site.
         client.call(
-            "Browser.setDownloadBehavior",
-            {"behavior": "allow", "downloadPath": str(profile / "downloads")},
-            browser=True,
+            "Browser.setDownloadBehavior", {"behavior": "deny", "eventsEnabled": True}, browser=True
         )
-        deadline = time.monotonic() + MAX_SECONDS
+        metadata["browser_stage"] = "candidate_selection"
+        deadline = min(time.monotonic() + MAX_SECONDS, operation_deadline)
         load_page(
             requested_url,
             open_page=open_page,
@@ -191,6 +223,7 @@ def capture_website(url, *, cancel_event=None, executable=None, skip_urls=(), re
             classify=classify_page,
             skip_urls=skip_urls,
             require_usable=require_usable,
+            page_check=page_check,
         )
         if cancel_event.is_set():
             raise ValueError("Website capture cancelled")
@@ -207,8 +240,24 @@ def capture_website(url, *, cancel_event=None, executable=None, skip_urls=(), re
         png = base64.b64decode(screenshot["data"], validate=True)
         metadata["captured_at"] = now()
         metadata["browser_stage"] = "complete"
+    except WebsiteLoadError:
+        raise
+    except (OSError, ValueError) as error:
+        if downloads.attempts:
+            raise CaptureOperationError(network_error(error), metadata) from error
+        if metadata["browser_stage"] != "startup" or cancel_event.is_set():
+            raise
+        native_code = getattr(error, "winerror", None) or getattr(error, "errno", None)
+        detail = f"OS error {native_code}" if isinstance(native_code, int) else network_error(error)
+        raise CaptureBrowserStartupError(f"Capture browser startup failed: {detail}") from error
     finally:
         if client:
+            try:
+                if not cancel_event.is_set():
+                    client.finish_downloads()
+            except (OSError, ValueError):
+                pass  # Preserve observations and the original capture outcome on disconnect.
+            metadata.update(downloads.snapshot())
             try:
                 client.send("Browser.close", browser=True)
             except (OSError, ValueError):
@@ -226,6 +275,7 @@ def capture_website(url, *, cancel_event=None, executable=None, skip_urls=(), re
                 except subprocess.TimeoutExpired:
                     process.kill()
                     process.wait(timeout=2)
-        shutil.rmtree(profile, ignore_errors=True)
+        if profile is not None:
+            shutil.rmtree(profile, ignore_errors=True)
     metadata["elapsed_seconds"] = round(time.monotonic() - start, 2)
     return png, metadata

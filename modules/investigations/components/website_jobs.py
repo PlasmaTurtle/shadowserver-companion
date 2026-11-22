@@ -11,7 +11,7 @@ from . import website_evidence
 from modules.tools.components.network_identity import root_domain
 from modules.workspace.components.primitives import now, uid
 from .reviews.queries import SectionReviewQueries
-from modules.tools.components.website_capture import capture_website, web_url
+from modules.tools.components.website_capture import capture_website, download_activity, web_url
 
 
 class WebsiteCaptureJobs:
@@ -90,13 +90,15 @@ class WebsiteCaptureJobs:
             job.update(state="running", message="Capturing website viewport")
         files = []
         committed = False
+        metadata = {}
         outcome = {"state": "failed", "message": "Website capture did not finish"}
         try:
-            png, metadata = self.capture(job["requested_url"], cancel_event=job["cancel"])
+            png, result = self.capture(job["requested_url"], cancel_event=job["cancel"])
+            if result.get("requested_url") != job["requested_url"]:
+                raise ValueError("Capture provenance does not match the reported website request")
+            metadata = website_evidence.capture_metadata(result)
             if job["cancel"].is_set():
                 raise ValueError("Website capture cancelled")
-            if metadata.get("requested_url") != job["requested_url"]:
-                raise ValueError("Capture provenance does not match the reported website request")
             capture = website_evidence.prepare(
                 self.store,
                 png,
@@ -157,9 +159,18 @@ class WebsiteCaptureJobs:
                 "case_version": prior_version + 1,
             }
         except Exception as error:
+            observations = {}
+            failed_capture = getattr(error, "metadata", metadata)
+            if (
+                isinstance(failed_capture, dict)
+                and failed_capture.get("requested_url", job["requested_url"])
+                == job["requested_url"]
+            ):
+                observations = download_activity(failed_capture)
             outcome = {
                 "state": "cancelled" if job["cancel"].is_set() else "failed",
                 "message": str(error)[:500] or "Website capture failed",
+                **observations,
             }
             # Keep a small immutable chronology entry; failed attempts never pose
             # as confirmed business pages or alter the notification draft.
@@ -171,7 +182,11 @@ class WebsiteCaptureJobs:
                         outcome["message"],
                         job["lead_id"],
                         job["case_id"],
-                        metadata={"hostname": job["hostname"], "capture_job": job["id"]},
+                        metadata={
+                            "hostname": job["hostname"],
+                            "capture_job": job["id"],
+                            **observations,
+                        },
                     )
             except Exception:
                 pass
@@ -181,10 +196,10 @@ class WebsiteCaptureJobs:
                     try:
                         path.unlink(missing_ok=True)
                     except OSError:
-                        outcome = {
-                            "state": "failed",
-                            "message": "Website capture was not attached. Temporary file cleanup failed; close the app and check file access before retrying.",
-                        }
+                        outcome.update(
+                            state="failed",
+                            message="Website capture was not attached. Temporary file cleanup failed; close the app and check file access before retrying.",
+                        )
             with self.lock:
                 # A terminal job is no longer considered busy by workspace
                 # maintenance. Publish it only after attachment/cleanup settles.

@@ -26,7 +26,7 @@
         "modules/investigations/**"
       ],
       "entry": "modules/investigations/docs/README.md",
-      "contract": "Case workflow, notifications, review/certification, report composition and preserved evidence.",
+      "contract": "Case workflow, report composition, certification, preserved evidence and completed notification history from recorded delivery.",
       "tests": [
         "modules/investigations/tests"
       ],
@@ -54,7 +54,7 @@
         "modules/entities/**"
       ],
       "entry": "modules/entities/docs/README.md",
-      "contract": "Business identities, ownership/lifecycle and contact discovery/management.",
+      "contract": "Canonical business identities, merge history, reviewed profile fields and contact discovery.",
       "tests": [
         "modules/entities/tests"
       ],
@@ -68,7 +68,7 @@
         "modules/leads/**"
       ],
       "entry": "modules/leads/docs/README.md",
-      "contract": "Qualified lead queues, frontier selection and lead export contracts.",
+      "contract": "Qualified lead review, finding-based queue filters, saved capture previews and lead export contracts.",
       "tests": [
         "modules/leads/tests"
       ],
@@ -82,7 +82,7 @@
         "modules/attribution/**"
       ],
       "entry": "modules/attribution/docs/README.md",
-      "contract": "Registration/DNS evidence, attribution approvals, group proof reuse and independent attribution engine.",
+      "contract": "Registration and DNS evidence, approved attribution, proof reuse, NC business registry schema and the independent attribution engine.",
       "tests": [
         "modules/attribution/tests"
       ],
@@ -96,7 +96,7 @@
         "modules/accretion/**"
       ],
       "entry": "modules/accretion/docs/README.md",
-      "contract": "Data intake, report subscriptions/acquisition, canonical observations and acquisition scheduling.",
+      "contract": "Report acquisition, duplicate import detection, grouped qualification, priority evaluation and final case/entity deconfliction in Associate.",
       "tests": [
         "modules/accretion/tests"
       ],
@@ -329,13 +329,18 @@
       "path": "modules/accretion/components/api_models.py",
       "module": "modules.accretion.components.api_models",
       "owner": "accretion",
-      "lines": 9,
-      "sha256": "a1538d42d8872f94d03ebe2649a6ff5a118c365dad0db73a6eb2ad49ac858dca",
+      "lines": 18,
+      "sha256": "0609e8e808c7326d18201f8e68906889f0cb3a4794425a30e2940a6d8f73fa6c",
       "imports": [],
       "symbols": [
         {
           "name": "GroupRetryValues",
-          "line": 7,
+          "line": 8,
+          "kind": "class"
+        },
+        {
+          "name": "DeconflictionValues",
+          "line": 13,
           "kind": "class"
         }
       ]
@@ -344,19 +349,21 @@
       "path": "modules/accretion/components/association.py",
       "module": "modules.accretion.components.association",
       "owner": "accretion",
-      "lines": 171,
-      "sha256": "85c643a9f8fc95bb2e2701b1a2149b8fd406c363a47ae4c6d2684a4997d191bc",
+      "lines": 263,
+      "sha256": "2a2a4b24394242aa2257f78cd7da79bba4724d9774bc92d9ec7bb7a98ff9e3d4",
       "imports": [
         "modules.accretion.components.awareness",
         "modules.accretion.components.dark_matter",
+        "modules.accretion.components.deconfliction",
         "modules.accretion.components.evaluated_lead",
+        "modules.accretion.components.evaluation",
         "modules.accretion.components.intake.records",
+        "modules.accretion.components.intake.versions",
         "modules.accretion.components.report",
         "modules.entities.components.contact_queue",
         "modules.entities.components.ownership",
         "modules.entities.components.registry_profile",
         "modules.entities.components.repositories.association",
-        "modules.investigations.components.outreach_policy",
         "modules.investigations.components.website_evidence",
         "modules.leads.components.lead_frontier",
         "modules.leads.components.lead_queue",
@@ -366,12 +373,12 @@
       "symbols": [
         {
           "name": "AssociationResult",
-          "line": 20,
+          "line": 26,
           "kind": "class"
         },
         {
           "name": "associate_lead",
-          "line": 31,
+          "line": 47,
           "kind": "function"
         }
       ]
@@ -667,6 +674,46 @@
       ]
     },
     {
+      "path": "modules/accretion/components/deconfliction.py",
+      "module": "modules.accretion.components.deconfliction",
+      "owner": "accretion",
+      "lines": 97,
+      "sha256": "850c244991607996da1173dc6a1ca8cfc3846f9c233546d2982ce88c0acc6a39",
+      "imports": [
+        "modules.accretion.components.intake.domains",
+        "modules.investigations.components.outreach_policy",
+        "modules.investigations.components.services.case_queries",
+        "modules.tools.components.network_identity"
+      ],
+      "symbols": [
+        {
+          "name": "identifier_for",
+          "line": 11,
+          "kind": "function"
+        },
+        {
+          "name": "exact_host_entries",
+          "line": 21,
+          "kind": "function"
+        },
+        {
+          "name": "url_hostname",
+          "line": 33,
+          "kind": "function"
+        },
+        {
+          "name": "AssociationEvidenceChanged",
+          "line": 37,
+          "kind": "class"
+        },
+        {
+          "name": "check",
+          "line": 41,
+          "kind": "function"
+        }
+      ]
+    },
+    {
       "path": "modules/accretion/components/evaluated_lead.py",
       "module": "modules.accretion.components.evaluated_lead",
       "owner": "accretion",
@@ -700,8 +747,8 @@
       "path": "modules/accretion/components/evaluation.py",
       "module": "modules.accretion.components.evaluation",
       "owner": "accretion",
-      "lines": 102,
-      "sha256": "7955b5f41bfc9f3fa803d7cd3509c5105d46a58ff9b33d055d4b216c3d8c5fff",
+      "lines": 98,
+      "sha256": "83fb5f3eac9ecf4e1a890b5e88c8786e491a6c810c0ef859e5e643d654846523",
       "imports": [
         "modules.accretion.components",
         "modules.accretion.components.accretion",
@@ -712,7 +759,6 @@
         "modules.accretion.components.qualified_lead",
         "modules.accretion.components.report",
         "modules.entities.components.ownership",
-        "modules.investigations.components.outreach_policy",
         "modules.investigations.components.website_evidence",
         "modules.leads.components.lead_frontier",
         "modules.library.components.cve_sources",
@@ -885,8 +931,8 @@
       "path": "modules/accretion/components/intake/validation.py",
       "module": "modules.accretion.components.intake.validation",
       "owner": "accretion",
-      "lines": 109,
-      "sha256": "4bdea885c19a35b5b99ce4acf29fe50b0d40657be2eec7793b7cc6d9b22fa868",
+      "lines": 118,
+      "sha256": "e78fb767d89acb1ef94bad7a5737f1bb84e3b86a85956546f2e3e3aa08b977d2",
       "imports": [
         "modules.accretion.components.intake.domains",
         "modules.accretion.components.intake.findings",
@@ -943,8 +989,8 @@
       "path": "modules/accretion/components/intake_filter.py",
       "module": "modules.accretion.components.intake_filter",
       "owner": "accretion",
-      "lines": 295,
-      "sha256": "dfb64d31cdda665a989a458b0924f8b92bd932e7162e2a961ba9c6612ba083f4",
+      "lines": 301,
+      "sha256": "4c39e6670eb715d1123cd82145fe09e37e9ce490c045cff97d3c181bcf109ddb",
       "imports": [
         "modules.accretion.components.accretion",
         "modules.accretion.components.intake.domains",
@@ -975,7 +1021,7 @@
         },
         {
           "name": "filter_report",
-          "line": 215,
+          "line": 221,
           "kind": "function"
         }
       ]
@@ -984,8 +1030,8 @@
       "path": "modules/accretion/components/intake_progress.py",
       "module": "modules.accretion.components.intake_progress",
       "owner": "accretion",
-      "lines": 174,
-      "sha256": "7d9bec3f8a3ca2e25c94838596988f7f2645355dafa25446c8ece64c531aa8a0",
+      "lines": 247,
+      "sha256": "879057f8b6b62389a24093989227c824dfc5d5af47d671f8ac8bca29da9bad6f",
       "imports": [
         "modules.library.components.cve_catalog.storage",
         "modules.workspace.components.primitives"
@@ -993,27 +1039,37 @@
       "symbols": [
         {
           "name": "catalog_readiness",
-          "line": 10,
+          "line": 11,
           "kind": "function"
         },
         {
           "name": "preserve_export_obligation",
-          "line": 52,
+          "line": 54,
           "kind": "function"
         },
         {
           "name": "publish",
-          "line": 62,
+          "line": 64,
           "kind": "function"
         },
         {
           "name": "accepted_patterns",
-          "line": 73,
+          "line": 76,
+          "kind": "function"
+        },
+        {
+          "name": "retry_label",
+          "line": 107,
+          "kind": "function"
+        },
+        {
+          "name": "stage_totals",
+          "line": 121,
           "kind": "function"
         },
         {
           "name": "overview",
-          "line": 90,
+          "line": 131,
           "kind": "function"
         }
       ]
@@ -1022,14 +1078,15 @@
       "path": "modules/accretion/components/intake_service.py",
       "module": "modules.accretion.components.intake_service",
       "owner": "accretion",
-      "lines": 730,
-      "sha256": "66ee038c8a0cd62f62f2ea5316cb91678fa74aefc8588b16ac73253d3df8e878",
+      "lines": 834,
+      "sha256": "b11ec8d28a880a95d6b5aaa662607c581fab143a576e993dbbdff94cfd703c3c",
       "imports": [
         "attribution",
         "modules.accretion.components.accretion",
         "modules.accretion.components.api_import",
         "modules.accretion.components.association",
         "modules.accretion.components.dark_matter",
+        "modules.accretion.components.deconfliction",
         "modules.accretion.components.evaluated_lead",
         "modules.accretion.components.evaluation",
         "modules.accretion.components.intake",
@@ -1050,7 +1107,7 @@
       "symbols": [
         {
           "name": "IntakeService",
-          "line": 44,
+          "line": 45,
           "kind": "class"
         }
       ]
@@ -1059,44 +1116,50 @@
       "path": "modules/accretion/components/qualification.py",
       "module": "modules.accretion.components.qualification",
       "owner": "accretion",
-      "lines": 294,
-      "sha256": "f973d2962a3ddb9cb23b3b326cd457b616e0e9dd3711574e1c79882c44b23a12",
+      "lines": 451,
+      "sha256": "d766644ce8b8537b9c684d1e632dbf4e8b400529b34e0f708d13fd84f0b4c483",
       "imports": [
         "modules.accretion.components",
         "modules.accretion.components.awareness",
+        "modules.accretion.components.deconfliction",
         "modules.accretion.components.intake.domains",
         "modules.accretion.components.intake.records",
         "modules.accretion.components.intake_filter",
         "modules.accretion.components.qualification_context",
         "modules.accretion.components.qualified_lead",
         "modules.accretion.components.report",
+        "modules.accretion.components.website_identity",
         "modules.attribution.components.attribution_bridge",
         "modules.attribution.components.attribution_reuse",
         "modules.entities.components.ownership",
         "modules.investigations.components",
-        "modules.investigations.components.outreach_policy",
         "modules.investigations.components.website_evidence",
         "modules.tools.components.website_capture"
       ],
       "symbols": [
         {
           "name": "QualificationDecision",
-          "line": 27,
+          "line": 38,
           "kind": "class"
         },
         {
           "name": "local_scope",
-          "line": 66,
+          "line": 77,
           "kind": "function"
         },
         {
           "name": "complete_lead",
-          "line": 87,
+          "line": 95,
+          "kind": "function"
+        },
+        {
+          "name": "prior_website_attempts",
+          "line": 113,
           "kind": "function"
         },
         {
           "name": "Qualifier",
-          "line": 102,
+          "line": 145,
           "kind": "class"
         }
       ]
@@ -1123,10 +1186,11 @@
       "path": "modules/accretion/components/qualification_reconciliation.py",
       "module": "modules.accretion.components.qualification_reconciliation",
       "owner": "accretion",
-      "lines": 241,
-      "sha256": "7685b89348f88cc299a2900b21c0970129d1c98269d7e3b7dacb1c256db5562d",
+      "lines": 251,
+      "sha256": "15718663673472c39c37caf5362e23eafb5aa28ec4c924c61ea11682f46259c8",
       "imports": [
         "attribution",
+        "modules.accretion.components.deconfliction",
         "modules.accretion.components.intake.records",
         "modules.accretion.components.qualification",
         "modules.accretion.components.report",
@@ -1148,7 +1212,7 @@
         },
         {
           "name": "reconcile_backlog",
-          "line": 224,
+          "line": 234,
           "kind": "function"
         }
       ]
@@ -1203,8 +1267,8 @@
       "path": "modules/accretion/components/report_profiles.py",
       "module": "modules.accretion.components.report_profiles",
       "owner": "accretion",
-      "lines": 483,
-      "sha256": "7add56d3a585d82ddc92be2ec576ae54cfc7a561092fe28affd081c6c31d8cde",
+      "lines": 482,
+      "sha256": "b743eff83a52d97b3b6c7886ec84059b23d32a26b94a5fafeeb635e40d2e1e97",
       "imports": [
         "modules.accretion.components.intake.records",
         "modules.accretion.components.intake.versions"
@@ -1232,22 +1296,22 @@
         },
         {
           "name": "has_independent_finding",
-          "line": 217,
+          "line": 216,
           "kind": "function"
         },
         {
           "name": "notification_eligibility",
-          "line": 224,
+          "line": 223,
           "kind": "function"
         },
         {
           "name": "products_from_version",
-          "line": 347,
+          "line": 346,
           "kind": "function"
         },
         {
           "name": "observation_envelope",
-          "line": 402,
+          "line": 401,
           "kind": "function"
         }
       ]
@@ -1291,24 +1355,26 @@
       "path": "modules/accretion/components/routes/intake.py",
       "module": "modules.accretion.components.routes.intake",
       "owner": "accretion",
-      "lines": 326,
-      "sha256": "cf5bb01886ef5c8a54619ff841d5d487b9f510515b69f8b18f4481d5035e55cc",
+      "lines": 405,
+      "sha256": "3b9bb10f214512084f7f28e01fca31aaa32b4ad15720f8c8534be2b83bee68c2",
       "imports": [
         "attribution",
         "modules.accretion.components.api_import",
         "modules.accretion.components.api_models",
+        "modules.accretion.components.deconfliction",
         "modules.accretion.components.intake.files",
         "modules.accretion.components.intake_progress",
         "modules.accretion.components.intake_service",
         "modules.accretion.components.report_profiles",
         "modules.attribution.components.api_models",
         "modules.attribution.components.attribution_bridge",
-        "modules.ui.components.presentation"
+        "modules.ui.components.presentation",
+        "modules.workspace.components.primitives"
       ],
       "symbols": [
         {
           "name": "register",
-          "line": 28,
+          "line": 34,
           "kind": "function"
         }
       ]
@@ -1383,8 +1449,8 @@
       "path": "modules/accretion/components/scheduling.py",
       "module": "modules.accretion.components.scheduling",
       "owner": "accretion",
-      "lines": 432,
-      "sha256": "f224f0cf6dc4ef5c2591fdb1348cccac81c8157929fe7ebb347a92d82fb501f8",
+      "lines": 428,
+      "sha256": "279fb3076483a0f2f30a524e219d3d48cc6e2ba118227d8a68dd15039a581e3c",
       "imports": [
         "modules.accretion.components.api_jurisdiction",
         "modules.accretion.components.shadowserver_reports.errors",
@@ -1513,8 +1579,8 @@
       "path": "modules/accretion/components/scoring_urgency.py",
       "module": "modules.accretion.components.scoring_urgency",
       "owner": "accretion",
-      "lines": 139,
-      "sha256": "a5fdc4fb5613d3804ae9679696a6a58216d4914db8725aaef1d3dd92f3cb0653",
+      "lines": 141,
+      "sha256": "d6aa36189338a2afdd81b3fe8c99e6c07e028d281c021d69a551df158d10be9e",
       "imports": [
         "modules.accretion.components.scoring_matrix"
       ],
@@ -1911,6 +1977,24 @@
       ]
     },
     {
+      "path": "modules/accretion/components/website_identity.py",
+      "module": "modules.accretion.components.website_identity",
+      "owner": "accretion",
+      "lines": 83,
+      "sha256": "9ac8afb6c33e81ce9d6cf66d13f8a421dfdcf9e963bf049d6b13317e9091f444",
+      "imports": [
+        "modules.investigations.components.website_evidence",
+        "modules.tools.components.network_identity"
+      ],
+      "symbols": [
+        {
+          "name": "rejection_reason",
+          "line": 42,
+          "kind": "function"
+        }
+      ]
+    },
+    {
       "path": "modules/accretion/components/windows_schedule.py",
       "module": "modules.accretion.components.windows_schedule",
       "owner": "accretion",
@@ -2015,11 +2099,30 @@
       ]
     },
     {
+      "path": "modules/accretion/databases/deconfliction.py",
+      "module": "modules.accretion.databases.deconfliction",
+      "owner": "accretion",
+      "lines": 38,
+      "sha256": "0247ce2c0b2158972dd5db54d0f30c6619dbb97c82d0cd241777e9f8993a5487",
+      "imports": [
+        "modules.accretion.components.evaluated_lead",
+        "modules.accretion.components.evaluation",
+        "modules.leads.components.lead_frontier"
+      ],
+      "symbols": [
+        {
+          "name": "schema",
+          "line": 4,
+          "kind": "function"
+        }
+      ]
+    },
+    {
       "path": "modules/accretion/static/intake.js",
       "module": "modules/accretion/static/intake.js",
       "owner": "accretion",
-      "lines": 341,
-      "sha256": "b55e8ae8b8b364dade7b7dfc17438601d4cc62a04c59e1355c68a8a8bb848ad4",
+      "lines": 415,
+      "sha256": "7cc7478b563858c3e173d28ea25bbb0d70ad35cf274db3b1a7ac60286131069c",
       "imports": [],
       "symbols": [
         {
@@ -2033,8 +2136,8 @@
       "path": "modules/accretion/static/intake_events.js",
       "module": "modules/accretion/static/intake_events.js",
       "owner": "accretion",
-      "lines": 79,
-      "sha256": "0abfca65a67fa5d5612328c32ea8940f9e3ef0ac81418935243d14f12d0b34fc",
+      "lines": 105,
+      "sha256": "a0b0fb6e0875431209bfa1e605b73988a98c79a8a6a2d59b9cfbb4228db81840",
       "imports": [],
       "symbols": [
         {
@@ -2233,8 +2336,8 @@
       "path": "modules/activity/static/activity.js",
       "module": "modules/activity/static/activity.js",
       "owner": "activity",
-      "lines": 58,
-      "sha256": "08a4e893f6922e046a87bbcadbb15ef11fa271907d7e5b5431465f077358c133",
+      "lines": 74,
+      "sha256": "7bdd1ba9c8bd83cc47a7e981114714501bb9b6e5aa4a3ca82607aab8c9689cb5",
       "imports": [],
       "symbols": [
         {
@@ -3157,8 +3260,8 @@
       "path": "modules/attribution/static/attribution.js",
       "module": "modules/attribution/static/attribution.js",
       "owner": "attribution",
-      "lines": 218,
-      "sha256": "a7c8ad80e5c4953015adeb10b6e96d52e7e742c3b6a45e76ea413330712911a9",
+      "lines": 240,
+      "sha256": "c2b5762c155d7d4f8f22ffdb49054c95018dbee0fe7a96906a6b23341ba4a3ef",
       "imports": [],
       "symbols": [
         {
@@ -3168,8 +3271,28 @@
         },
         {
           "name": "createHandlers",
-          "line": 137,
+          "line": 159,
           "kind": "export"
+        }
+      ]
+    },
+    {
+      "path": "modules/attribution/tools/create_nc_registry.py",
+      "module": "modules.attribution.tools.create_nc_registry",
+      "owner": "attribution",
+      "lines": 36,
+      "sha256": "d24826d5071269b7bf2cd1f23c35770a9a0d651c1fd7b0c567dae20e0ada2f9e",
+      "imports": [],
+      "symbols": [
+        {
+          "name": "create_database",
+          "line": 12,
+          "kind": "function"
+        },
+        {
+          "name": "main",
+          "line": 24,
+          "kind": "function"
         }
       ]
     },
@@ -4085,8 +4208,8 @@
       "path": "modules/entities/components/routes/entities.py",
       "module": "modules.entities.components.routes.entities",
       "owner": "entities",
-      "lines": 458,
-      "sha256": "67ee2bb75ca9aa031c876d4412a344dacf09021b504c23e025ae132fb3b620f3",
+      "lines": 410,
+      "sha256": "3cd9d70def400414e5629beb4fa64563866cef1c3e7a77b60cf775877a847b0e",
       "imports": [
         "attribution",
         "modules.attribution.components.attribution_approval_evidence",
@@ -4102,7 +4225,6 @@
         "modules.investigations.components.api_models",
         "modules.investigations.components.entity_adoption",
         "modules.investigations.components.services.case_queries",
-        "modules.investigations.components.website_evidence",
         "modules.leads.components.lead_queue",
         "modules.leads.components.repositories.lead_scopes",
         "modules.library.components.catalog_outreach",
@@ -4112,53 +4234,38 @@
       ],
       "symbols": [
         {
-          "name": "PendingLeadStart",
-          "line": 36,
-          "kind": "class"
-        },
-        {
-          "name": "PendingLeadDisposition",
-          "line": 43,
-          "kind": "class"
-        },
-        {
-          "name": "PendingLeadAssociation",
-          "line": 49,
-          "kind": "class"
-        },
-        {
           "name": "OwnershipTransfer",
-          "line": 55,
+          "line": 39,
           "kind": "class"
         },
         {
           "name": "FindingReactivation",
-          "line": 65,
+          "line": 49,
           "kind": "class"
         },
         {
           "name": "EntityDNSRefresh",
-          "line": 72,
+          "line": 56,
           "kind": "class"
         },
         {
           "name": "EntityAssetAssociation",
-          "line": 77,
+          "line": 61,
           "kind": "class"
         },
         {
           "name": "EntityIPAssociation",
-          "line": 83,
+          "line": 67,
           "kind": "class"
         },
         {
           "name": "EntityDetailsAdoption",
-          "line": 89,
+          "line": 73,
           "kind": "class"
         },
         {
           "name": "register",
-          "line": 96,
+          "line": 80,
           "kind": "function"
         }
       ]
@@ -4316,15 +4423,20 @@
       "path": "modules/entities/static/entities.js",
       "module": "modules/entities/static/entities.js",
       "owner": "entities",
-      "lines": 678,
-      "sha256": "bb56d02004f973271cbab93bde774ab9076ee9f4eb99119015b60a7de3e64c70",
+      "lines": 684,
+      "sha256": "b2e9313d8655b8559cb340f832ed3720adf1d29cde1058e5fb2ba77b491d0bca",
       "imports": [
         "modules/ui/static/shared.js"
       ],
       "symbols": [
         {
-          "name": "install",
+          "name": "notificationSummary",
           "line": 5,
+          "kind": "export"
+        },
+        {
+          "name": "install",
+          "line": 11,
           "kind": "export"
         }
       ]
@@ -6828,12 +6940,13 @@
       "path": "modules/investigations/components/routes/evidence.py",
       "module": "modules.investigations.components.routes.evidence",
       "owner": "investigations",
-      "lines": 167,
-      "sha256": "c1ed787bdfd58b5e05d0bbfe700295ebf930a382aad736aa19ea6ef67c09418e",
+      "lines": 179,
+      "sha256": "2faef278ee035c3c4301b2c9e66ae86d816b42c980561fcfd73f2c128eee4e91",
       "imports": [
         "modules.investigations.components.api_models",
         "modules.investigations.components.image_evidence",
         "modules.investigations.components.reviews.queries",
+        "modules.investigations.components.website_evidence",
         "modules.workspace.components.primitives"
       ],
       "symbols": [
@@ -6898,8 +7011,8 @@
       "path": "modules/investigations/components/services/case_queries.py",
       "module": "modules.investigations.components.services.case_queries",
       "owner": "investigations",
-      "lines": 30,
-      "sha256": "351be0b3db5a17c8ab0bcc704bc27c6287424f542a6b85fe124ff9e8c07dba21",
+      "lines": 83,
+      "sha256": "cb7611a2159ada5b62147f0a097689a09e73857be0cb4aa879ef8ccaac813f33",
       "imports": [
         "modules.investigations.components.cases",
         "modules.investigations.components.repositories.cases",
@@ -6907,8 +7020,18 @@
       ],
       "symbols": [
         {
+          "name": "completed_notifications",
+          "line": 13,
+          "kind": "function"
+        },
+        {
+          "name": "notification_histories",
+          "line": 18,
+          "kind": "function"
+        },
+        {
           "name": "list_cases",
-          "line": 12,
+          "line": 65,
           "kind": "function"
         }
       ]
@@ -7255,8 +7378,8 @@
       "path": "modules/investigations/components/website_evidence.py",
       "module": "modules.investigations.components.website_evidence",
       "owner": "investigations",
-      "lines": 362,
-      "sha256": "21e81ccc9fdd329d7cf447f7bac86b0fc12a0b2fa6d40160458982b4c9db8861",
+      "lines": 456,
+      "sha256": "e988b8d8fc30301fe11e60f2a7c41ac10e7d55e22c25b99de68dad7bfe9dce84",
       "imports": [
         "modules.investigations.components.image_evidence",
         "modules.tools.components.filesystem",
@@ -7275,78 +7398,93 @@
           "kind": "function"
         },
         {
-          "name": "prepare",
+          "name": "capture_metadata",
           "line": 47,
           "kind": "function"
         },
         {
+          "name": "prepare",
+          "line": 56,
+          "kind": "function"
+        },
+        {
           "name": "publish",
-          "line": 71,
+          "line": 82,
           "kind": "function"
         },
         {
           "name": "retain",
-          "line": 83,
+          "line": 94,
           "kind": "function"
         },
         {
           "name": "get",
-          "line": 118,
-          "kind": "function"
-        },
-        {
-          "name": "preview",
           "line": 129,
           "kind": "function"
         },
         {
+          "name": "preview",
+          "line": 140,
+          "kind": "function"
+        },
+        {
           "name": "source_matches",
-          "line": 137,
+          "line": 149,
           "kind": "function"
         },
         {
           "name": "bind",
-          "line": 175,
+          "line": 187,
           "kind": "function"
         },
         {
           "name": "merge_entities",
-          "line": 189,
+          "line": 201,
           "kind": "function"
         },
         {
           "name": "latest_for_entity",
-          "line": 199,
+          "line": 211,
+          "kind": "function"
+        },
+        {
+          "name": "recent_for_host",
+          "line": 225,
           "kind": "function"
         },
         {
           "name": "projection",
-          "line": 213,
+          "line": 244,
+          "kind": "function"
+        },
+        {
+          "name": "scope_projection",
+          "line": 321,
           "kind": "function"
         },
         {
           "name": "reference_for_evidence",
-          "line": 232,
+          "line": 326,
           "kind": "function"
         },
         {
           "name": "export_references",
-          "line": 258,
+          "line": 352,
           "kind": "function"
         },
         {
           "name": "attach",
-          "line": 280,
+          "line": 374,
           "kind": "function"
         },
         {
           "name": "adopt_for_case",
-          "line": 330,
+          "line": 424,
           "kind": "function"
         },
         {
           "name": "validate_retained",
-          "line": 345,
+          "line": 439,
           "kind": "function"
         }
       ]
@@ -7355,8 +7493,8 @@
       "path": "modules/investigations/components/website_jobs.py",
       "module": "modules.investigations.components.website_jobs",
       "owner": "investigations",
-      "lines": 215,
-      "sha256": "359d664801da7454ab7de2558023c73097fd5b0f6cd5a40f1fad6112a125d793",
+      "lines": 230,
+      "sha256": "6c6b98dd675ecc8346d08c6d7eea012c8b80a0e391442b96caab40057fc5ca79",
       "imports": [
         "modules.investigations.components",
         "modules.investigations.components.cases",
@@ -7566,8 +7704,8 @@
       "path": "modules/investigations/static/website_capture.js",
       "module": "modules/investigations/static/website_capture.js",
       "owner": "investigations",
-      "lines": 148,
-      "sha256": "db5d3eba6af522c57a0ea6af612396437402a71a0f3461aa1ea22939de7f68c5",
+      "lines": 165,
+      "sha256": "cd7d9d3a46453513a085255c16d2a2797ba098e55ec251310bfaa486469588c3",
       "imports": [],
       "symbols": [
         {
@@ -7923,8 +8061,8 @@
       "path": "modules/leads/components/lead_queue.py",
       "module": "modules.leads.components.lead_queue",
       "owner": "leads",
-      "lines": 499,
-      "sha256": "062327ffa0c15c4bfe44ebdc8f77f5009d4a88b50ee16585e5f942ba4ada35df",
+      "lines": 529,
+      "sha256": "213f4994cf73754f4518b3406610753257b53d7a6b86aa436aabff373651da91",
       "imports": [
         "modules.accretion.components.awareness",
         "modules.accretion.components.awareness_admission",
@@ -7934,6 +8072,7 @@
         "modules.entities.components.repositories.entities",
         "modules.investigations.components.cases",
         "modules.investigations.components.repositories.reviews",
+        "modules.investigations.components.services.case_queries",
         "modules.investigations.components.website_evidence",
         "modules.leads.components.lead_frontier",
         "modules.leads.helpers.queue_identity",
@@ -7954,12 +8093,12 @@
         },
         {
           "name": "LeadQueue",
-          "line": 175,
+          "line": 181,
           "kind": "class"
         },
         {
           "name": "save_ip_association",
-          "line": 480,
+          "line": 510,
           "kind": "function"
         }
       ]
@@ -8001,6 +8140,45 @@
         {
           "name": "pending_counts",
           "line": 4,
+          "kind": "function"
+        }
+      ]
+    },
+    {
+      "path": "modules/leads/components/routes/__init__.py",
+      "module": "modules.leads.components.routes",
+      "owner": "leads",
+      "lines": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+      "imports": [],
+      "symbols": []
+    },
+    {
+      "path": "modules/leads/components/routes/queue.py",
+      "module": "modules.leads.components.routes.queue",
+      "owner": "leads",
+      "lines": 53,
+      "sha256": "44e2dceb4a83a2ad5e3ff1cb19fa2efd91607b0b3beb882bf5812cb85ba05efa",
+      "imports": [],
+      "symbols": [
+        {
+          "name": "PendingLeadStart",
+          "line": 10,
+          "kind": "class"
+        },
+        {
+          "name": "PendingLeadDisposition",
+          "line": 17,
+          "kind": "class"
+        },
+        {
+          "name": "PendingLeadAssociation",
+          "line": 23,
+          "kind": "class"
+        },
+        {
+          "name": "register",
+          "line": 29,
           "kind": "function"
         }
       ]
@@ -8088,8 +8266,8 @@
       "path": "modules/leads/static/entity_leads.js",
       "module": "modules/leads/static/entity_leads.js",
       "owner": "leads",
-      "lines": 204,
-      "sha256": "40f41210e95a814800fce927870a06f5fc789e9f47a40a805e7504a543b387ad",
+      "lines": 267,
+      "sha256": "3ea7f88881901b58e08b5861f5793e90474784f467b0c1559c5448ccd12b0c79",
       "imports": [
         "modules/entities/static/entities.js",
         "modules/ui/static/shared.js"
@@ -8106,8 +8284,8 @@
       "path": "modules/leads/static/entity_leads_events.js",
       "module": "modules/leads/static/entity_leads_events.js",
       "owner": "leads",
-      "lines": 64,
-      "sha256": "188b974facb321935eab3b64d54e17dd233294a9d7c2da2ab6c12968564d0d00",
+      "lines": 74,
+      "sha256": "d742a0000ad5af37835597902507134be46edaa48bdc07af4032230edeff7525",
       "imports": [],
       "symbols": [
         {
@@ -8444,8 +8622,8 @@
       "path": "modules/library/components/cve_catalog/feed_http.py",
       "module": "modules.library.components.cve_catalog.feed_http",
       "owner": "library",
-      "lines": 141,
-      "sha256": "2cdbe494c191cb375f3a8048bc5a36437ce5407b1c7907879584c8315a9797f9",
+      "lines": 142,
+      "sha256": "a730b3af32c96bd8db9d66dc27856017e47495658c46838aead44e48d0001379",
       "imports": [
         "attribution.bounded_http",
         "modules.library.components.cve_catalog.control"
@@ -8453,7 +8631,7 @@
       "symbols": [
         {
           "name": "open_response",
-          "line": 87,
+          "line": 88,
           "kind": "function"
         }
       ]
@@ -8665,8 +8843,8 @@
       "path": "modules/library/components/cve_catalog/transport.py",
       "module": "modules.library.components.cve_catalog.transport",
       "owner": "library",
-      "lines": 210,
-      "sha256": "052741a283231cc35c0aa7d320952683c0ec1ecb29a120aa2ba142df7559d2ba",
+      "lines": 220,
+      "sha256": "96e0f2da5ceaf291424287f9d603beccd9cfa2184a9d0affb4c299e722712acd",
       "imports": [
         "modules.library.components.cve_catalog.content_validation",
         "modules.library.components.cve_catalog.control",
@@ -8676,32 +8854,32 @@
       "symbols": [
         {
           "name": "CatalogDeferred",
-          "line": 26,
+          "line": 27,
           "kind": "class"
         },
         {
           "name": "CatalogTransient",
-          "line": 35,
+          "line": 36,
           "kind": "class"
         },
         {
           "name": "retry_nvd",
-          "line": 42,
+          "line": 43,
           "kind": "function"
         },
         {
           "name": "pace_nvd",
-          "line": 62,
+          "line": 63,
           "kind": "function"
         },
         {
           "name": "explicit_retry_seconds",
-          "line": 77,
+          "line": 78,
           "kind": "function"
         },
         {
           "name": "NVDTransport",
-          "line": 100,
+          "line": 110,
           "kind": "class"
         }
       ]
@@ -9504,7 +9682,7 @@
       "module": "modules/library/static/catalog_library_render.js",
       "owner": "library",
       "lines": 184,
-      "sha256": "2039ce3c41d119495f0d24c822b717cdcbbc4f76d097b70c677f07d1bb0c895c",
+      "sha256": "665dfea0aa83f446ab3b87f048ce317e52c2e6eca5e84c62ba0e74087be79688",
       "imports": [],
       "symbols": [
         {
@@ -9533,8 +9711,8 @@
       "path": "modules/library/static/cve_catalog.js",
       "module": "modules/library/static/cve_catalog.js",
       "owner": "library",
-      "lines": 307,
-      "sha256": "dfb085ca1bec540144d060bec9d76cd1d553f171bd6b815535682ac790392447",
+      "lines": 320,
+      "sha256": "7791ae21d82def7e22cbf94c974e7ae8986cf228d60e4a38a4eeef6215d485c1",
       "imports": [
         "modules/library/static/catalog_library.js"
       ],
@@ -10611,10 +10789,11 @@
       "path": "modules/tools/components/website_capture/__init__.py",
       "module": "modules.tools.components.website_capture",
       "owner": "tools",
-      "lines": 7,
-      "sha256": "21a69bd7f782bf56d890e9c5f5b272e1606b81a4928c8fddc9216af61074bd96",
+      "lines": 14,
+      "sha256": "3c02e96f50fbeedeb6fe826f3b60d7157e3eb55e35ccf48dd0e01338b71a2b07",
       "imports": [
         "modules.tools.components.website_capture.browser",
+        "modules.tools.components.website_capture.downloads",
         "modules.tools.components.website_capture.navigation",
         "modules.tools.components.website_capture.transport"
       ],
@@ -10624,10 +10803,12 @@
       "path": "modules/tools/components/website_capture/browser.py",
       "module": "modules.tools.components.website_capture.browser",
       "owner": "tools",
-      "lines": 231,
-      "sha256": "df462f1458d66b85775234060731aeb4876cdba7179658e2b7c3187fe5aac53b",
+      "lines": 281,
+      "sha256": "6e6d62d6e13ef7d560834bb15978cc6284c84ba0125f87d95219871adffe5301",
       "imports": [
         "modules.tools.components.website_capture.cdp",
+        "modules.tools.components.website_capture.diagnostics",
+        "modules.tools.components.website_capture.downloads",
         "modules.tools.components.website_capture.navigation",
         "modules.tools.components.website_capture.process_guard",
         "modules.tools.components.website_capture.transport",
@@ -10635,23 +10816,33 @@
       ],
       "symbols": [
         {
+          "name": "CaptureBrowserStartupError",
+          "line": 30,
+          "kind": "class"
+        },
+        {
+          "name": "CaptureOperationError",
+          "line": 34,
+          "kind": "class"
+        },
+        {
           "name": "find_browser",
-          "line": 27,
+          "line": 42,
           "kind": "function"
         },
         {
           "name": "browser_arguments",
-          "line": 49,
+          "line": 64,
           "kind": "function"
         },
         {
           "name": "classify_page",
-          "line": 63,
+          "line": 78,
           "kind": "function"
         },
         {
           "name": "capture_website",
-          "line": 97,
+          "line": 112,
           "kind": "function"
         }
       ]
@@ -10660,8 +10851,8 @@
       "path": "modules/tools/components/website_capture/cdp.py",
       "module": "modules.tools.components.website_capture.cdp",
       "owner": "tools",
-      "lines": 174,
-      "sha256": "12d5e08ba97ec07c82f869ab9db53a67a650c617719175d36da495f40c0da389",
+      "lines": 192,
+      "sha256": "bc868b9e0296dc1a8926c76ad53a88603a0648c5e2c5d91a15b3c1bb90e4a407",
       "imports": [],
       "symbols": [
         {
@@ -10675,19 +10866,41 @@
       "path": "modules/tools/components/website_capture/diagnostics.py",
       "module": "modules.tools.components.website_capture.diagnostics",
       "owner": "tools",
-      "lines": 104,
-      "sha256": "fbf57f543b90725a676f025f27545001ee0fe2d1c4257cf90314e06668bca34a",
+      "lines": 109,
+      "sha256": "ad6b067d146251fc929f00d4b9bac7a0553ceb22aa043ef1893f7640f62facf9",
       "imports": [],
       "symbols": [
         {
           "name": "network_error",
-          "line": 76,
+          "line": 81,
           "kind": "function"
         },
         {
           "name": "navigation_error",
-          "line": 97,
+          "line": 102,
           "kind": "function"
+        }
+      ]
+    },
+    {
+      "path": "modules/tools/components/website_capture/downloads.py",
+      "module": "modules.tools.components.website_capture.downloads",
+      "owner": "tools",
+      "lines": 83,
+      "sha256": "e3456f404810a498152f2fa3c116c41571d8eb9df14bd5f5da063eb66ff7c942",
+      "imports": [
+        "modules.workspace.components.primitives"
+      ],
+      "symbols": [
+        {
+          "name": "download_activity",
+          "line": 13,
+          "kind": "function"
+        },
+        {
+          "name": "DownloadObservations",
+          "line": 37,
+          "kind": "class"
         }
       ]
     },
@@ -10695,8 +10908,8 @@
       "path": "modules/tools/components/website_capture/navigation.py",
       "module": "modules.tools.components.website_capture.navigation",
       "owner": "tools",
-      "lines": 364,
-      "sha256": "60b89976b6dd3e70a590d083f152a0d05f3e2c5ee20e07a2a193347b91678bf2",
+      "lines": 389,
+      "sha256": "0fbd8a549b64871af62a06683a6e96affd3998d1a46ae2aa660651e77c69f382",
       "imports": [
         "modules.tools.components.network_identity",
         "modules.tools.components.website_capture.diagnostics",
@@ -10720,7 +10933,7 @@
         },
         {
           "name": "load_page",
-          "line": 303,
+          "line": 313,
           "kind": "function"
         }
       ]
@@ -11235,8 +11448,8 @@
       "path": "modules/ui/static/events.js",
       "module": "modules/ui/static/events.js",
       "owner": "ui",
-      "lines": 243,
-      "sha256": "f004c8f5a9b14a5dd597e28afeee24b028a038ffda8009014f0cdecac4753538",
+      "lines": 244,
+      "sha256": "29c5b9ae79a8e2ea1626cf63beccdbc22c7a82528b47a49f836e1b0372cbbb32",
       "imports": [
         "modules/accretion/static/intake_events.js",
         "modules/accretion/static/shadowserver_data.js",
@@ -11295,18 +11508,18 @@
       "path": "modules/ui/static/navigation.js",
       "module": "modules/ui/static/navigation.js",
       "owner": "ui",
-      "lines": 430,
-      "sha256": "1d72e94b61b99696fd2e3a8763a47cfd4a5b34dadd8f53456bc721c7d1b73508",
+      "lines": 446,
+      "sha256": "056489088c624865596c0bbf78cb7bb1b8965e99212701105da83f4caa00fd9c",
       "imports": [],
       "symbols": [
         {
           "name": "install",
-          "line": 2,
+          "line": 8,
           "kind": "export"
         },
         {
           "name": "start",
-          "line": 328,
+          "line": 344,
           "kind": "export"
         }
       ]
@@ -11315,8 +11528,8 @@
       "path": "modules/ui/static/request.js",
       "module": "modules/ui/static/request.js",
       "owner": "ui",
-      "lines": 91,
-      "sha256": "6c9423b4e44776f0f1f646ceb2dfaeaa5c4a5e23e288b2d785559e68b1df0cd3",
+      "lines": 103,
+      "sha256": "f0eeee31aaaf9f0a3b830ebdb65630c0cb509afddd09de384f58dbebd2946050",
       "imports": [],
       "symbols": []
     },
@@ -11339,8 +11552,8 @@
       "path": "modules/ui/static/shared.js",
       "module": "modules/ui/static/shared.js",
       "owner": "ui",
-      "lines": 320,
-      "sha256": "d7159d191a70bc20b977ab398551c2db001e7d87320df9249430901932ff7cdb",
+      "lines": 344,
+      "sha256": "7c77bbfbf5d3bdcc38a04d0b4c6a72f971d2dd3426549274e86295f2c46b2a19",
       "imports": [
         "modules/ui/static/format.js",
         "modules/ui/static/request.js"
@@ -11541,8 +11754,8 @@
       "path": "modules/workspace/components/api.py",
       "module": "modules.workspace.components.api",
       "owner": "workspace",
-      "lines": 332,
-      "sha256": "1cefc937a31df162c61808e114198e9dd6ab837d5e45348ec41318dd521b2d12",
+      "lines": 336,
+      "sha256": "9841460fe1d4c4c44fdde0d45634112ce6fdad2420c21d493d7c3873f4f2fe49",
       "imports": [
         "modules.accretion.components.api_acquisition",
         "modules.accretion.components.intake_service",
@@ -11568,6 +11781,9 @@
         "modules.investigations.components.services.drafts",
         "modules.investigations.components.services.notification_views",
         "modules.investigations.components.website_jobs",
+        "modules.leads.components.lead_queue",
+        "modules.leads.components.routes",
+        "modules.leads.components.routes.queue",
         "modules.library.components.catalog_outreach",
         "modules.library.components.cve_catalog",
         "modules.library.components.cve_catalog.risk",
@@ -11603,7 +11819,7 @@
       "symbols": [
         {
           "name": "create_app",
-          "line": 62,
+          "line": 64,
           "kind": "function"
         }
       ]
@@ -12512,12 +12728,13 @@
       "path": "modules/workspace/databases/migrations.py",
       "module": "modules.workspace.databases.migrations",
       "owner": "workspace",
-      "lines": 471,
-      "sha256": "0a22380b9b18e3d4e10c119b33193749f801d13c8131d131227ff9a3815b1579",
+      "lines": 473,
+      "sha256": "168baef73b57a469c53405d25443849515fbec7bf72cf5c90c2f85066dbfc67c",
       "imports": [
         "modules.accretion.databases.awareness_admission_migration",
         "modules.accretion.databases.awareness_migration",
         "modules.accretion.databases.dark_matter_schema",
+        "modules.accretion.databases.deconfliction",
         "modules.attribution.databases.asset_attribution_migration",
         "modules.entities.components.registry_profile",
         "modules.entities.databases.contact_migration",
@@ -12534,72 +12751,72 @@
       "symbols": [
         {
           "name": "schema_five",
-          "line": 249,
+          "line": 250,
           "kind": "function"
         },
         {
           "name": "schema_six",
-          "line": 278,
+          "line": 279,
           "kind": "function"
         },
         {
           "name": "schema_seven",
-          "line": 302,
+          "line": 303,
           "kind": "function"
         },
         {
           "name": "schema_nine",
-          "line": 312,
+          "line": 313,
           "kind": "function"
         },
         {
           "name": "schema_eleven",
-          "line": 327,
+          "line": 328,
           "kind": "function"
         },
         {
           "name": "schema_twelve",
-          "line": 337,
+          "line": 338,
           "kind": "function"
         },
         {
           "name": "schema_thirteen",
-          "line": 344,
+          "line": 345,
           "kind": "function"
         },
         {
           "name": "schema_fourteen",
-          "line": 360,
+          "line": 361,
           "kind": "function"
         },
         {
           "name": "schema_fifteen",
-          "line": 367,
+          "line": 368,
           "kind": "function"
         },
         {
           "name": "schema_sixteen",
-          "line": 373,
+          "line": 374,
           "kind": "function"
         },
         {
           "name": "schema_twenty_one",
-          "line": 386,
+          "line": 387,
           "kind": "function"
         },
         {
           "name": "schema_twenty_two",
-          "line": 393,
+          "line": 394,
           "kind": "function"
         },
         {
           "name": "schema_twenty_three",
-          "line": 400,
+          "line": 401,
           "kind": "function"
         },
         {
           "name": "migrate",
-          "line": 435,
+          "line": 437,
           "kind": "function"
         }
       ]
@@ -12673,8 +12890,8 @@
       "path": "modules/workspace/tools/verify_upgrade.py",
       "module": "modules.workspace.tools.verify_upgrade",
       "owner": "workspace",
-      "lines": 391,
-      "sha256": "d2effc36c9d23b4f98b53319135ef9a757372e16c3139189beb60f4d59c4fe7a",
+      "lines": 402,
+      "sha256": "d7bc5b4c9980d42c397e2b8b0900416f274abac507d83a3103763dd4fdd5dfbb",
       "imports": [],
       "symbols": [
         {
@@ -12704,17 +12921,17 @@
         },
         {
           "name": "loopback_only",
-          "line": 110,
+          "line": 116,
           "kind": "function"
         },
         {
           "name": "phase",
-          "line": 125,
+          "line": 131,
           "kind": "function"
         },
         {
           "name": "main",
-          "line": 298,
+          "line": 309,
           "kind": "function"
         }
       ]
@@ -13024,13 +13241,13 @@
       "path": "tools/release_policy.py",
       "module": "tools.release_policy",
       "owner": "project",
-      "lines": 274,
-      "sha256": "9ba6c28fb402726778ccf9dc07f16fb824cf461a9ffaa24132919787b1685c19",
+      "lines": 275,
+      "sha256": "b40887cc8eafc0da23c5ed08e06dde9c6c32004b13fb7b96757f5df4351fd986",
       "imports": [],
       "symbols": [
         {
           "name": "distributable",
-          "line": 175,
+          "line": 176,
           "kind": "function"
         }
       ]
@@ -13524,15 +13741,15 @@
       "imports": [
         {
           "from": "modules.accretion.components.association",
-          "to": "modules.investigations.components.outreach_policy"
-        },
-        {
-          "from": "modules.accretion.components.association",
           "to": "modules.investigations.components.website_evidence"
         },
         {
-          "from": "modules.accretion.components.evaluation",
+          "from": "modules.accretion.components.deconfliction",
           "to": "modules.investigations.components.outreach_policy"
+        },
+        {
+          "from": "modules.accretion.components.deconfliction",
+          "to": "modules.investigations.components.services.case_queries"
         },
         {
           "from": "modules.accretion.components.evaluation",
@@ -13544,10 +13761,6 @@
         },
         {
           "from": "modules.accretion.components.qualification",
-          "to": "modules.investigations.components.outreach_policy"
-        },
-        {
-          "from": "modules.accretion.components.qualification",
           "to": "modules.investigations.components.website_evidence"
         },
         {
@@ -13556,6 +13769,10 @@
         },
         {
           "from": "modules.accretion.components.qualified_lead",
+          "to": "modules.investigations.components.website_evidence"
+        },
+        {
+          "from": "modules.accretion.components.website_identity",
           "to": "modules.investigations.components.website_evidence"
         }
       ]
@@ -13582,6 +13799,10 @@
         },
         {
           "from": "modules.accretion.components.evaluation",
+          "to": "modules.leads.components.lead_frontier"
+        },
+        {
+          "from": "modules.accretion.databases.deconfliction",
           "to": "modules.leads.components.lead_frontier"
         }
       ]
@@ -13641,6 +13862,10 @@
       "to": "tools",
       "imports": [
         {
+          "from": "modules.accretion.components.deconfliction",
+          "to": "modules.tools.components.network_identity"
+        },
+        {
           "from": "modules.accretion.components.intake.domains",
           "to": "modules.tools.components.network_identity"
         },
@@ -13655,6 +13880,10 @@
         {
           "from": "modules.accretion.components.qualification",
           "to": "modules.tools.components.website_capture"
+        },
+        {
+          "from": "modules.accretion.components.website_identity",
+          "to": "modules.tools.components.network_identity"
         }
       ]
     },
@@ -13722,6 +13951,10 @@
         },
         {
           "from": "modules.accretion.components.repositories.intake_scores",
+          "to": "modules.workspace.components.primitives"
+        },
+        {
+          "from": "modules.accretion.components.routes.intake",
           "to": "modules.workspace.components.primitives"
         },
         {
@@ -14045,10 +14278,6 @@
         {
           "from": "modules.entities.components.routes.entities",
           "to": "modules.investigations.components.services.case_queries"
-        },
-        {
-          "from": "modules.entities.components.routes.entities",
-          "to": "modules.investigations.components.website_evidence"
         },
         {
           "from": "modules.entities.components.services.entities",
@@ -15166,6 +15395,10 @@
         },
         {
           "from": "modules.leads.components.lead_queue",
+          "to": "modules.investigations.components.services.case_queries"
+        },
+        {
+          "from": "modules.leads.components.lead_queue",
           "to": "modules.investigations.components.website_evidence"
         },
         {
@@ -15713,6 +15946,10 @@
         {
           "from": "modules.tools.components.website_capture.browser",
           "to": "modules.workspace.components.primitives"
+        },
+        {
+          "from": "modules.tools.components.website_capture.downloads",
+          "to": "modules.workspace.components.primitives"
         }
       ]
     },
@@ -16057,6 +16294,10 @@
         {
           "from": "modules.workspace.databases.migrations",
           "to": "modules.accretion.databases.dark_matter_schema"
+        },
+        {
+          "from": "modules.workspace.databases.migrations",
+          "to": "modules.accretion.databases.deconfliction"
         }
       ]
     },
@@ -16368,6 +16609,18 @@
       "from": "workspace",
       "to": "leads",
       "imports": [
+        {
+          "from": "modules.workspace.components.api",
+          "to": "modules.leads.components.lead_queue"
+        },
+        {
+          "from": "modules.workspace.components.api",
+          "to": "modules.leads.components.routes"
+        },
+        {
+          "from": "modules.workspace.components.api",
+          "to": "modules.leads.components.routes.queue"
+        },
         {
           "from": "modules.workspace.components.store",
           "to": "modules.leads.components.services.lead_exports"

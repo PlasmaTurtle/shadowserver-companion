@@ -4,13 +4,14 @@ export function install(ctx) {
     generation = 0,
     running = null,
     lastMessage = '',
+    lastDownloadActivity = null,
     lastCaseId = null;
   const esc = (...args) => ctx.actions.esc(...args);
   function captureMarkup() {
     const lead = ctx.state.editor.currentLead;
     const hosts = [...new Set((lead.hostnames || []).map((h) => h.name).filter(Boolean))];
     const active = !!running;
-    return `<div class="website-capture"><div class="field"><label for="capture-hostname">Reported hostname</label><select id="capture-hostname" ${active ? 'disabled' : ''}>${hosts.map((h) => `<option value="${esc(h)}">${esc(h)}</option>`).join('')}</select></div><button class="button primary" type="button" data-action="capture-website" ${active || !hosts.length ? 'disabled' : ''}>Capture website</button>${active ? '<button class="button" type="button" data-action="cancel-website-capture">Cancel</button>' : ''}<p class="website-capture-status" role="status">${esc(active ? 'Capturing desktop viewport…' : (lastCaseId === lead.case_id && lastMessage) || '1440 × 900 · viewport only')}</p></div>`;
+    return `<div class="website-capture"><div class="field"><label for="capture-hostname">Reported hostname</label><select id="capture-hostname" ${active ? 'disabled' : ''}>${hosts.map((h) => `<option value="${esc(h)}">${esc(h)}</option>`).join('')}</select></div><button class="button primary" type="button" data-action="capture-website" ${active || !hosts.length ? 'disabled' : ''}>Capture website</button>${active ? '<button class="button" type="button" data-action="cancel-website-capture">Cancel</button>' : ''}<p class="website-capture-status" role="status">${esc(active ? 'Capturing desktop viewport…' : (lastCaseId === lead.case_id && lastMessage) || '1440 × 900 · viewport only')}</p>${!active && lastCaseId === lead.case_id ? ctx.actions.downloadActivityMarkup(lastDownloadActivity) : ''}</div>`;
   }
   function provenance(item) {
     const c = item.capture;
@@ -50,7 +51,7 @@ export function install(ctx) {
             '',
           )}</ol>${attempts.length > 8 ? `<p>Showing 8 of ${attempts.length} attempts.</p>` : ''}`
       : '';
-    return `<span class="badge ${c.capture_status === 'captured' ? 'gray' : 'amber'}">${esc(label(c.capture_status, 'Capture'))}</span>${c.fallback_used === true ? '<span class="badge amber">Main-site fallback</span>' : ''}<details class="capture-provenance"><summary>Capture details</summary><dl><dt>Requested</dt><dd>${esc(c.requested_url)}</dd><dt>Final page</dt><dd>${esc(c.final_url)}</dd>${c.root_domain ? `<dt>Main site</dt><dd>${text(c.root_domain, 253)}</dd>` : ''}<dt>Title</dt><dd>${esc(c.title || 'Untitled')}</dd><dt>Viewport</dt><dd>${esc(c.viewport?.width)} × ${esc(c.viewport?.height)}</dd><dt>HTTP status</dt><dd>${esc(c.http_status || 'Unavailable')}</dd>${c.blocked_requests > 0 ? `<dt>Limited requests</dt><dd>${esc(c.blocked_requests)}</dd>` : ''}<dt>SHA-256</dt><dd><code>${esc(item.sha256)}</code></dd></dl>${navigation}${outcomes}${
+    return `<span class="badge ${c.capture_status === 'captured' ? 'gray' : 'amber'}">${esc(label(c.capture_status, 'Capture'))}</span>${c.fallback_used === true ? '<span class="badge amber">Main-site fallback</span>' : ''}<details class="capture-provenance"><summary>Capture details</summary><dl><dt>Requested</dt><dd>${esc(c.requested_url)}</dd><dt>Final page</dt><dd>${esc(c.final_url)}</dd>${c.root_domain ? `<dt>Main site</dt><dd>${text(c.root_domain, 253)}</dd>` : ''}<dt>Title</dt><dd>${esc(c.title || 'Untitled')}</dd><dt>Viewport</dt><dd>${esc(c.viewport?.width)} × ${esc(c.viewport?.height)}</dd><dt>HTTP status</dt><dd>${esc(c.http_status || 'Unavailable')}</dd>${c.blocked_requests > 0 ? `<dt>Limited requests</dt><dd>${esc(c.blocked_requests)}</dd>` : ''}<dt>SHA-256</dt><dd><code>${esc(item.sha256)}</code></dd></dl>${ctx.actions.downloadActivityMarkup(c.download_activity)}${navigation}${outcomes}${
       (c.resource_failures || []).length
         ? `<ul>${c.resource_failures
             .slice(0, 8)
@@ -81,6 +82,9 @@ export function install(ctx) {
       }
       running = null;
       lastMessage = result.message;
+      lastDownloadActivity = ['failed', 'cancelled'].includes(result.state)
+        ? result.download_activity
+        : null;
       lastCaseId = watch.caseId;
       const lead = ctx.state.editor.currentLead;
       if (lead?.case_id === watch.caseId && result.state === 'completed') {
@@ -102,6 +106,17 @@ export function install(ctx) {
         }
         const region = ctx.actions.$('#editor-content');
         if (region) region.innerHTML = ctx.actions.editorContent();
+      } else if (lead?.case_id === watch.caseId && lastDownloadActivity) {
+        repaint();
+        // A failed history refresh must not hide the terminal job result.
+        const fresh = await ctx.actions.api(ctx.actions.leadURL('')).catch(() => null);
+        if (token !== generation || ctx.state.editor.currentLead?.case_id !== watch.caseId) return;
+        if (fresh) {
+          ctx.state.editor.currentLead.history = fresh.history;
+          const region = ctx.actions.$('#editor-content');
+          if (region && ctx.state.editor.tab === 'activity')
+            region.innerHTML = ctx.actions.editorContent();
+        }
       }
       repaint();
       ctx.actions.toast(lastMessage);
@@ -109,6 +124,7 @@ export function install(ctx) {
       if (token !== generation) return;
       running = null;
       lastMessage = error.message;
+      lastDownloadActivity = null;
       lastCaseId = watch.caseId;
       repaint();
       ctx.actions.toast(error.message);
@@ -128,6 +144,7 @@ export function install(ctx) {
     if (token !== generation) return;
     running = { id: job.id, caseId };
     lastMessage = '';
+    lastDownloadActivity = null;
     repaint();
     poll(++generation);
   }

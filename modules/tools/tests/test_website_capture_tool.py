@@ -1,8 +1,12 @@
 """Reusable website-capture URL, browser-default and outcome contracts."""
 
+import threading
+import time
+from unittest.mock import Mock, call
+
 import pytest
 
-from modules.tools.components.website_capture import web_url
+from modules.tools.components.website_capture import WebsiteLoadError, navigation, web_url
 from modules.tools.components.website_capture.browser import browser_arguments, classify_page
 
 
@@ -27,6 +31,26 @@ def test_query_and_fragment_policy():
         web_url("https://example.com/path?a=2&b=3#section")
         == "https://example.com/path?a=2&b=3#section"
     )
+
+
+def test_top_level_download_tries_next_candidate_without_rendering_a_file():
+    client = Mock()
+    client.call.return_value = {"isDownload": True, "errorText": "net::ERR_ABORTED"}
+    metadata = {"attempts": [], "attempted_urls": []}
+    with pytest.raises(WebsiteLoadError, match="Website offered a file download"):
+        navigation.load_page(
+            "https://localhost/file",
+            open_page=lambda: client,
+            deadline=time.monotonic() + 60,
+            cancel_event=threading.Event(),
+            metadata=metadata,
+            classify=classify_page,
+        )
+    assert client.call.call_args_list == [
+        call("Page.navigate", {"url": "https://localhost/file"}),
+        call("Page.navigate", {"url": "http://localhost/file"}),
+    ]
+    assert all(attempt["outcome"] == "load_failed" for attempt in metadata["attempts"])
 
 
 @pytest.mark.parametrize(

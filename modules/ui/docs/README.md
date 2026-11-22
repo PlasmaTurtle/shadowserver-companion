@@ -43,6 +43,12 @@ list for composed cancellation. Results are decoded data; HTTP errors preserve
 uses `AbortError`. Timers/listeners are released on completion or cancellation.
 No navigation, token, retry or domain state lives in this transport.
 
+An interrupted Fetch reports a `ConnectionError` with local app recovery
+instructions. A submitted write may already have reached the service. The UI
+asks the analyst to check its status before sending it again. If bootstrap
+fails, **Reload app** reloads the current URL so the browser can reuse its
+session cookie, fetch the bootstrap data and start normal navigation and polling.
+
 The `api` adapter in [shared.js](../static/shared.js) supplies mutation-token
 headers, JSON request encoding, navigation cancellation and the existing read
 deadline. Submitted writes continue independently of the abandoned view.

@@ -49,6 +49,7 @@ export function bindEvents(ctx) {
   ];
   const actions = uniqueHandlers(features, 'actions');
   actions.set('reload', () => ctx.actions.route(true));
+  actions.set('reload-app', () => window.location.reload());
   const forms = uniqueHandlers(features, 'forms');
   forms.set('global-search-form', async (_form, values) => {
     ctx.actions.closeModal();

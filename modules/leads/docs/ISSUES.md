@@ -21,12 +21,12 @@ Individual entries retain their module benefit, scope and focused evidence.
 | ISS007 | [Entity presentation in Leads](#iss007-entity-presentation-in-leads) | Resolved |
 | LEAD-01 through LEAD-06 | [Site and screenshot inspection, finding filters, notification history and review continuity](README.md#boundary) | Implemented |
 
-The November 22 [queue checks](../tests/test_website_thumbnail_ui.cjs) cover
+The November 22 queue checks in `test_website_thumbnail_ui.cjs` cover
 links to three different hosts, preview enlargement and a decision shared by
-both finding views. The [navigation regression](../../ui/tests/test_navigation_ui_098.cjs)
+both finding views. The navigation regression in `test_navigation_ui_098.cjs`
 covers filters across page boundaries and advancing past a lead removed by
-another reviewer. [Capture projection](../tests/test_lead_website_projection.py)
-checks the original image bytes and reuse when the case gains new source rows.
+another reviewer. The checks in `test_lead_website_projection.py`
+verify the original image bytes and reuse when the case gains new source rows.
 
 ## ISS007 Entity presentation in Leads
 

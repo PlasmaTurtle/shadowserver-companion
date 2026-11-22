@@ -25,6 +25,11 @@ database, independently released package or complete runtime isolation.
 Choose a module from its responsibility, then keep its implementation and
 supporting files together.
 
+Treat any remaining relocation as one incremental migration. For each module,
+move its callers, route registration, assets, tests and packaging paths together.
+Regenerate the program map and verify the packaged entry point before moving
+the next module. Keep relocation commits separate from changes to behavior.
+
 ## Find the owner
 
 | Module | Responsibility | Module guide |

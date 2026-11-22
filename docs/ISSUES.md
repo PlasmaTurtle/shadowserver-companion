@@ -1,7 +1,7 @@
 # Project issues and module issue index
 
 This register owns shared project work and indexes module-owned issues. Last
-reviewed: **2026-11-21**. Each issue has one canonical home: its owning module's
+reviewed: **2026-11-22**. Each issue has one canonical home: its owning module's
 `docs/ISSUES.md`, or this file for project-wide coordination. Status and completion
 evidence stay at that home. The [module directory](README.md#module-documentation-and-tracking)
 links every guide and tracker, including modules without recorded open items.
@@ -69,6 +69,14 @@ records its own verification and does not inherit that batch's completion claim.
 | ISS046 | [Typed Accretion handoffs](../modules/accretion/docs/ISSUES.md#iss046-typed-accretion-handoffs) | Accretion; Attribution, Entities, Leads and Workspace |
 | ISS047 | [Command palette reopen lifecycle](../modules/ui/docs/ISSUES.md#iss047-command-palette-reopen-lifecycle) | UI |
 | ISS048 | [Full-run runtime reliability](#iss048-full-run-runtime-reliability) | Project; Investigations, Workspace and release tooling |
+| ISS049 | [Filter and Qualify counters](../modules/accretion/docs/ISSUES.md#iss049-filter-and-qualify-counters) | Accretion |
+| ISS050 | [Recovering the shell after a lost connection](../modules/ui/docs/ISSUES.md#iss050-recovering-the-shell-after-a-lost-connection) | UI |
+| ISS051 | [Capture browser startup failures](../modules/tools/docs/ISSUES.md#iss051-capture-browser-startup-failures) | Tools |
+| ISS052 | [Catalog update status after a failed sync](../modules/library/docs/ISSUES.md#iss052-catalog-update-status-after-a-failed-sync) | Library |
+| ISS053 | [Local views lost their connection while the console was open](../modules/workspace/docs/ISSUES.md#iss053-local-views-lost-their-connection-while-the-console-was-open) | Workspace |
+| ISS054 | [Defender quarantined the Windows launcher](#iss054-defender-quarantined-the-windows-launcher) | Project release tooling |
+| ISS055 | [Website capture permitted file downloads](../modules/tools/docs/ISSUES.md#iss055-website-capture-permitted-file-downloads) | Tools |
+| ISS056 | [North Carolina business-registration import](../modules/attribution/docs/ISSUES.md#iss056-north-carolina-business-registration-import) | Attribution and Entities |
 
 ## Project work status
 
@@ -81,6 +89,7 @@ records its own verification and does not inherit that batch's completion claim.
 | ISS014 | Pending validation | Release, Settings, Workspace and affected modules |
 | ISS028 | Resolved | Root configuration, dependency/release tooling, documentation and Workspace startup |
 | ISS048 | Needs triage | Unexplained certification-integrity failure and native interpreter crash during full verification |
+| ISS054 | Open | Windows candidate distribution on hold pending launcher analysis |
 
 ## ISS028 Root configuration and startup ownership
 
@@ -295,6 +304,14 @@ Word 16.0.20326.20318 is available for a later controlled layout check. The actu
 installer uses the existing app's fixed registry and shortcut identity, so a
 different `/D` directory alone does not isolate full installation acceptance.
 The recorded self-test applies only to the named artifact; ISS014 remains pending.
+
+## ISS054 Defender quarantined the Windows launcher
+
+Microsoft Defender Antivirus detected `Trojan:Win32/Bearfoos.A!ml` in the installed Eclipse bootstrap on November 21, 2026 at 11:00:02 PM Eastern. Event 1117 records successful quarantine at 11:00:28 PM. The event also lists shortcuts and scheduled-task references. The operator subsequently uninstalled the application and deleted its file tree.
+
+The [Windows build script](../tools/windows_installer/build.py) compiles the [NSIS launcher](../tools/windows_installer/bootstrap.nsi) and names it after the SHA-256 of its output. Shortcuts invoke that launcher to start the bundled Python application. The detected filename contains the exact bootstrap SHA-256 from the installer verification report, `5ee0cde45aa1a263c24820071399db05e490de418ffe2fba6a16e9b3b9f78508`. The quarantined bytes have no independently observed hash in the supplied events. The detection used security intelligence version `1.463.407.0`. Hold this Windows candidate pending examination of the build provenance and a security determination for the specific launcher. The [Microsoft submission portal](https://www.microsoft.com/en-us/wdsi/filesubmission) accepts developer submissions. Record that determination and verify installation, launch and scheduled startup under real-time protection before clearing the hold.
+
+The last recorded server response preceded the first detection by 10 minutes 27 seconds. The supplied events identify the launcher. The running Python server's exit time and the cause of the earlier GUI outage remain unknown. [Workspace ISS053](../modules/workspace/docs/ISSUES.md#iss053-local-views-lost-their-connection-while-the-console-was-open) tracks that investigation.
 
 ## ISS048 Full-run runtime reliability
 

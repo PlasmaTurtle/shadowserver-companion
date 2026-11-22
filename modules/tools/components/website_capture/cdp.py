@@ -18,7 +18,7 @@ MAX_MESSAGE = 24 * 1024 * 1024
 
 
 class CDP:
-    def __init__(self, url, deadline):
+    def __init__(self, url, deadline, *, downloads=None):
         p = urlsplit(url)
         if (
             p.scheme != "ws"
@@ -37,6 +37,7 @@ class CDP:
         self.sequence = 0
         self.session = None
         self.events = []
+        self.downloads = downloads
         self.results = {}
         key = base64.b64encode(os.urandom(16)).decode()
         try:
@@ -144,6 +145,9 @@ class CDP:
         message = json.loads(data)
         if "id" in message:
             self.results[message["id"]] = message
+        elif message.get("method") in ("Browser.downloadWillBegin", "Browser.downloadProgress"):
+            if self.downloads is not None:
+                self.downloads.observe(message["method"], message["params"])
         elif "method" in message:
             self.events.append(message)
 
@@ -168,7 +172,21 @@ class CDP:
         response = self.results.pop(identity)
         if "error" in response:
             raise ValueError("Capture browser could not complete " + method)
-        return response.get("result", {})
+        result = response.get("result", {})
+        if method == "Page.navigate" and result.get("isDownload") and self.downloads is not None:
+            self.downloads.navigation_download(result.get("frameId"))
+        return result
 
     def close(self):
         self.socket.close()
+
+    def finish_downloads(self):
+        """Allow a pending attempt a short window for its terminal browser event."""
+        if self.downloads is None or not self.downloads.pending():
+            return
+        self.deadline = min(self.deadline, time.monotonic() + 0.25)
+        while self.downloads.pending() and time.monotonic() < self.deadline:
+            try:
+                self.receive()
+            except socket.timeout:
+                continue

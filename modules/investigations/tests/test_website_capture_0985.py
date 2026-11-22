@@ -16,6 +16,7 @@ from modules.investigations.components.cases import Cases
 from modules.investigations.components.image_evidence import metadata_path
 from modules.investigations.components.report_snapshot import snapshot
 from modules.investigations.components.reviews.queries import SectionReviewQueries
+from modules.tools.components.website_capture import WebsiteLoadError
 
 from modules.investigations.tests.support.website_capture import (
     captured,
@@ -99,6 +100,61 @@ def test_partial_capture_is_saved_but_not_automatically_included(fixture):
         ]
         == 0
     )
+
+
+@pytest.mark.parametrize(
+    "page_loaded", [True, False], ids=["with-screenshot", "without-screenshot"]
+)
+def test_capture_preserves_only_observed_download_time_and_outcome(fixture, page_loaded):
+    app, client, _, case = fixture
+    observation = {"observed_at": "2026-11-21T12:34:56Z", "outcome": "canceled"}
+    activity = {"attempts": [observation], "truncated": False}
+
+    def capture(url, **kwargs):
+        png, metadata = captured()
+        metadata.update(
+            requested_url=url,
+            download_activity={
+                "attempts": [{**observation, "suggestedFilename": "private-download-name"}],
+                "filePath": "private-download-path",
+            },
+        )
+        if not page_loaded:
+            raise WebsiteLoadError("Website did not load", metadata)
+        return png, metadata
+
+    jobs = app.state.website_jobs
+    jobs.capture = capture
+    endpoint = f"/api/cases/{case}"
+    before = client.get(endpoint).json()
+    started = client.post(endpoint + "/website-capture", json={"hostname": "mail.example.com"})
+    assert started.status_code == 200, started.text
+    result = done(jobs, started.json()["id"])
+    editor = client.get(endpoint).json()
+    event = next(
+        entry for entry in editor["history"] if entry["action"].startswith("website_capture")
+    )
+    event_metadata = json.loads(event["metadata"])
+    assert "private-download" not in json.dumps([result, editor])
+    if page_loaded:
+        assert result["state"] == "completed", result
+        assert result["capture"]["download_activity"] == activity
+        assert editor["evidence"][0]["capture"]["download_activity"] == activity
+        assert event["action"] == "website_captured"
+        assert event_metadata["capture"]["download_activity"] == activity
+        sidecar = app.state.store.path(metadata_path(result["evidence_id"])).read_text("utf-8")
+        assert json.loads(sidecar)["website_capture"]["download_activity"] == activity
+        assert "private-download" not in sidecar
+    else:
+        assert result["state"] == "failed", result
+        assert result["download_activity"] == activity
+        assert event["action"] == "website_capture_failed"
+        assert event_metadata["capture_job"] == result["id"]
+        assert event_metadata["download_activity"] == activity
+        assert editor["evidence"] == []
+        assert not app.state.store.all("SELECT id FROM website_captures")
+        assert editor["case"]["version"] == before["case"]["version"]
+        assert editor["draft_revision"] == before["draft_revision"]
 
 
 def test_capture_completion_cannot_change_a_now_frozen_section(fixture, monkeypatch):
@@ -187,11 +243,16 @@ def test_terminal_capture_status_waits_for_temporary_file_cleanup(
 def test_cancel_and_duplicate_jobs_do_not_attach(fixture):
     app, client, _, case = fixture
     started = threading.Event()
+    activity = {
+        "attempts": [{"observed_at": "2026-11-21T12:34:56Z", "outcome": "unconfirmed"}],
+        "truncated": False,
+    }
 
     def wait_cancel(*args, cancel_event, **kwargs):
         started.set()
         cancel_event.wait(3)
-        return captured()
+        png, metadata = captured()
+        return png, {**metadata, "download_activity": activity}
 
     jobs = app.state.website_jobs
     jobs.capture = wait_cancel
@@ -202,7 +263,9 @@ def test_cancel_and_duplicate_jobs_do_not_attach(fixture):
     assert one["id"] == two["id"]
     assert jobs.busy()
     client.post("/api/website-captures/" + one["id"] + "/cancel", json={})
-    assert done(jobs, one["id"])["state"] == "cancelled"
+    result = done(jobs, one["id"])
+    assert result["state"] == "cancelled"
+    assert result["download_activity"] == activity
     assert not app.state.store.all("SELECT * FROM evidence")
 
 

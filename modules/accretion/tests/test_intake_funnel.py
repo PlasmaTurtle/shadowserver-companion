@@ -163,7 +163,203 @@ def test_unsuccessful_qualification_stops_every_downstream_stage(funnel, outcome
     imported, job = ingest(funnel)
     assert job["status"] == outcome
     assert imported["status"] == ("needs_retry" if outcome == "deferred" else "done")
+    expected_stage = {
+        "no_match": "Intake complete",
+        "review": "Qualification needs review",
+        "deferred": "Qualification needs retry",
+    }[outcome]
+    progress = json.loads(imported["config"])["intake_progress"]
+    assert imported["stage"] == progress["detail"] == expected_stage
+    assert progress["phase"] == ("complete" if outcome == "no_match" else "qualify")
     assert_stopped(store, state)
+
+
+def test_capture_startup_failure_reaches_progress_and_historical_detail(funnel):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from modules.accretion.components.routes.intake import register
+    from modules.tools.components.website_capture import CaptureBrowserStartupError
+
+    store, intake, _ = funnel
+
+    def unavailable(*args, **kwargs):
+        raise CaptureBrowserStartupError("Capture browser could not start")
+
+    intake.capture = unavailable
+    imported, job = ingest(funnel)
+    assert job["error"] == "capture_browser_startup"
+    assert imported["status"] == "needs_retry"
+    app = FastAPI()
+    register(app, store=store, intake=intake)
+    with TestClient(app) as client:
+
+        def counts():
+            progress = client.get("/api/intake/progress").json()["current"]
+            detail = client.get("/api/imports/" + imported["id"]).json()
+            return progress["retry_reasons"], detail["retry_reasons"]
+
+        startup = {"Capture browser could not start": 1}
+        generic = {"Website capture tool failed": 1}
+        assert counts() == (startup, startup)
+        with store.transaction() as db:
+            db.execute("UPDATE jobs SET error='website_capture_error' WHERE id=?", (job["id"],))
+        assert counts() == (generic, startup)
+        with store.transaction() as db:
+            db.execute(
+                "UPDATE jobs SET attempts=json_set(attempts,'$[#-1].message',?) WHERE id=?",
+                ("Sensitive diagnostic for https://example.invalid/", job["id"]),
+            )
+        assert counts() == (generic, generic)
+
+
+@pytest.mark.parametrize("startup_failure", [True, False])
+def test_only_local_browser_startup_failure_holds_unchecked_groups(funnel, startup_failure):
+    from modules.tools.components.website_capture import (
+        CaptureBrowserStartupError,
+        WebsiteLoadError,
+    )
+
+    store, intake, state = funnel
+    state["outcome"] = "no_match"
+    calls = []
+    batch = report([row(hostname="app.example.com"), row(hostname="web.example.net", ip="1.1.1.1")])
+    import_id = intake.enqueue("scan_http_vulnerable.csv", batch)["id"]
+
+    def capture(url, **kwargs):
+        calls.append(url)
+        if len(calls) == 1:
+            if startup_failure:
+                raise CaptureBrowserStartupError("Capture browser could not start")
+            raise WebsiteLoadError("Site-specific navigation failure", {"attempted_urls": [url]})
+        return capture_website(url, **kwargs)
+
+    intake.capture = capture
+    intake.process(import_id)
+    current = intake_progress.overview(store)["current"]
+    assert current["status"] == "needs_retry"
+    assert current["groups_total"] == current["rows_read"] == current["valid_rows"] == 2
+    if startup_failure:
+        assert len(calls) == current["groups_done"] == 1
+        assert current["jobs"] == {"deferred": 1, "pending": 1}
+    else:
+        assert len(calls) == current["groups_done"] == 2
+        assert current["jobs"] == {"deferred": 1, "no_match": 1}
+    intake.retry(import_id)
+    assert intake_progress.overview(store)["current"]["groups_done"] == (
+        0 if startup_failure else 1
+    )
+    intake.process(import_id)
+    current = intake_progress.overview(store)["current"]
+    assert current["groups_done"] == current["groups_total"] == 2
+    assert current["status"] == "done" and current["jobs"] == {"no_match": 2}
+    assert len(calls) == 3 and len(set(calls)) == 2
+    assert store.dark_matter.query()["total"] == 2
+
+
+def test_group_download_observations_survive_retry_before_a_case_exists(funnel):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from modules.accretion.components.routes.intake import register
+    from modules.tools.components.website_capture import WebsiteLoadError
+
+    store, intake, _ = funnel
+    host = "site.example.com"
+    sibling = "other.example.com"
+    original = report([row(hostname=host), row(hostname=sibling)])
+    imported = intake.enqueue("scan_http_vulnerable.csv", original)["id"]
+    observations = [
+        {"observed_at": f"2026-11-21T12:00:0{index}Z", "outcome": outcome}
+        for index, outcome in enumerate(["canceled", "unconfirmed", "completed", "canceled"])
+    ]
+    calls = []
+
+    def capture(url, **kwargs):
+        index = len(calls)
+        calls.append(url)
+        extra = {
+            "download_activity": {
+                "attempts": [{**observations[index], "filename": "secret-filename.bin"}],
+                "download_url": "https://private.invalid/path",
+            }
+        }
+        if index in {0, 1}:
+            raise WebsiteLoadError("Page unavailable", extra)
+        if index == 2:
+            error = OSError("Synthetic capture operation failed")
+            error.metadata = extra
+            raise error
+        png, metadata = capture_website(url, **kwargs)
+        return png, {**metadata, **extra}
+
+    intake.capture = capture
+    app = FastAPI()
+    register(app, store=store, intake=intake)
+    with TestClient(app) as client:
+
+        def website_attempts():
+            job_id = client.get("/api/imports/" + imported).json()["groups"][0]["id"]
+            group = client.get("/api/groups/" + job_id).json()
+            rows = [item for item in group["attempts"] if item["method"] == "website"]
+            for item in rows:
+                assert set(item["download_activity"]) == {"attempts", "truncated"}
+                assert not item["download_activity"]["truncated"]
+            return [
+                (item["hostname"], item["status"], item["download_activity"]["attempts"])
+                for item in rows
+            ]
+
+        intake.process(imported)
+        assert website_attempts() == [
+            (host, "load_failed", [observations[0]]),
+            (sibling, "load_failed", [observations[1]]),
+        ]
+        intake.retry(imported)
+        intake.process(imported)
+        assert website_attempts() == [
+            (host, "previous_capture", [observations[0]]),
+            (sibling, "previous_capture", [observations[1]]),
+            (host, "tool_error", [observations[2]]),
+        ]
+        intake.retry(imported)
+        intake.process(imported)
+        expected = [
+            (host, "previous_capture", [observations[0], observations[2]]),
+            (sibling, "previous_capture", [observations[1]]),
+            (host, "captured", [observations[3]]),
+        ]
+        assert website_attempts() == expected
+        intake.process(imported)
+        assert website_attempts() == expected and len(calls) == 4
+        assert store.one("SELECT count(*) n FROM cases")["n"] == 0
+
+
+def test_previous_capture_records_stay_bounded_per_reported_host():
+    from modules.accretion.components.qualification import prior_website_attempts
+
+    def attempt(host, start, count):
+        return {
+            "method": "website",
+            "hostname": host,
+            "download_activity": {
+                "attempts": [
+                    {"observed_at": f"2026-11-21T12:00:{i:02}Z", "outcome": "unconfirmed"}
+                    for i in range(start, start + count)
+                ],
+            },
+        }
+
+    saved = [
+        attempt("first.example.com", 0, 12),
+        attempt("first.example.com", 12, 12),
+        attempt("second.example.com", 24, 1),
+    ]
+    first, second = prior_website_attempts(saved)
+    assert (
+        len(first["download_activity"]["attempts"]) == 16
+        and first["download_activity"]["truncated"]
+    )
+    assert second["download_activity"] == {**saved[2]["download_activity"], "truncated": False}
+    assert prior_website_attempts([first, second]) == [first, second]
 
 
 def test_no_filter_survivors_never_open_qualification_or_later_stages(funnel, monkeypatch):

@@ -147,9 +147,11 @@ are tracked in [ISS027](../../accretion/docs/ISSUES.md#iss027-qualify-decisions-
 `retain(store, png, metadata, root_domain=...)` stores the original, safe PNG preview
 and capture provenance before an entity exists. `get` and `preview` verify all
 three retained files against their hashes. `bind` associates an admitted capture
-with an entity inside Associate's transaction; `projection` supplies the verified
-working URL and screenshot endpoint to Leads and Entities. A diagnostic or unrelated
-destination cannot become the entity's qualifying website.
+with an entity inside Associate's transaction. The entity profile can show its
+latest bound capture. Leads and case adoption use the capture ID from the
+selected observations' admissions or their original qualification job. Older
+observations without either reference require a single bound capture matching
+a selected reported hostname. Ambiguous or missing proof leaves the image absent.
 
 Case creation and scope extension call `adopt_for_case`. Adoption references the
 same original and preview, copying only immutable metadata under the evidence ID

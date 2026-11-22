@@ -8,6 +8,7 @@ from .report import Report, ReportCandidate
 from .qualified_lead import QualifiedLead
 from .evaluated_lead import EvaluatedLead
 from .association import AssociationResult
+from .deconfliction import AssociationEvidenceChanged
 from .intake.files import SourceFormatError
 from .dark_matter import prepare_batch, enqueue_prepared, enqueue_outcome, enqueue_batch
 
@@ -38,7 +39,7 @@ from modules.accretion.components.report_profiles import (
 
 LOG = logging.getLogger(__name__)
 MAX_UPLOAD = 50 * 1024 * 1024
-POLICY_VERSION = 14
+POLICY_VERSION = 15
 
 
 class IntakeService:
@@ -58,7 +59,9 @@ class IntakeService:
             raise ValueError("Report must be between 1 byte and 50 MiB")
         return self.enqueue_stream(name, io.BytesIO(content), max_bytes=MAX_UPLOAD)
 
-    def enqueue_stream(self, name, stream, *, max_bytes=MAX_UPLOAD, acquisition=None):
+    def enqueue_stream(
+        self, name, stream, *, max_bytes=MAX_UPLOAD, acquisition=None, reevaluate=False
+    ):
         """Bounded original-file publication; downloaded is distinct from imported."""
         name = Path(name.replace("\\", "/")).name
         extension = ".csv.gz" if name.lower().endswith(".csv.gz") else Path(name).suffix.lower()
@@ -85,7 +88,6 @@ class IntakeService:
             if name != receipt["original_filename"]:
                 raise ValueError("Report filename does not match its API receipt")
             max_bytes = min(max_bytes, MAX_API_DOWNLOAD)
-            config["report_type"] = receipt["report_type"]
         else:
             acquisition = {"kind": "manual_file"}
         acquisition["imported_at"] = now()
@@ -116,39 +118,70 @@ class IntakeService:
                 size != receipt["size_bytes"] or digest != receipt["sha256"]
             ):
                 raise ValueError("Downloaded report bytes do not match the API receipt")
-            return self._publish_original(name, temporary, extension, digest, config)
+            return self._publish_original(name, temporary, extension, digest, config, reevaluate)
         finally:
             temporary.unlink(missing_ok=True)
 
-    def _publish_original(self, name, temporary, extension, digest, config):
+    def _publish_original(self, name, temporary, extension, digest, config, reevaluate):
         acquisition = config["acquisition"]
-        policy = dump(
-            {
-                "regions": sorted(config["regions"]),
-                "sheet": config["sheet"],
-                "version": POLICY_VERSION,
-                "accretion_policy": config.get("accretion_policy"),
-                "critical_only": config.get("critical_only", True),
-                "outreach_mode": config.get("outreach_mode", "critical"),
-                "targeted_reason": config.get("targeted_reason", ""),
-                "report_type": config.get("report_type", "auto"),
-                "profile_version": PROFILE_VERSION,
-                "catalog_revision": {
-                    key: config["catalog_at_import"].get(key)
-                    for key in ("total", "bootstrap_complete", "last_success_at")
-                },
-                "filename_profile": resolve_profile({}, name, config.get("report_type", "auto"))[
-                    "id"
-                ],
-                "acquisition_kind": acquisition["kind"],
-            }
-        )
-        fingerprint = hashlib.sha256((digest + policy).encode()).hexdigest()
+        configured_type = config.get("report_type", "auto")
+        receipt_type = acquisition.get("receipt", {}).get("report_type")
+        profile = resolve_profile({}, name, configured_type, receipt_type=receipt_type)["id"]
+        policy = {
+            "regions": sorted(config["regions"]),
+            "sheet": config["sheet"],
+            "version": POLICY_VERSION,
+            "accretion_policy": config.get("accretion_policy"),
+            "critical_only": config.get("critical_only", True),
+            "outreach_mode": config.get("outreach_mode", "critical"),
+            "targeted_reason": config.get("targeted_reason", ""),
+            "report_type": configured_type,
+            "profile_version": PROFILE_VERSION,
+            "catalog_revision": {
+                key: config["catalog_at_import"].get(key)
+                for key in ("total", "bootstrap_complete", "last_success_at")
+            },
+            "filename_profile": profile,
+        }
+
+        def fingerprint_for(settings):
+            return hashlib.sha256((digest + dump(settings)).encode()).hexdigest()
+
+        fingerprint = fingerprint_for({**policy, "format": extension})
+        relative = f"originals/{digest}{extension}"
+        candidates = [fingerprint]
+        if not reevaluate:
+            # Version 14 identified the delivery channel as part of the policy.
+            # Repeat delivery keeps the historical import. An explicit policy
+            # reevaluation can create a fresh result under the current rules.
+            filename_profile = resolve_profile({}, name, configured_type)["id"]
+            if profile == filename_profile:
+                candidates.append(
+                    fingerprint_for({**policy, "version": 14, "acquisition_kind": "manual_file"})
+                )
+            original_api_type = receipt_type or profile
+            if (
+                profile != "unclassified"
+                and resolve_profile({}, name, original_api_type)["id"] == profile
+            ):
+                candidates.append(
+                    fingerprint_for(
+                        {
+                            **policy,
+                            "version": 14,
+                            "acquisition_kind": "shadowserver_api_receipt",
+                            "report_type": original_api_type,
+                        }
+                    )
+                )
         with self.store.transaction() as db:
             if getattr(self.store, "maintenance", None) and self.store.maintenance.is_set():
                 raise ValueError("Intake is paused while a data change is staged")
+            placeholders = ",".join("?" for _ in candidates)
             existing = db.execute(
-                "SELECT id,config,status FROM imports WHERE fingerprint=?", (fingerprint,)
+                f"SELECT id,config,status FROM imports WHERE fingerprint IN ({placeholders}) AND path=? "
+                "ORDER BY (fingerprint=?) DESC,created_at,id LIMIT 1",
+                (*candidates, relative, fingerprint),
             ).fetchone()
             if existing:
                 if acquisition.get("receipt"):
@@ -171,7 +204,6 @@ class IntakeService:
                     "downloaded": bool(acquisition.get("receipt")),
                     "imported": existing["status"] == "done",
                 }
-            relative = f"originals/{digest}{extension}"
             path = self.store.path(relative)
             if path.exists():
                 with path.open("rb") as original:
@@ -235,9 +267,13 @@ class IntakeService:
                 from .api_import import MAX_API_DOWNLOAD
 
                 return self.enqueue_stream(
-                    item["name"], original, max_bytes=MAX_API_DOWNLOAD, acquisition=acquisition
+                    item["name"],
+                    original,
+                    max_bytes=MAX_API_DOWNLOAD,
+                    acquisition=acquisition,
+                    reevaluate=True,
                 )
-            return self.enqueue_stream(item["name"], original)
+            return self.enqueue_stream(item["name"], original, reevaluate=True)
 
     def start(self):
         self.thread = threading.Thread(target=self._loop, name="intake-worker", daemon=True)
@@ -289,13 +325,14 @@ class IntakeService:
             config = json.loads(row["config"])
             current = self.store.settings()
             config.update({key: current[key] for key in ("timeout", "retries", "interval")})
-            db.execute(
+            deferred = db.execute(
                 "UPDATE jobs SET status='pending',error='' WHERE import_id=? AND status='deferred'",
                 (import_id,),
-            )
+            ).rowcount
             db.execute(
-                "UPDATE imports SET status='queued',stage='Queued',error='',config=? WHERE id=?",
-                (dump(config), import_id),
+                "UPDATE imports SET status='queued',stage='Queued',error='',config=?,"
+                "groups_done=max(0,groups_done-?) WHERE id=?",
+                (dump(config), deferred, import_id),
             )
         self.wake.set()
 
@@ -308,6 +345,7 @@ class IntakeService:
         config = json.loads(item["config"])
         report = Report.from_record(item)
         try:
+            config.setdefault("intake_progress", {}).setdefault("started_at", now())
             self._checkpoint(import_id)
             with self.store.transaction() as db:
                 self._checkpoint(import_id, db)
@@ -329,6 +367,7 @@ class IntakeService:
                     detail="Checking attribution",
                     filter_complete=True,
                     admitted_rows=result.valid_rows,
+                    filtered_rows=result.rows_read - result.valid_rows,
                     groups_total=result.group_count,
                     updated_at=now(),
                 )
@@ -339,20 +378,30 @@ class IntakeService:
                 self._checkpoint(import_id)
                 with self.store.transaction() as db:
                     self._checkpoint(import_id, db)
-                    db.execute("UPDATE imports SET config=? WHERE id=?", (dump(config), import_id))
+                    db.execute(
+                        "UPDATE imports SET config=json_patch(config,?) WHERE id=?",
+                        (
+                            dump(
+                                {
+                                    **result.config_updates,
+                                    "intake_progress": config["intake_progress"],
+                                }
+                            ),
+                            import_id,
+                        ),
+                    )
                     enqueue_prepared(db, archived)
                     db.executemany(
                         "INSERT INTO jobs(id,import_id,domain,payload) VALUES(?,?,?,?)",
                         job_rows,
                     )
                     db.execute(
-                        "UPDATE imports SET rows_read=?,valid_rows=?,rejected=?,groups_total=?,config=?,stage='Checking attribution' WHERE id=?",
+                        "UPDATE imports SET rows_read=?,valid_rows=?,rejected=?,groups_total=?,stage='Checking attribution' WHERE id=?",
                         (
                             result.rows_read,
                             result.valid_rows,
                             dump(result.rejected),
                             result.group_count,
-                            dump(config),
                             import_id,
                         ),
                     )
@@ -360,7 +409,7 @@ class IntakeService:
                 # is durable; qualification loads only its saved job payloads.
                 del result, archived, job_rows
             self._checkpoint(import_id)
-            from .qualification import Qualifier
+            from .qualification import Qualifier, prior_website_attempts
             from modules.entities.components.ownership import OwnershipChanged
 
             # Only IDs are queued in memory; each payload is read when its group
@@ -381,6 +430,7 @@ class IntakeService:
             )
             cve_records = {}
             export_pending = bool(config.get("intake_progress", {}).get("exports_pending"))
+            browser_unavailable = False
             with closing(
                 Qualifier(
                     self.store,
@@ -400,7 +450,18 @@ class IntakeService:
                         report, job["domain"], json.loads(job["payload"])
                     )
                     group = candidate.group
-                    decision = qualifier.qualify(candidate, refresh=bool(job["refresh_requested"]))
+                    prior_attempts = json.loads(job["attempts"])
+                    resume_host = next(
+                        (
+                            a["hostname"]
+                            for a in reversed(prior_attempts)
+                            if a.get("status") == "work_limit"
+                        ),
+                        None,
+                    )
+                    decision = qualifier.qualify(
+                        candidate, refresh=bool(job["refresh_requested"]), resume_host=resume_host
+                    )
                     evaluated = None
                     if decision.lead is not None:
                         try:
@@ -423,25 +484,47 @@ class IntakeService:
                         ):
                             continue
                         self._shutdown_checkpoint()
+                        association = None
                         if decision.lead is not None:
                             try:
-                                self.associate_lead(evaluated, db=db)
+                                association = self.associate_lead(evaluated, db=db)
                             except OwnershipChanged as error:
                                 decision = decision.defer("ownership_changed", str(error))
-                        if decision.lead is None:
+                            except AssociationEvidenceChanged as error:
+                                decision = decision.defer(
+                                    "association_evidence_changed", str(error)
+                                )
+                        if association and not association.queue_id:
+                            from dataclasses import replace
+
+                            decision = replace(
+                                decision,
+                                lead=None,
+                                status="dismissed",
+                                reason="association_deconflicted",
+                            )
+                        elif decision.lead is None:
                             enqueue_outcome(
                                 db,
                                 import_id,
                                 group.observations,
-                                stage="qualify",
+                                stage="associate"
+                                if decision.reason == "association_evidence_changed"
+                                else "qualify",
                                 outcome=decision.status,
                                 reason=decision.reason,
                             )
+                        attempts = decision.attempts
+                        if association:
+                            attempts = (*attempts, *association.attempts())
+                        if current["attempts"] != "[]":
+                            previous = prior_website_attempts(json.loads(current["attempts"]))
+                            attempts = (*previous, *attempts)
                         db.execute(
                             "UPDATE jobs SET status=?,attempts=?,attribution_result_id=?,qualification=?,refresh_requested=0,error=? WHERE id=?",
                             (
                                 decision.status,
-                                dump(decision.attempts),
+                                dump(attempts),
                                 decision.result_id,
                                 dump(decision.evidence),
                                 "" if decision.lead else decision.reason,
@@ -466,36 +549,51 @@ class IntakeService:
 
                         preserve_export_obligation(db, import_id, config)
                         db.execute(
-                            "UPDATE imports SET groups_done=groups_done+1,qualified=qualified+?,config=? WHERE id=?",
-                            (int(decision.lead is not None), dump(config), import_id),
+                            "UPDATE imports SET groups_done=groups_done+1,qualified=qualified+?,"
+                            "config=json_set(config,'$.intake_progress',json(?)) WHERE id=?",
+                            (int(decision.lead is not None), dump(progress), import_id),
                         )
-            deferred = self.store.one(
-                "SELECT count(*) n FROM jobs WHERE import_id=? AND status='deferred'", (import_id,)
-            )["n"]
+                    if decision.reason == "capture_browser_startup":
+                        browser_unavailable = True
+                        break
             self._checkpoint(import_id)
             with self.store.transaction() as db:
                 self._checkpoint(import_id, db)
-                pending = db.execute(
-                    "SELECT count(*) FROM jobs WHERE import_id=? AND status='pending'", (import_id,)
-                ).fetchone()[0]
-                review = db.execute(
-                    "SELECT count(*) FROM jobs WHERE import_id=? AND status='review'", (import_id,)
-                ).fetchone()[0]
+                pending, review, deferred = db.execute(
+                    "SELECT count(*) FILTER (WHERE status='pending'), "
+                    "count(*) FILTER (WHERE status='review'), count(*) FILTER (WHERE status='deferred') "
+                    "FROM jobs WHERE import_id=?",
+                    (import_id,),
+                ).fetchone()
+                if browser_unavailable:
+                    status, stage = "needs_retry", "Capture browser could not start"
+                elif pending:
+                    status, stage = "queued", "Qualification queued"
+                elif deferred:
+                    status, stage = "needs_retry", "Qualification needs retry"
+                elif review:
+                    status, stage = "done", "Qualification needs review"
+                else:
+                    status, stage = "done", "Intake complete"
                 db.execute(
-                    "UPDATE imports SET status=?,stage='Finished',message=? WHERE id=?",
+                    "UPDATE imports SET status=?,stage=?,message=?,config=json_set(config,"
+                    "'$.intake_progress.phase',?,'$.intake_progress.detail',?,"
+                    "'$.intake_progress.updated_at',?) WHERE id=?",
                     (
-                        "queued" if pending else "needs_retry" if deferred else "done",
-                        f"{pending} groups queued; {review} awaiting review; {deferred} need a retry"
+                        status,
+                        stage,
+                        f"{pending} groups pending; {review} awaiting review; {deferred} need a retry"
                         if pending or review or deferred
                         else "All groups processed",
+                        "qualify" if pending or review or deferred else "complete",
+                        stage,
+                        now(),
                         import_id,
                     ),
                 )
                 self.store.log(db, "import_complete", f"Processed {item['name']}")
             if export_pending:
                 self.export_pending()
-            config.setdefault("intake_progress", {})["exports_pending"] = False
-            publish(self.store, import_id, config, "complete", "Intake complete")
         except IntakeInterrupted:
             return
         except Exception as error:
@@ -617,7 +715,8 @@ class IntakeService:
             ).fetchone()
             if current["status"] != "review" or current["attribution_result_id"] != result_id:
                 raise ValueError("This group changed. Reload before saving your decision.")
-            lead_id = self.associate_lead(evaluated, db=db).entity_id if evaluated else None
+            association = self.associate_lead(evaluated, db=db) if evaluated else None
+            lead_id = association.entity_id if association else None
             db.execute(
                 "INSERT INTO attribution_reviews VALUES(?,?,?,?,?,?,?,?,?)",
                 (
@@ -633,14 +732,19 @@ class IntakeService:
                 ),
             )
             db.execute(
-                "UPDATE jobs SET status=?,qualification=? WHERE id=?",
+                "UPDATE jobs SET status=?,qualification=?,attempts=?,error=? WHERE id=?",
                 (
                     "qualified" if lead_id else "dismissed",
                     dump(lead.evidence()) if lead else job["qualification"],
+                    dump(
+                        json.loads(job["attempts"])
+                        + (association.attempts() if association else [])
+                    ),
+                    "association_deconflicted" if association and not lead_id else "",
                     job_id,
                 ),
             )
-            if not lead_id:
+            if not association:
                 enqueue_outcome(
                     db,
                     job["import_id"],

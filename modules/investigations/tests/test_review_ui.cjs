@@ -67,7 +67,20 @@
     domain: 'example.com',
     status: 'review',
     entries: [{ ip: '8.8.8.8' }],
-    attempts: [],
+    attempts: [
+      {
+        method: 'website',
+        hostname: 'earlier.example.test',
+        status: 'previous_capture',
+        download_activity: {
+          attempts: [
+            { observed_at: '2026-11-21T19:45:23Z', outcome: 'canceled', url: 'private-url' },
+          ],
+          truncated: false,
+        },
+      },
+      { method: 'website', hostname: 'legacy.example.test', status: 'captured' },
+    ],
     reviews: [],
     can_retry: true,
     attribution_result: result,
@@ -89,6 +102,10 @@
     assert(body.includes('value="accept"') && body.includes('value="dismiss"'));
     assert(body.includes('Inspect saved registration response') && body.includes('Retry lookups'));
     assert(body.includes('id="match-0" value="0" checked'));
+    assert.match(body, /earlier\.example\.test · Website capture · Earlier capture/);
+    assert.match(body, /Website download attempts \(1\)[\s\S]*Browser reported cancellation/);
+    assert.match(body, /legacy\.example\.test · Website capture · captured/);
+    assert.doesNotMatch(body, /private-url|Additional attempts were observed/);
     assert(!body.includes('<img src=x'));
     assert.equal(node('#review-count').textContent, 1);
     console.log(

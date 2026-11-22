@@ -170,12 +170,22 @@ def reconcile_reviews(intake, root_domain, *, evidence_store=None):
                 if state != "known" or owner != recognition["entity_id"]:
                     continue
                 from modules.entities.components.ownership import OwnershipChanged
+                from .deconfliction import AssociationEvidenceChanged
 
                 try:
-                    lead_id = intake.associate_lead(evaluated, db=db).entity_id
-                except OwnershipChanged:
+                    association_result = intake.associate_lead(evaluated, db=db)
+                    lead_id = association_result.entity_id
+                except (OwnershipChanged, AssociationEvidenceChanged):
                     continue
                 attempts = json.loads(job["attempts"])
+                attempts.extend(association_result.attempts())
+                if not lead_id:
+                    db.execute(
+                        "UPDATE jobs SET status='dismissed',attempts=?,error='association_deconflicted' WHERE id=?",
+                        (dump(attempts), job["id"]),
+                    )
+                    refresh_import_summary(db, job["import_id"])
+                    continue
                 if job["attribution_result_id"] and not any(
                     attempt.get("result_id") == job["attribution_result_id"] for attempt in attempts
                 ):

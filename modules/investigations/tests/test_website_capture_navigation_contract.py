@@ -82,7 +82,13 @@ def test_redirected_capture_attaches_with_reported_request_and_actual_destinatio
 @pytest.mark.parametrize("wrong_request", ["https://example.com/", "http://mail.example.com/"])
 def test_redirect_metadata_cannot_replace_the_reported_request(tmp_path, wrong_request):
     png, metadata = captured()
-    metadata.update(requested_url=wrong_request, final_url="https://www.example.com/")
+    metadata.update(
+        requested_url=wrong_request,
+        final_url="https://www.example.com/",
+        download_activity={
+            "attempts": [{"observed_at": "2026-11-21T12:34:56Z", "outcome": "canceled"}]
+        },
+    )
     app = create_app(
         tmp_path / "data", worker=False, website_capture=lambda *args, **kwargs: (png, metadata)
     )
@@ -98,6 +104,12 @@ def test_redirect_metadata_cannot_replace_the_reported_request(tmp_path, wrong_r
         result = done(app.state.website_jobs, started.json()["id"])
         assert result["state"] == "failed"
         assert "provenance does not match" in result["message"]
+        assert "download_activity" not in result
+        event = store.one(
+            "SELECT metadata FROM events WHERE case_id=? AND action='website_capture_failed'",
+            (case["case_id"],),
+        )
+        assert "download_activity" not in json.loads(event["metadata"])
         assert not store.all("SELECT * FROM evidence")
         assert not list((store.root / "evidence").iterdir())
         assert store.one("SELECT * FROM cases WHERE id=?", (case["case_id"],)) == before

@@ -14,7 +14,7 @@ from modules.leads.tests.support.lead_queue import queue_import
 from tests.support.workbench import app, client, observations
 
 
-@pytest.mark.parametrize("stage", ["capture", "attributed", "evaluated"])
+@pytest.mark.parametrize("stage", ["capture", "capture_reuse", "attributed", "evaluated"])
 def test_ownership_transfer_requires_requalification_before_publication(
     client, app, monkeypatch, stage
 ):
@@ -40,12 +40,29 @@ def test_ownership_transfer_requires_requalification_before_publication(
 
     if stage == "capture":
         capture = app.state.intake.capture
+        # This branch exercises a fresh browser result. The adjacent branch
+        # transfers ownership after reading a genuinely reusable capture.
+        from modules.investigations.components import website_evidence
+
+        monkeypatch.setattr(website_evidence, "recent_for_host", lambda *a, **kw: None)
 
         def during_capture(*args, **kwargs):
             move_ownership()
             return capture(*args, **kwargs)
 
         monkeypatch.setattr(app.state.intake, "capture", during_capture)
+    elif stage == "capture_reuse":
+        from modules.investigations.components import website_evidence
+
+        recent = website_evidence.recent_for_host
+
+        def during_reuse(*args, **kwargs):
+            result = recent(*args, **kwargs)
+            assert result
+            move_ownership()
+            return result
+
+        monkeypatch.setattr(website_evidence, "recent_for_host", during_reuse)
     elif stage == "attributed":
         qualify = Qualifier.qualify
 

@@ -95,8 +95,14 @@ def unchanged_records(key, before, after):
 def verify_entity_snapshots(before, after):
     entities = {r["id"]: r for r in before["leads"]}
     profiles = {r["entity_id"]: json.loads(r["payload"]) for r in before["entity_profiles"]}
+    prior_cases = {r["id"]: r for r in before["cases"]}
     for case in after["cases"]:
         if "entity_snapshot" not in case:
+            continue
+        if "entity_snapshot" in prior_cases[case["id"]]:
+            assert case["entity_snapshot"] == prior_cases[case["id"]]["entity_snapshot"], (
+                "Pinned report identity changed during upgrade"
+            )
             continue
         entity = entities[case["entity_id"]]
         assert json.loads(case["entity_snapshot"]) == {
@@ -172,7 +178,12 @@ def phase(name, output):
                 in APPROVED_TEMPLATE_HASHES
             )
             assert len(before["reports"]) == 3 and len(before["section_validations"]) == 15
-            assert len(before["evidence"]) == 3 and before["files"]
+            reported_cases = {r["case_id"] for r in before["reports"]}
+            captured_cases = {r["case_id"] for r in before["evidence"] if r["kind"] == "website"}
+            assert reported_cases <= captured_cases, "Baseline report lacks website evidence"
+            for item in before["evidence"]:
+                assert before["files"][item["path"]] == item["sha256"]
+                assert item["preview_path"] in before["files"]
             before["version"] = __version__
             (output / "baseline-manifest.json").write_text(
                 json.dumps(before, indent=2), encoding="utf-8"

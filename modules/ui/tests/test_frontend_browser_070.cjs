@@ -34,8 +34,25 @@ const base = process.env.ECLIPSE_BASE_URL || 'http://127.0.0.1:8897',
     }
     assert(process.env.ECLIPSE_LAUNCH_URL, 'An explicit one-time launcher URL is required');
     assert.equal((await ctx.request.get(base + '/api/bootstrap')).status(), 401);
+    await page.route('**/api/bootstrap', (route) => route.abort('connectionreset'), { times: 1 });
     await page.goto(process.env.ECLIPSE_LAUNCH_URL);
+    await page.getByRole('heading', { name: 'Unable to connect' }).waitFor();
+    assert.match(
+      await page.locator('#main').innerText(),
+      /No complete response from the local app/,
+    );
+    const healthLink = page.getByRole('link', { name: 'Check local service' });
+    const healthUrl = new URL(await healthLink.getAttribute('href'), base);
+    assert.equal(healthUrl.origin, new URL(base).origin);
+    assert.equal(
+      (await (await ctx.request.get(healthUrl.href)).json()).app,
+      'notification-workbench',
+    );
+    await page.getByRole('button', { name: 'Reload app' }).click();
     await page.getByRole('heading', { name: 'Workspace', exact: true }).waitFor();
+    checks.push(
+      'A lost bootstrap response recovers through the shell action and the established session',
+    );
     await page.goto(base + '/#eclipse');
     await page.locator('#eclipse[data-ready="true"]').waitFor();
     const expectedRelease = JSON.parse(

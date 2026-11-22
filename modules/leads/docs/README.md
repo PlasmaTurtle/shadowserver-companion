@@ -22,9 +22,11 @@ responsibilities.
 
 The [required Accretion product contract](../../accretion/docs/PIPELINE.md#qualify)
 has Qualify return an evidence-backed lead, Evaluate add urgency/priority, and
-Associate find contacts and enrich entity information. Leads consumes the retained
-website evidence through Investigations' `website_evidence.projection` API. The
-queue and detail show that capture's thumbnail and open its actual working URL.
+Associate find contacts and enrich entity information. Leads uses Investigations'
+`website_evidence.scope_projection` to show the screenshot recorded for its
+source observations. Later captures for the entity or its other hostnames
+cannot displace that revision. The queue and detail open the captured destination
+and display the missing-image state when the retained proof cannot be identified.
 The image route verifies the retained original, preview and metadata hashes;
 opening Leads never starts a browser capture. Case creation adopts the same
 original and preview through Investigations' evidence API.

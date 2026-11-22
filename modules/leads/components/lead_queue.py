@@ -183,7 +183,7 @@ class LeadQueue:
         self.store = store
 
     def _project(self, db, row, *, detail=False):
-        from modules.investigations.components.website_evidence import projection
+        from modules.investigations.components.website_evidence import scope_projection
 
         item = dict(row)
         entries = json.loads(item.pop("payload"))
@@ -208,8 +208,8 @@ class LeadQueue:
             item["status"] = "assigned"
         item.update(
             domain=row["root_domain"],
-            website=projection(db, row["entity_id"], root_domain=row["root_domain"])
-            if row["entity_id"]
+            website=scope_projection(db, row["entity_id"], row["root_domain"], ids)
+            if row["qualified"] and row["entity_id"]
             else None,
             entity_name=(entity["company"] or entity["domain"]) if entity else "",
             hostnames=sorted({str(f.get("hostname") or "") for f in fields if f.get("hostname")}),

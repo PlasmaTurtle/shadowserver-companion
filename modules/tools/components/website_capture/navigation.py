@@ -82,6 +82,8 @@ _PAGE_STATE = r"""JSON.stringify((()=>{
    (e.tagName==='IMG'&&e.complete&&e.naturalWidth>0)||(e.tagName==='VIDEO'&&mediaReady(e))||
    e.tagName==='CANVAS'||e.tagName==='IFRAME'||e.tagName.toLowerCase()==='svg'||getComputedStyle(e).backgroundImage!=='none');
  return {url:location.href,title:document.title,text,visible,password:[...document.querySelectorAll('input[type=password]')].some(shown),
+   site_name:(document.querySelector('meta[property="og:site_name"]')?.content||'').slice(0,300),
+   heading:([...document.querySelectorAll('h1')].find(shown)?.innerText||'').slice(0,300),
    ready_state:document.readyState,images_ready:images.every(i=>i.complete&&i.naturalWidth>0),
    images_finished:images.every(i=>i.complete),
    media_ready:videos.every(mediaReady),fonts_ready:!document.fonts||document.fonts.status==='loaded',
@@ -112,12 +114,17 @@ def _attempt(client, url, *, deadline, cancel_event, metadata, classify):
     client.deadline = min(deadline, time.monotonic() + NAVIGATION_SECONDS)
     answer = client.call("Page.navigate", {"url": url})
     frame = answer.get("frameId")
-    if answer.get("errorText") and answer["errorText"] != "net::ERR_ABORTED":
+    failure = ""
+    if answer.get("isDownload"):
+        failure = "Website offered a file download"
+    elif answer.get("errorText") and answer["errorText"] != "net::ERR_ABORTED":
+        failure = navigation_error({"result": answer})
+    if failure:
         return {
             "outcome": "load_failed",
             "final_url": "",
             "http_status": None,
-            "reason": navigation_error({"result": answer}),
+            "reason": failure,
         }
     client.deadline = deadline
     navigation_deadline = min(deadline, time.monotonic() + NAVIGATION_SECONDS)
@@ -296,6 +303,9 @@ def _attempt(client, url, *, deadline, cancel_event, metadata, classify):
         "final_url": page.get("url", ""),
         "http_status": top_status,
         "title": page.get("title", "")[:500],
+        "site_name": page.get("site_name", ""),
+        "heading": page.get("heading", ""),
+        "page_text": page.get("text", ""),
         "reason": reason,
     }
 
@@ -310,6 +320,7 @@ def load_page(
     classify,
     skip_urls=(),
     require_usable=False,
+    page_check=None,
 ):
     skipped = set(skip_urls)
     for url, fallback in navigation_candidates(requested_url):
@@ -321,6 +332,7 @@ def load_page(
         attempt = {"url": url, "outcome": "load_failed", "final_url": "", "http_status": None}
         metadata["attempted_urls"].append(url)
         metadata["attempts"].append(attempt)
+        metadata["redirects"] = [url]
         client = open_page()
         try:
             attempt.update(
@@ -336,12 +348,25 @@ def load_page(
         except TimeoutError:
             _check(cancel_event)
             attempt["reason"] = "Website navigation timed out"
+        page_text = attempt.pop("page_text", "")
+        if len(metadata["redirects"]) > 1:
+            attempt["redirects"] = list(metadata["redirects"])
+        if page_check and attempt["outcome"] in {"captured", "login_required"}:
+            reason = page_check(
+                {**attempt, "capture_status": attempt["outcome"], "page_text": page_text}
+            )
+            if reason:
+                attempt["reason"] = reason
+                attempt["outcome"] = "rejected"
+                continue
         if attempt["outcome"] in {"captured", "login_required"} or (
             not require_usable and attempt["outcome"] != "load_failed"
         ):
             metadata.update(
                 final_url=attempt["final_url"],
                 title=attempt.pop("title", ""),
+                site_name=attempt.get("site_name", ""),
+                heading=attempt.get("heading", ""),
                 http_status=attempt["http_status"],
                 capture_status=attempt["outcome"],
                 fallback_used=fallback,

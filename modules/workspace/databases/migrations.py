@@ -18,8 +18,9 @@ from modules.accretion.databases.awareness_admission_migration import schema as 
 from modules.investigations.databases.evidence_registry_migration import schema as schema_eighteen
 from modules.entities.databases.lifecycle_migration import schema as schema_nineteen
 from modules.observatory.components.analytical_index import schema as schema_twenty
+from modules.accretion.databases.deconfliction import schema as schema_twenty_four
 
-SCHEMA_VERSION = 23
+SCHEMA_VERSION = 24
 
 LEGACY_SCHEMA = r"""
                 
@@ -429,6 +430,7 @@ MIGRATIONS = {
     21: schema_twenty_one,
     22: schema_twenty_two,
     23: schema_twenty_three,
+    24: schema_twenty_four,
 }
 
 

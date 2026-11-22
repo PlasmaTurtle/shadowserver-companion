@@ -32,7 +32,9 @@ class WhoisRecord:
     protocol: str = "RDAP"
 
 
-def capture_website(url, *, cancel_event=None, skip_urls=(), require_usable=False):
+def capture_website(
+    url, *, cancel_event=None, skip_urls=(), require_usable=False, page_check=None, deadline=None
+):
     if cancel_event and cancel_event.is_set():
         raise ValueError("Website capture cancelled")
     image = Image.new("RGB", (1440, 900), "#f0f4f8")
@@ -48,6 +50,7 @@ def capture_website(url, *, cancel_event=None, skip_urls=(), require_usable=Fals
         "capture_status": "captured",
         "http_status": 200,
         "title": "Synthetic website fixture",
+        "site_name": "Example Company (synthetic)",
         "redirects": [url],
         "attempted_urls": [url],
         "attempts": [{"url": url, "outcome": "captured"}],

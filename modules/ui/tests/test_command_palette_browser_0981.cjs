@@ -192,7 +192,11 @@ const { chromium } = require('playwright');
     await page.getByRole('option').filter({ hasText: 'navigation-fixture.csv' }).waitFor();
     await page.locator('#command-query').press('Enter');
     await page.getByRole('heading', { name: 'navigation-fixture.csv', exact: true }).waitFor();
-    await page.getByRole('heading', { name: 'Hostname groups', exact: true }).waitFor();
+    await page.getByRole('heading', { name: 'Root-domain groups', exact: true }).waitFor();
+    await page
+      .locator('#modal[open]')
+      .getByRole('button', { name: 'example.com', exact: true })
+      .waitFor();
     await page.keyboard.press('Escape');
     await page.waitForFunction(() => !document.querySelector('#modal').open);
     checks.push('Source-file result opens authenticated import detail without route confusion');

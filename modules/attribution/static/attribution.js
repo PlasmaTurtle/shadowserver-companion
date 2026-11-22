@@ -64,8 +64,9 @@ export function install(ctx) {
   function lookupAttempt(attempt) {
     if (attempt.method === 'associate') {
       const esc = ctx.actions.esc;
-      const scope = { domain: 'Whole domain', host: 'Exact hostname', entity: 'Entity' }[attempt.scope] || '';
-      return `<div class="notice"><div><strong>${attempt.action === 'exclude' ? 'Excluded by Associate' : 'Previous notification'}</strong><p>${esc(scope)} · ${esc(attempt.identifier)} · ${esc(attempt.reference)}</p><small>${esc(attempt.reason || (attempt.count + ' completed notifications'))}</small></div></div>`;
+      const scope =
+        { domain: 'Whole domain', host: 'Exact hostname', entity: 'Entity' }[attempt.scope] || '';
+      return `<div class="notice"><div><strong>${attempt.action === 'exclude' ? 'Excluded by Associate' : 'Previous notification'}</strong><p>${esc(scope)} · ${esc(attempt.identifier)} · ${esc(attempt.reference)}</p><small>${esc(attempt.reason || attempt.count + ' completed notifications')}</small></div></div>`;
     }
     const website = attempt.method === 'website';
     const title = [
@@ -75,7 +76,11 @@ export function install(ctx) {
     ]
       .filter(Boolean)
       .join(' · ');
-    return `<div class="notice"><div><strong>${ctx.actions.esc(title)}</strong><p>${ctx.actions.esc(attempt.message || attempt.reason || attempt.error || '')}</p>${attempt.warnings?.length ? `<small>${attempt.warnings.map(ctx.actions.esc).join('; ')}</small>` : ''}${website ? ctx.actions.downloadActivityMarkup(attempt.download_activity) : ''}</div></div>`;
+    const destinations =
+      website && attempt.attempts?.length
+        ? `<details><summary>Website destinations</summary><ul>${attempt.attempts.map((item) => `<li>${ctx.actions.esc((item.redirects?.length ? item.redirects : [...new Set([item.url, item.final_url].filter(Boolean))]).join(' → '))} · ${ctx.actions.esc(item.reason || item.outcome || '')}</li>`).join('')}</ul></details>`
+        : '';
+    return `<div class="notice"><div><strong>${ctx.actions.esc(title)}</strong><p>${ctx.actions.esc(attempt.message || attempt.reason || attempt.error || '')}</p>${website && attempt.final_url ? `<small>Final destination · ${ctx.actions.esc(attempt.final_url)}</small>` : ''}${destinations}${attempt.warnings?.length ? `<small>${attempt.warnings.map(ctx.actions.esc).join('; ')}</small>` : ''}${website ? ctx.actions.downloadActivityMarkup(attempt.download_activity) : ''}</div></div>`;
   }
 
   async function showGroup(id) {

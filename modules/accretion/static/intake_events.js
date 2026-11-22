@@ -11,6 +11,22 @@ export function createHandlers(ctx) {
     ],
     click: [
       {
+        matches: (el) => 'editDeconfliction' in el.dataset,
+        run: (el) =>
+          ctx.actions.busy(el, () => ctx.actions.showDeconfliction(el.dataset.editDeconfliction)),
+      },
+      {
+        matches: (el) => 'removeDeconfliction' in el.dataset,
+        run: (el) =>
+          ctx.actions.busy(el, async () => {
+            await ctx.actions.api(
+              '/api/intake/deconfliction/' + encodeURIComponent(el.dataset.removeDeconfliction),
+              { method: 'DELETE' },
+            );
+            await ctx.actions.showDeconfliction();
+          }),
+      },
+      {
         matches: (el) => el.dataset.reevaluateImport,
         run: (el) =>
           ctx.actions.busy(el, async () => {
@@ -67,13 +83,23 @@ export function createHandlers(ctx) {
       },
     ],
     actions: {
+      'show-deconfliction': () => ctx.actions.showDeconfliction(),
       scan: async (el) => {
         const result = await ctx.actions.api('/api/inbox/scan', { method: 'POST' });
         ctx.actions.toast(`${result.added} reports added from inbox.`);
         await ctx.actions.route(true);
       },
     },
-    forms: {},
+    forms: {
+      'deconfliction-form': async (form, fields) => {
+        const id = form.dataset.id;
+        await ctx.actions.api(
+          '/api/intake/deconfliction' + (id ? '/' + encodeURIComponent(id) : ''),
+          { method: id ? 'PUT' : 'POST', body: fields },
+        );
+        await ctx.actions.showDeconfliction();
+      },
+    },
     dispose: () => ctx.actions.disposeIntakeDropzone?.(),
   };
 }

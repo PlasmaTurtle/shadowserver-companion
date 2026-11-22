@@ -125,10 +125,10 @@ const assert = require('node:assert/strict');
   // Priority sorting applies before lens pagination, and remains in generated links.
   const large = Array.from({ length: 85 }, (_, index) => ({
     ...lead(`large-${index}`, '2026-11-12', { ...score, aggregate: index }),
-    association_state: index < 65 ? 'known' : 'new',
+    finding_kinds: index < 65 ? ['cve'] : ['eol'],
   }));
   ctx.actions.api = async () => structuredClone(large);
-  html = await ctx.actions.pendingLeadsPage(new URLSearchParams({ lens: 'known', page: '2' }));
+  html = await ctx.actions.pendingLeadsPage(new URLSearchParams({ lens: 'cve', page: '2' }));
   const rendered = [...html.matchAll(/href="#leads\/(large-\d+)"/g)].map((match) => match[1]);
   assert.equal(rendered.length, 25);
   assert.equal(rendered[0], 'large-24');
@@ -153,17 +153,18 @@ const assert = require('node:assert/strict');
     config: {
       intake_stats: {
         ignored_empty_rows: 2,
-        accretion: { admitted_rows: 12, filtered_rows: 88, leads: 4 },
+        accretion: { admitted_rows: 12, context_rows: 3, filtered_rows: 88, leads: 4 },
       },
     },
   };
   html = ctx.actions.importRow(imported);
-  assert.match(html, /12 eligible rows/);
-  assert.match(html, /88 filtered out/);
-  assert.match(html, /4 groups passed filter/);
-  assert.match(html, /3 attributed groups/);
+  assert.match(html, /9 eligible rows/);
+  assert.match(html, /3 context rows/);
+  assert.match(html, /88 rows filtered out/);
+  assert.match(html, /4 root-domain groups/);
+  assert.match(html, /3 published groups/);
   assert.match(html, /2 empty rows ignored/);
-  assert.match(ctx.actions.importRow({ ...imported, config: '{}' }), /12 eligible rows/);
+  assert.match(ctx.actions.importRow({ ...imported, config: '{}' }), /12 rows retained/);
   assert.doesNotMatch(ctx.actions.importRow({ ...imported, config: '{}' }), /filtered out/);
   assert.match(ctx.actions.accretionIntakeMarkup(), /Accretion/);
   assert.match(ctx.actions.accretionIntakeMarkup(), /Filter/);
@@ -193,13 +194,43 @@ const assert = require('node:assert/strict');
     assert.doesNotMatch(card, /Scored with limited|accretion-working/);
   };
   html = progress();
-  assert.match(stage(html, 'filter'), /> eligible</);
-  assert.doesNotMatch(stage(html, 'filter'), / admitted</);
+  assert.doesNotMatch(stage(html, 'filter'), /eligible rows/);
   assert.match(stage(html, 'qualify'), /data-state="complete"/);
   assert.match(stage(html, 'qualify'), /1 not qualified/);
   assertNotReached(html, 'evaluate', 'groups ranked');
   assertNotReached(html, 'associate', 'groups associated');
   assert.match(html, /No groups passed qualification/);
+  html = progress({
+    rows_read: 1400,
+    valid_rows: 1380,
+    stats: { admitted_rows: 1380, context_rows: 80, filtered_rows: 20 },
+    groups_done: 408,
+    groups_total: 408,
+    jobs: { no_match: 408 },
+  });
+  assert.match(stage(html, 'filter'), /1,300 eligible rows/);
+  assert.match(stage(html, 'filter'), /80 context rows/);
+  assert.match(stage(html, 'filter'), /20 rows filtered out/);
+  assert.match(stage(html, 'filter'), /408 root-domain groups/);
+  assert.match(stage(html, 'qualify'), /408 \/ 408 root-domain groups checked/);
+  assert.match(stage(html, 'qualify'), /408 not qualified/);
+  html = progress({
+    status: 'needs_retry',
+    stage: 'Intake complete',
+    jobs: { deferred: 408 },
+    retry_reasons: { 'Capture browser could not start': 408 },
+    groups_total: 408,
+    groups_done: 408,
+  });
+  assert.match(html, /Qualification needs retry/);
+  assert.doesNotMatch(html, /Intake complete/);
+  assert.match(stage(html, 'qualify'), /Capture browser could not start · 408 groups/);
+  assert.match(stage(html, 'qualify'), /408 to retry/);
+  assert.doesNotMatch(stage(html, 'qualify'), /not qualified/);
+  assert.match(
+    ctx.actions.importRow({ ...imported, status: 'needs_retry', stage: 'Intake complete' }),
+    /Qualification needs retry/,
+  );
   for (const outcome of ['review', 'deferred']) {
     html = progress({
       jobs: { [outcome]: 1 },

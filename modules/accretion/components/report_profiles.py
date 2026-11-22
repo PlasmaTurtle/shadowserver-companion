@@ -154,24 +154,23 @@ def _filename_profile(filename):
     return ""
 
 
-def resolve_profile(fields, filename="", configured_type="auto"):
+def resolve_profile(fields, filename="", configured_type="auto", *, receipt_type=None):
     """Return a versioned profile without coercing unknown reports to HTTP.
 
-    Prefer the explicit import setting/row identity, then a recognized filename.
+    Prefer the explicit import setting, row identity, verified receipt, then filename.
     Headers cannot distinguish accessible HTTP from vulnerable HTTP, so an
     unrecognized filename needs a deliberate report-profile selection. Saved
     normalized profiles remain part of their original retained observations.
     """
     definitions = inventory()
     selected, basis = "", "unclassified"
-    explicit = (
-        configured_type if configured_type not in ("", None, "auto") else fields.get("report_type")
-    )
-    if explicit:
-        selected, basis = (
-            str(explicit),
-            "configured" if configured_type not in ("", None, "auto") else "reported",
-        )
+    if configured_type not in ("", None, "auto"):
+        selected, basis = str(configured_type), "configured"
+    elif reported_type := fields.get("report_type"):
+        selected, basis = str(reported_type), "reported"
+    elif receipt_type:
+        selected, basis = str(receipt_type), "receipt"
+    if selected:
         selected = _profile_aliases().get(_identity_token(selected), selected)
     else:
         selected = _filename_profile(str(filename).casefold())

@@ -9,6 +9,67 @@ Use the [module guide](README.md) for operation and interfaces and the
 | --- | --- | --- |
 | ISS020 | [Reported-host loading and redirects](#iss020-reported-host-loading-and-redirects) | Resolved |
 | ISS026 | [Reusable tools and duplicate capabilities](#iss026-reusable-tools-and-duplicate-capabilities) | Resolved |
+| ISS051 | [Capture browser startup failures](#iss051-capture-browser-startup-failures) | Diagnostics fixed, incident cause open |
+| ISS055 | [Website capture permitted file downloads](#iss055-website-capture-permitted-file-downloads) | Resolved in source |
+
+## ISS055 Website capture permitted file downloads
+
+The shared capture tool used by Accretion and Investigations explicitly permitted
+Chromium to save site-initiated downloads inside its temporary profile. A crash
+could interrupt cleanup. Capture now sets the browser context to deny downloads
+before opening the first website. A rejected policy stops the job. Direct file
+responses that Chromium identifies as downloads enter the normal site fallback.
+
+On Windows, independent Edge 158 and Chrome 157 loopback checks exercised an HTTP
+attachment and a JavaScript Blob download. These reference runs used Playwright's
+default launch settings with its Chromium sandbox disabled. With downloads
+allowed, a directory watcher saw temporary and final files. With downloads denied, both browsers
+reported cancellation at zero bytes and the watcher saw no destination files.
+Under the interactive Windows account, the production capture tool in the
+Desktop source checkout rendered the expected PNG and recorded cancellation of
+the page's attachment. The normal Chromium sandbox and process guard were active.
+A separate sandboxed Edge check observed both HTTP attachment and Blob attempts
+canceled at zero bytes with zero download-directory events. With downloads
+allowed for the controls, both harmless fixture files appeared. All 23 Tools
+navigation checks passed. The Windows installer hold remains in the project register.
+
+The capture tool now records a reported attempt and its terminal browser outcome,
+including attempts during redirects or in another tab of the capture session.
+Observations received before an interrupted render survive on the exception.
+The [public contract](README.md#website-loading-and-capture) defines the fields
+and retention limit. Investigations keeps observations in screenshot provenance or
+case history. Accretion keeps them in the original domain group's lookup history.
+Neither workflow treats the observation as evidence of malicious intent.
+
+## ISS051 Capture browser startup failures
+
+One installed Windows import recorded 408 local browser startup failures before
+website navigation. The recorded message omitted the browser exit code. Shared
+Tools now raises `CaptureBrowserStartupError` before navigation and retains the
+numeric process exit code or operating system error when available. Accretion
+can distinguish a workstation failure from the outcome of a website attempt.
+
+On November 21, 2026, the installed runtime launched Edge 158 and reached its
+debugging endpoint with a temporary profile and the existing process guard from
+both the installation directory and a separate working directory. A development
+run of the local navigation suite hit 19 DevTools connection resets and one
+permission error reading the temporary debugging endpoint. Reaching that
+endpoint therefore does not establish that the first tab can render. The
+37 focused launch, failure-reporting and capture contract checks passed.
+The installed incident's cause remains open. If it recurs, record the new
+diagnostic and compare startup under the same Windows account and conditions.
+
+A development reproduction with the capture flags and process guard reached
+download-policy acknowledgement and attached to a blank Edge tab. Edge's stderr
+then recorded repeated GPU process exits with Windows status `0xC0000022`
+(access denied) and a fatal GPU initialization error. The browser exited with
+`0x80000003` before cleanup. The fixture received no page navigation. An
+independent Playwright run with the Chromium sandbox enabled reproduced the
+same GPU failure without the capture client or its process guard. Those failures
+reproduced under the restricted automation account. Under the interactive Windows
+account, the same production capture path passed the redirect, rendering and
+download tests with the browser sandbox enabled. The installed
+launcher incident has separate evidence in the project register.
 
 ## ISS026 Reusable tools and duplicate capabilities
 

@@ -1,6 +1,7 @@
 """Small durable progress snapshots and bounded intake statistics. No network I/O."""
 
 from collections import Counter
+from datetime import datetime
 import json
 import sqlite3
 
@@ -33,6 +34,7 @@ REASONS = {
     "missing_required_value": "Missing required fields",
     "outside_jurisdiction": "Outside jurisdiction",
     "invalid_hostname": "Invalid hostname",
+    "unusable_certificate_hostname": "Certificate name cannot identify a reported host",
     "invalid_ip": "Invalid IP address",
     "missing_version": "Missing version evidence",
     "placeholder_version": "Placeholder version",
@@ -65,8 +67,9 @@ def publish(store, import_id, config, phase, detail, **counts):
     with store.transaction() as db:
         preserve_export_obligation(db, import_id, config)
         db.execute(
-            "UPDATE imports SET config=?,stage=? WHERE id=? AND status!='paused'",
-            (dump(config), detail, import_id),
+            "UPDATE imports SET config=json_set(config,'$.intake_progress',json(?)),stage=? "
+            "WHERE id=? AND status!='paused'",
+            (dump(progress), detail, import_id),
         )
 
 
@@ -85,6 +88,44 @@ def accepted_patterns(groups):
             for name in names:
                 products[name] += 1
     return {"cities": dict(cities.most_common(20)), "products": dict(products.most_common(20))}
+
+
+RETRY_LABELS = {
+    "website_budget_exhausted": "Website time limit reached; resume at the next hostname",
+    "capture_browser_startup": "Capture browser could not start",
+    "website_capture_error": "Website capture tool failed",
+    "website_unavailable": "Website could not be loaded",
+    "website_identity_review": "Website identity needs review",
+    "attribution_deferred": "Attribution deferred",
+    "ownership_changed": "Ownership changed during qualification",
+    "association_conflict": "Conflicting ownership evidence",
+    "association_evidence_changed": "Referral changed the evidence available for publication",
+    "website_deconflicted_destination": "Website redirected to a referred hostname",
+}
+
+
+def retry_label(reason, *, attempts=None):
+    """Summarize typed reasons and recognize a precise legacy local startup failure."""
+    if reason == "website_capture_error" and attempts:
+        last = attempts[-1]
+        if (
+            isinstance(last, dict)
+            and last.get("method") == "website"
+            and last.get("status") == "tool_error"
+            and last.get("message") == "Capture browser could not start"
+        ):
+            reason = "capture_browser_startup"
+    return RETRY_LABELS.get(reason, "Qualification needs another attempt")
+
+
+def stage_totals(published, excluded, deferred_at_associate=0):
+    """Each terminal Associate disposition followed successful Qualify and Evaluate."""
+    return {
+        "qualified": published + excluded + deferred_at_associate,
+        "evaluated": published + excluded + deferred_at_associate,
+        "published": published,
+        "excluded_by_associate": excluded,
+    }
 
 
 def overview(store):
@@ -128,13 +169,20 @@ def overview(store):
     }
     if current:
         config = json.loads(current["config"])
-        jobs = {
-            row["status"]: row["n"]
-            for row in store.all(
-                "SELECT status,count(*) n FROM jobs WHERE import_id=? GROUP BY status",
-                (current["id"],),
-            )
-        }
+        jobs, retries, group_reasons = Counter(), Counter(), Counter()
+        deferred_at_associate = 0
+        for row in store.all(
+            "SELECT status,error reason,count(*) n "
+            "FROM jobs WHERE import_id=? GROUP BY status,reason",
+            (current["id"],),
+        ):
+            jobs[row["status"]] += row["n"]
+            if row["status"] == "deferred":
+                retries[retry_label(row["reason"])] += row["n"]
+                if row["reason"] == "association_evidence_changed":
+                    deferred_at_associate += row["n"]
+            elif row["reason"]:
+                group_reasons[row["reason"]] += row["n"]
         temperatures = {
             row["temperature"]: row["n"]
             for row in store.all(
@@ -148,7 +196,31 @@ def overview(store):
             # qualified job commits the successful association transaction.
             "associated_groups": jobs.get("qualified", 0),
         }
+        stats = config.get("intake_stats", {}).get("accretion", {})
+        if progress.get("filter_complete") and "filtered_rows" in stats:
+            progress["filtered_rows"] = stats["filtered_rows"]
+        start = progress.get("started_at")
+        end = now() if current["status"] == "running" else progress.get("updated_at")
+        elapsed = None
+        if start and end:
+            try:
+                elapsed = max(
+                    0,
+                    int(
+                        (
+                            datetime.fromisoformat(end) - datetime.fromisoformat(start)
+                        ).total_seconds()
+                    ),
+                )
+            except (TypeError, ValueError):
+                pass
         result["current"] = {
+            "stage_totals": stage_totals(
+                jobs["qualified"], group_reasons["association_deconflicted"], deferred_at_associate
+            ),
+            "elapsed_seconds": elapsed,
+            "group_rejections": dict(group_reasons),
+            "eligibility_checks": config.get("intake_stats", {}).get("eligibility", {}),
             **{
                 key: current[key]
                 for key in (
@@ -166,8 +238,9 @@ def overview(store):
             },
             "progress": progress,
             "catalog_at_scoring": config.get("catalog_at_scoring"),
-            "stats": config.get("intake_stats", {}).get("accretion", {}),
+            "stats": stats,
             "jobs": jobs,
+            "retry_reasons": dict(retries.most_common()),
             "temperatures": temperatures,
             "rejections": json.loads(current["rejected"] or "{}"),
         }

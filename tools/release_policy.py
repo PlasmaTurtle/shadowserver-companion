@@ -46,6 +46,7 @@ DOCS = {
     "history/validation/module-reorganization-validation.md",
     "history/validation/maintenance-2026-11-21.md",
     "history/validation/full-build-2026-11-21.md",
+    "history/validation/intake-review-2026-11-22.md",
     "program-map.json",
     "history/releases/RELEASE_0992.md",
     "history/design/ANALYST_WORKFLOW_0101.md",

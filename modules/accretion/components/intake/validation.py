@@ -60,6 +60,16 @@ class EntryValidator:
 
     def rejection_reason(self, entry: SourceObservation, *, profile=None) -> str | None:
         fields = entry.fields
+        hostname = fields.get("hostname")
+        if isinstance(hostname, str) and (
+            "*" in hostname or re.search(r"(?:^|[,/\s])(?:CN|DNS)\s*[=:]", hostname, re.I)
+        ):
+            return "unusable_certificate_hostname"
+        if not hostname and any(
+            fields.get(key)
+            for key in ("cert_subject_common_name", "cert_subject_alt_name", "subject_common_name")
+        ):
+            return "unusable_certificate_hostname"
         if any(
             fields.get(name) is None
             or (isinstance(fields.get(name), str) and not fields[name].strip())
@@ -93,7 +103,6 @@ class EntryValidator:
             return "placeholder_version"
         if finding_reason:
             return finding_reason
-        hostname = fields["hostname"]
         if not isinstance(hostname, str) or len(hostname) > 253 or not HOSTNAME.fullmatch(hostname):
             return "invalid_hostname"
         extracted = extract_domain(hostname)

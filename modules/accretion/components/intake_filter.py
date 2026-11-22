@@ -81,6 +81,7 @@ def _reject(examples, counts, source, reason):
 
 def _read_candidates(store, report, config, checkpoint):
     validator = EntryValidator(set(config["regions"]))
+    receipt_type = config.get("acquisition", {}).get("receipt", {}).get("report_type")
     candidates, outcomes, profiles = [], [], {}
     rejected, examples = Counter(), {}
     count = ignored = 0
@@ -96,7 +97,12 @@ def _read_candidates(store, report, config, checkpoint):
                 continue
             count += 1
             source = SourceObservation(report.name, row.sheet, row.row, row.fields)
-            profile = resolve_profile(source.fields, report.name, config.get("report_type", "auto"))
+            profile = resolve_profile(
+                source.fields,
+                report.name,
+                config.get("report_type", "auto"),
+                receipt_type=receipt_type,
+            )
             profiles[profile["id"]] = profile
             entry, reason = (
                 validator.validate_with_reason(source, profile=profile)

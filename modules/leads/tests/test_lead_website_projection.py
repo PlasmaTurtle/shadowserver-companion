@@ -1,9 +1,51 @@
 """Lead images and website actions consume the retained qualification capture."""
 
 import hashlib
+from datetime import datetime, timedelta, timezone
+
+import pytest
 
 from tests.support.workbench import app, client, observations
+from tests.support.qualification import capture_website
+from modules.investigations.components import website_evidence
 from modules.leads.tests.support.lead_queue import queue_import
+
+
+@pytest.mark.parametrize("remove_admitted_binding", [False, True])
+def test_lead_and_case_use_the_exact_admitted_capture(client, app, remove_admitted_binding):
+    store = app.state.store
+    queue_import(client, app)
+    lead = client.get("/api/pending-leads").json()[0]
+    admitted = lead["website"]
+    for url in (admitted["requested_url"], "https://sibling.example.com/"):
+        png, meta = capture_website(url)
+        meta["captured_at"] = (datetime.now(timezone.utc) + timedelta(hours=1)).isoformat()
+        capture = website_evidence.retain(store, png, meta, root_domain=lead["root_domain"])
+        with store.transaction() as db:
+            website_evidence.bind(
+                db, capture["id"], lead["entity_id"], root_domain=lead["root_domain"]
+            )
+            if url == admitted["requested_url"]:
+                # A refreshed job cannot replace the source-level admission.
+                db.execute(
+                    "UPDATE jobs SET qualification=json_set(qualification,'$.website.id',?) WHERE id=?",
+                    (capture["id"], lead["job_id"]),
+                )
+    if remove_admitted_binding:
+        with store.transaction() as db:
+            db.execute("DELETE FROM website_capture_entities WHERE capture_id=?", (admitted["id"],))
+    assert client.get("/api/entities/" + lead["entity_id"]).json()["website"]["id"] == capture["id"]
+    expected = None if remove_admitted_binding else admitted
+    assert client.get("/api/pending-leads").json()[0]["website"] == expected
+    assert client.get("/api/pending-leads/" + lead["id"]).json()["website"] == expected
+    response = client.post(
+        "/api/pending-leads/" + lead["id"] + "/start", json={"expected_revision": lead["revision"]}
+    )
+    assert response.status_code == 200, response.text
+    assert store.all(
+        "SELECT capture_id FROM website_capture_cases WHERE case_id=?",
+        (response.json()["case_id"],),
+    ) == ([] if remove_admitted_binding else [{"capture_id": admitted["id"]}])
 
 
 def test_lead_entity_and_case_share_capture_without_recapturing(client, app):

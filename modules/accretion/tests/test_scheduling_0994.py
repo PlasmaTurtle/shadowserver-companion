@@ -91,15 +91,6 @@ def test_long_absence_is_chunked_without_skipping_dates_and_late_days_overlap():
     assert next_due(cfg, NOW) == datetime(2026, 11, 13, 10, tzinfo=timezone.utc)
 
 
-def test_unready_catalog_blocks_scheduled_qualification(tmp_path):
-    schedule, network, store = scheduler(tmp_path)
-    schedule.catalog = SimpleNamespace(status=lambda: {"bootstrap_complete": False})
-    schedule.tick()
-    assert not network.calls
-    assert schedule.status()["run"]["status"] == "failed"
-    assert "catalog" in schedule.status()["run"]["message"]
-
-
 def test_manual_api_operation_prevents_scheduled_overlap(tmp_path):
     schedule, network, store = scheduler(tmp_path)
     network.active = True
@@ -231,7 +222,7 @@ def test_signed_scheduled_download_runs_real_intake_and_repeat_is_idempotent(tmp
     schedule = AcquisitionSchedule(
         store,
         acquisition,
-        SimpleNamespace(status=lambda: {"bootstrap_complete": True}),
+        SimpleNamespace(status=lambda: {"bootstrap_complete": False}),
         clock=lambda: datetime(2026, 11, 6, 7, tzinfo=timezone.utc),
     )
     schedule.configure(

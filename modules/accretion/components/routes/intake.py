@@ -6,6 +6,8 @@ import json
 import hashlib
 import os
 import tempfile
+import sqlite3
+from collections import Counter
 from contextlib import closing
 from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
@@ -15,17 +17,71 @@ from fastapi.responses import FileResponse, StreamingResponse
 from starlette.background import BackgroundTask
 from modules.attribution.components.attribution_bridge import checked_result
 from ..intake_service import MAX_UPLOAD
+from ..intake_progress import retry_label, stage_totals
 from attribution import EvidenceRenderer, EvidenceStore
 from modules.ui.components.presentation import mark_attribution_bundle
 from modules.attribution.components.api_models import (
     AttributionReviewValues,
 )
 from modules.accretion.components.api_models import (
+    DeconflictionValues,
     GroupRetryValues,
 )
+from modules.workspace.components.primitives import now, uid
+from ..deconfliction import identifier_for
 
 
 def register(app, *, store, intake):
+    @app.get("/api/intake/deconfliction")
+    def deconfliction_entries():
+        return store.all("SELECT * FROM intake_deconfliction ORDER BY identifier,scope")
+
+    def save_entry(values, existing=None):
+        try:
+            identifier = identifier_for(values.scope, values.identifier)
+            with store.transaction() as db:
+                params = (values.scope, identifier, values.external_reference, values.reason, now())
+                identity = existing or uid()
+                if existing is None:
+                    db.execute(
+                        "INSERT INTO intake_deconfliction VALUES(?,?,?,?,?,?)", (identity, *params)
+                    )
+                elif not db.execute(
+                    "UPDATE intake_deconfliction SET scope=?,identifier=?,external_reference=?,reason=?,updated_at=? WHERE id=?",
+                    (*params, identity),
+                ).rowcount:
+                    raise HTTPException(404, "Deconfliction entry not found")
+                store.log(
+                    db, "deconfliction_saved", "Saved " + values.scope + " entry for " + identifier
+                )
+                return dict(
+                    db.execute(
+                        "SELECT * FROM intake_deconfliction WHERE id=?", (identity,)
+                    ).fetchone()
+                )
+        except sqlite3.IntegrityError:
+            raise HTTPException(
+                409, "An entry already exists for this identifier and scope"
+            ) from None
+        except ValueError as error:
+            raise HTTPException(400, str(error)) from None
+
+    @app.post("/api/intake/deconfliction")
+    def add_deconfliction_entry(values: DeconflictionValues):
+        return save_entry(values)
+
+    @app.put("/api/intake/deconfliction/{entry_id}")
+    def edit_deconfliction_entry(entry_id: str, values: DeconflictionValues):
+        return save_entry(values, entry_id)
+
+    @app.delete("/api/intake/deconfliction/{entry_id}")
+    def remove_deconfliction_entry(entry_id: str):
+        with store.transaction() as db:
+            if not db.execute("DELETE FROM intake_deconfliction WHERE id=?", (entry_id,)).rowcount:
+                raise HTTPException(404, "Deconfliction entry not found")
+            store.log(db, "deconfliction_removed", "Removed external entry " + entry_id)
+        return {"removed": True}
+
     @app.get("/api/intake/progress")
     def intake_progress():
         from ..intake_progress import overview
@@ -113,6 +169,29 @@ def register(app, *, store, intake):
         item["groups"] = store.all(
             "SELECT id,domain,status,attempts,error,attribution_result_id FROM jobs WHERE import_id=? ORDER BY rowid",
             (import_id,),
+        )
+        retry_counts = Counter()
+        for group in item["groups"]:
+            if group["status"] == "deferred":
+                attempts = (
+                    json.loads(group["attempts"])
+                    if group["error"] == "website_capture_error"
+                    else None
+                )
+                label = retry_label(group["error"], attempts=attempts)
+                group["retry_label"] = label
+                retry_counts[label] += 1
+        item["retry_reasons"] = retry_counts
+        item["stage_totals"] = stage_totals(
+            sum(group["status"] == "qualified" for group in item["groups"]),
+            sum(
+                group["status"] == "dismissed" and group["error"] == "association_deconflicted"
+                for group in item["groups"]
+            ),
+            sum(
+                group["status"] == "deferred" and group["error"] == "association_evidence_changed"
+                for group in item["groups"]
+            ),
         )
         return item
 

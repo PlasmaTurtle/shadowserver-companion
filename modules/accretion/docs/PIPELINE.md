@@ -102,9 +102,14 @@ contact or urgency work.
 
 Interruption checks run during bounded processing and before/inside publication.
 A completed Filter marker lets retries resume saved groups without rereading or
-renormalizing the report. `rows_read` counts nonempty rows; `valid_rows` includes
-selected context siblings as well as independently eligible rows. A malformed container with no trustworthy row map
-produces a source-level archive failure referencing the original file.
+renormalizing the report. `rows_read` counts nonempty rows. Filter splits them
+into independently eligible rows, context rows carried by those groups, and rows
+filtered out. `valid_rows` and `admitted_rows` include both eligible and context
+rows. Qualify checks each selected root-domain group once per pass, so several
+observations or hostnames can contribute to a single check. Older imports
+without a context count show the combined retained row count. A malformed
+container with no trustworthy row map produces a source-level archive failure
+referencing the original file.
 
 The [schema/admission guide](REPORT_SCHEMAS.md) owns supported families, mode
 rules, field requirements and extension steps. Unknown families stay archived;
@@ -116,20 +121,33 @@ an inventory entry alone does not enable notifications.
 three evidence classes: source findings, authoritative IP/domain attribution,
 and a functioning related website with its screenshot.
 
-1. Read Entities' current ownership/episode context, outreach holds and remaining
-   unhandled/unignored findings. Stop before external work for conflicts, holds,
+1. Read Entities' current ownership/episode context and remaining
+   unhandled/unignored findings. Stop before external work for ownership conflicts,
    no remaining work or an entirely nonpublic address group.
 2. Call the full [Tools capture API](../../tools/docs/README.md#website-loading-and-capture)
    with usable-content required. Try distinct reported hosts; the shared tool
    supplies bounded HTTP/S, root and `www` fallback. Reuse attempted-URL knowledge
    within the group. One failed host does not discard untried candidates.
-3. Retain a functioning related capture through Investigations. A working login
-   or admin page counts. Blank, challenge and browser/error output does not.
-   A successful unrelated redirect remains `website_identity_review`. A tool
-   failure is `website_capture_error`; failed destinations are `website_unavailable`.
+3. Check the rendered destination and retain its screenshot through Investigations.
+   A related site needs an organization site name, a visible brand matching the
+   domain, or a business name corroborated by its heading and title. Identified
+   login pages remain eligible when a domain brand or corroborated organization
+   name identifies them. A generic sign-in service name alone cannot identify
+   the business. An unidentified page records `website_unidentified`;
+   a parked page records `website_parked`. The browser tries the remaining main-site
+   candidates before rejecting the group. Failed destinations record
+   `website_unavailable`; an unrelated redirect records `website_identity_review`.
+   Keep the requested host, redirect chain and final URL with the attempt.
 4. Recheck ownership after capture. Lazily open Attribution, reuse admissible
    saved proof/approval or obtain fresh RDAP/DNS proof, then stop after a sufficient
-   group match. Attribution owns matching, review interpretation and coverage.
+   group match. When an exact-host referral covers part of a group, request
+   website and registration evidence from the remaining actionable sources.
+   Registry candidates retain their original report indices. A redirect to a
+   referred host triggers another bounded website candidate. Associate checks
+   current referrals again before binding the capture and publishing. If a
+   concurrent referral invalidates the capture or its registration support,
+   the group stays retryable and no lead is published.
+   Attribution owns matching, review interpretation and coverage.
 5. Construct `QualifiedLead`. Every finding references an original row and an
    actually supported condition/profile; proof covers the group; website evidence
    is related and retained. Otherwise preserve the precise outcome outside Leads.
@@ -147,12 +165,21 @@ For job transitions, retries and manual review, see [Operations](OPERATIONS.md).
 
 ## Screenshots
 
+For a domain group, lookup history retains observed download attempts with their
+original host's capture and browser outcome across retries, including runs that
+produced no screenshot. The observation is available before a case exists.
+See the [Tools capture contract](../../tools/docs/README.md#website-loading-and-capture).
+
 [Investigations website evidence](../../investigations/components/website_evidence.py)
 owns original PNG, preview and metadata retention, hashes, entity binding and
 case adoption. Qualify needs no fake entity or case to retain a capture. The
 Leads thumbnail and working URL use that evidence; displaying them does not
-recapture the page. New/retried qualification captures current website evidence;
-saved manual/reconciled acceptance verifies its retained artifact.
+recapture the page. Qualification can reuse a capture from the past 24 hours for
+the same reported hostname and current entity after checking its PNG, preview,
+metadata and page identity. Explicit refresh requests a new capture. Each group
+shares a 110-second website budget across its hosts. A group that reaches the
+budget records where an explicit resume should continue. Reviewed acceptance
+also checks that its saved capture identifies the website.
 
 Cases adopt the same bytes. Every certified report, including compact output
 without an appendix, requires its related screenshot in the Attribution section.
@@ -167,7 +194,7 @@ one entity. The frontier winner is selected by observation day, creation time an
 queue ID; its import supplies the captured policy and evaluation time. Its root
 also supplies the provider adjustment. The incoming report is not necessarily
 that winner. Handled, ignored and context-only conditions cannot inflate the score.
-Evaluate rechecks local ownership/holds, reads retained evidence and local CVE
+Evaluate rechecks local ownership, reads retained evidence and local CVE
 draft references, and returns one assessment bound to the selected scope.
 
 | Owner | Responsibility |
@@ -191,6 +218,12 @@ weights are 50/50. Temperature thresholds are 40/60/80; provider-owned domains
 receive the configured 0.1 aggregate multiplier. These are configurable outreach
 priorities, not proof of exposure or scientific certainty.
 
+Qualified findings on government hostnames ending in `.gov` receive the existing
+agency-priority contribution, alongside configured city and product priorities.
+Under the default weights this contributes five aggregate points for otherwise
+equivalent findings. The workspace upgrade recalculates pending government scores
+with their captured evidence and policy.
+
 ### Extend the scoring matrix
 
 Add a bounded `report_bases` entry in policy, keyed by exact profile ID or
@@ -213,8 +246,15 @@ already-qualified queued work without manufacturing a fresh qualification.
 The service owns job guards/completion; Associate can use that caller's
 transaction or open its own transaction for standalone publication.
 
-1. Recheck ownership/episode, holds, remaining actionable work, retained report
+1. Recheck ownership/episode, remaining actionable work, retained report
    identity and the current frontier fingerprint before publication writes.
+   Associate reads Investigations' completed-notification history and case outreach
+   decision for the canonical entity. A previous delivery supplies the last case
+   reference and count. A hold excludes outreach. The external deconfliction list
+   in Data accepts domain-wide or exact-host entries with a reference and reason.
+   Exact-host exclusions preserve eligible sibling hosts and their recalculated score.
+   Group details retain the matched identifier, scope, entry and reference as they
+   stood during the decision, even after an entry is edited or removed.
 2. Call [Entities persistence](../../entities/components/repositories/association.py)
    to record entity/domain/source rows, respecting current anchors, case evidence
    and manual profile decisions. Seed only matched registration fields.

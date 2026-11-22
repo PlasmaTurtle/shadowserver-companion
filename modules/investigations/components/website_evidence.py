@@ -242,8 +242,12 @@ def recent_for_host(store, entity_id, requested_url, *, since):
 
 
 def projection(db, entity_id, *, root_domain=None):
+    """Show the entity's current website independently of any particular intake."""
+    return _public_capture(latest_for_entity(db, entity_id, root_domain=root_domain))
+
+
+def _public_capture(capture):
     """Public read projection; filesystem details stay with evidence storage."""
-    capture = latest_for_entity(db, entity_id, root_domain=root_domain)
     if capture is None:
         return None
     return {
@@ -258,6 +262,65 @@ def projection(db, entity_id, *, root_domain=None):
             "sha256",
         )
     } | {"image_url": "/api/website-evidence/" + capture["id"] + "/image"}
+
+
+def _scope_captures(db, entity_id, entry_ids):
+    """Resolve retained evidence from the admissions for these exact source rows."""
+    scopes = {}
+    for row in db.execute(
+        """SELECT DISTINCT e.root_domain,e.import_id,e.hostname,j.status,
+                  json_extract(j.qualification,'$.website.id') job_capture,
+                  CASE WHEN json_valid(a.evidence_ref)
+                       THEN json_extract(a.evidence_ref,'$.website_capture_id') END admitted_capture
+           FROM json_each(?) selected JOIN entries e ON e.id=selected.value
+           LEFT JOIN jobs j ON j.import_id=e.import_id AND j.domain=e.root_domain
+           LEFT JOIN awareness_admission_events a ON a.import_id=e.import_id
+               AND a.source_key=e.id AND a.state='admitted'
+           WHERE e.lead_id=?""",
+        (json.dumps(entry_ids), entity_id),
+    ):
+        key = row["root_domain"], row["import_id"], row["status"], row["job_capture"]
+        hosts, claimed = scopes.setdefault(key, (set(), set()))
+        try:
+            host = urlsplit(web_url("https://" + row["hostname"].strip().rstrip("."))).hostname
+        except ValueError:
+            continue
+        hosts.add(host)
+        if row["admitted_capture"]:
+            claimed.add(row["admitted_capture"])
+
+    by_root = {}
+    for (root, _import_id, job_status, job_capture), (hosts, claimed) in scopes.items():
+        if not claimed and job_status == "qualified" and job_capture:
+            claimed.add(job_capture)
+        if not claimed and job_status not in (None, "qualified"):
+            continue
+        sql = """SELECT c.* FROM website_capture_entities b
+                 JOIN website_captures c ON c.id=b.capture_id
+                 WHERE b.entity_id=? AND c.root_domain=?"""
+        args = [entity_id, root]
+        if claimed:
+            sql += " AND c.id IN (SELECT value FROM json_each(?))"
+            args.append(json.dumps(sorted(claimed)))
+        matches = [
+            capture
+            for capture in db.execute(sql, args)
+            if urlsplit(capture["requested_url"]).hostname.rstrip(".") in hosts
+        ]
+        # Old imports and directly created cases may have only the entity binding.
+        # Ambiguous revisions cannot establish which image supported that scope.
+        if claimed or len(matches) == 1:
+            by_root.setdefault(root, []).extend(matches)
+    return {
+        root: max(captures, key=lambda c: (c["captured_at"], c["id"]))
+        for root, captures in by_root.items()
+        if captures
+    }
+
+
+def scope_projection(db, entity_id, root_domain, entry_ids):
+    """Show a lead's admitted evidence, including observations from a consolidated queue."""
+    return _public_capture(_scope_captures(db, entity_id, entry_ids).get(root_domain))
 
 
 def reference_for_evidence(item):
@@ -359,18 +422,18 @@ def attach(store, db, capture_id, case_id):
 
 
 def adopt_for_case(store, db, case_id):
-    """Adopt the latest qualifying capture for each explicitly scoped root."""
+    """Adopt the admitted revisions for selected observations and preserve earlier evidence."""
     case = db.execute("SELECT entity_id FROM cases WHERE id=?", (case_id,)).fetchone()
     if case is None:
         raise ValueError("Notification case not found")
-    adopted = []
-    for group in db.execute(
-        "SELECT root_domain FROM case_groups WHERE case_id=?", (case_id,)
-    ).fetchall():
-        capture = latest_for_entity(db, case["entity_id"], root_domain=group["root_domain"])
-        if capture:
-            adopted.append(attach(store, db, capture["id"], case_id))
-    return adopted
+    entries = db.execute(
+        """SELECT ce.entry_id FROM case_entries ce
+           LEFT JOIN case_entry_conditions cc ON cc.case_id=ce.case_id AND cc.entry_id=ce.entry_id
+           WHERE ce.case_id=? AND (cc.conditions IS NULL OR json_array_length(cc.conditions)>0)""",
+        (case_id,),
+    )
+    captures = _scope_captures(db, case["entity_id"], [row["entry_id"] for row in entries])
+    return [attach(store, db, capture["id"], case_id) for capture in captures.values()]
 
 
 def validate_retained(store, *, checkpoint=None):

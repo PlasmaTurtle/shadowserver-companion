@@ -1,6 +1,6 @@
 # Workspace issues
 
-This tracker owns Workspace maintenance work. Last reviewed: **2026-11-21**.
+This tracker owns Workspace maintenance work. Last reviewed: **2026-11-22**.
 Use the [module guide](README.md) for current contracts and verification, and
 the [project register](../../../docs/ISSUES.md) for shared work and the global
 index. Follow the [issue lifecycle](../../../docs/ISSUES.md#maintaining-this-register)
@@ -22,6 +22,23 @@ Individual entries retain their module benefit, scope and focused evidence.
 | ISS005 | [Workspace queue presentation](#iss005-workspace-queue-presentation) | Resolved |
 | ISS017 | [Read route mutation review](#iss017-read-route-mutation-review) | Resolved |
 | ISS029 | [Workspace file ownership and consolidation](#iss029-workspace-file-ownership-and-consolidation) | Resolved |
+| ISS053 | [Local views lost their connection while the console was open](#iss053-local-views-lost-their-connection-while-the-console-was-open) | Needs reproduction |
+
+## ISS053 Local views lost their connection while the console was open
+
+The analyst observed failures across views after importing a report with the Windows console still visible. The installed access log shows successful bootstrap, Workspace and intake progress requests. The operator subsequently uninstalled Eclipse and deleted its file tree after Defender quarantined the launcher. The logs establish neither when the running server stopped nor what caused the outage. [Project ISS054](../../../docs/ISSUES.md#iss054-defender-quarantined-the-windows-launcher) owns the quarantine investigation. The browser recovery correction is tracked in [UI ISS050](../../ui/docs/ISSUES.md#iss050-recovering-the-shell-after-a-lost-connection).
+
+All ten sidebar destinations opened in sandboxed Edge from a fresh Windows source demo after an import. The browser recorded 31 successful API responses. In a separate 1,380-row import with synthetic capture, registry and DNS providers, all 408 domain groups qualified. The ten views opened during processing (41 API responses) and again after completion (39), without failed requests or uncaught browser errors. After verification, Windows held the load-test database open during temporary-directory cleanup. It was available for exclusive access after the runner exited. A repeat waited for the qualified-lead export acknowledgement and exited cleanly with all 408 groups qualified. The separately launched demo server also released its workspace database on exit. To distinguish a local service interruption from a failed individual request on recurrence, record the time, the response from `/api/health` on the same origin, and the HTTP status or browser network error for one failed view. Omit session URLs, tokens, cookies and case data. Close this issue after reproducing the fault, repairing the responsible path and verifying navigation during and after an import on Windows.
+
+On November 22, the Windows source app retained both uploaded HTTP observations
+and qualified their single domain group. Edge refused navigation to the local
+stand-in for the reported hostname on the first attempt. The analyst resumed the
+same import with synthetic website and registry evidence. Its original CSV
+matched the uploaded bytes. The GUI completed review of all five sections,
+certification, export, simulated delivery and closure. After a server restart,
+the closed case reopened and served the same certified PDF by SHA-256. The
+recipient PDF had ten pages. Microsoft Word also rendered the DOCX in ten pages.
+The installed app's connection failure still needs reproduction.
 
 ## ISS029 Workspace file ownership and consolidation
 

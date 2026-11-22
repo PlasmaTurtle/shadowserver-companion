@@ -15,6 +15,8 @@ The [root changelog](../../CHANGELOG.md) retains current and recent releases;
 the [earlier changelog](releases/CHANGELOG_PRE_0.11.md) preserves entries before 0.11.
 
 Historical content is retained so decisions and limits remain inspectable.
+The [November 22 intake and lead review](validation/intake-review-2026-11-22.md)
+records the backlog reconciliation, upgrade and release checks.
 Source-specific handling notices, including TLP markings, continue to apply.
 Do not append current instructions to these records; update the corresponding
 current guide and create a new dated record when evidence needs preserving.

@@ -9,6 +9,7 @@ build/
 dist/
 data/
 data-demo/
+.*-companion.lock
 *.sqlite3*
 *.log
 

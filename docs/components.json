@@ -24,7 +24,7 @@
         "modules/investigations/**"
       ],
       "entry": "modules/investigations/docs/README.md",
-      "contract": "Case workflow, notifications, review/certification, report composition and preserved evidence.",
+      "contract": "Case workflow, report composition, certification, preserved evidence and completed notification history from recorded delivery.",
       "tests": [
         "modules/investigations/tests"
       ],
@@ -52,7 +52,7 @@
         "modules/entities/**"
       ],
       "entry": "modules/entities/docs/README.md",
-      "contract": "Business identities, ownership/lifecycle and contact discovery/management.",
+      "contract": "Canonical business identities, merge history, reviewed profile fields and contact discovery.",
       "tests": [
         "modules/entities/tests"
       ],
@@ -66,7 +66,7 @@
         "modules/leads/**"
       ],
       "entry": "modules/leads/docs/README.md",
-      "contract": "Qualified lead queues, frontier selection and lead export contracts.",
+      "contract": "Qualified lead review, finding-based queue filters, saved capture previews and lead export contracts.",
       "tests": [
         "modules/leads/tests"
       ],
@@ -80,7 +80,7 @@
         "modules/attribution/**"
       ],
       "entry": "modules/attribution/docs/README.md",
-      "contract": "Registration/DNS evidence, attribution approvals, group proof reuse and independent attribution engine.",
+      "contract": "Registration and DNS evidence, approved attribution, proof reuse, NC business registry schema and the independent attribution engine.",
       "tests": [
         "modules/attribution/tests"
       ],
@@ -94,7 +94,7 @@
         "modules/accretion/**"
       ],
       "entry": "modules/accretion/docs/README.md",
-      "contract": "Data intake, report subscriptions/acquisition, canonical observations and acquisition scheduling.",
+      "contract": "Report acquisition, duplicate import detection, grouped qualification, priority evaluation and final case/entity deconfliction in Associate.",
       "tests": [
         "modules/accretion/tests"
       ],

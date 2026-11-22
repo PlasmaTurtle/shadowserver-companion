@@ -17,6 +17,8 @@ def strongest_finding(parsed, records, policy, priority):
     cities, products = set(policy["priority_cities"]), set(policy["priority_products"])
     matches = set()
     for fields, normalized, _ in parsed:
+        if str(fields.get("hostname") or "").casefold().rstrip(".").endswith(".gov"):
+            matches.add("Government domain (.gov)")
         city = str(fields.get("city") or "").strip().casefold()
         if city and city in cities:
             matches.add("City priority: " + city)

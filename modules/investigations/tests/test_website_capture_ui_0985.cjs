@@ -78,7 +78,10 @@ const { loadApplication } = require('../../../tests/frontend_harness.cjs');
   assert.doesNotMatch(markup, /<script>|href="javascript/);
   assert.match(markup, /Access challenge/);
   assert.match(markup, /&lt;script&gt;/);
-  assert.doesNotMatch(markup, /Main-site fallback|Page navigation|Capture attempts/);
+  assert.doesNotMatch(
+    markup,
+    /Main-site fallback|Page navigation|Capture attempts|Website download attempts/,
+  );
   const redirected = {
     requested_url: 'http://mail.example.com/',
     final_url: 'https://www.example.com/contact/',
@@ -177,6 +180,72 @@ const { loadApplication } = require('../../../tests/frontend_harness.cjs');
   assert.doesNotMatch(hostile, new RegExp('r'.repeat(241)));
   assert.match(hostile, /Showing 10 of 11 navigation steps/);
   assert.match(hostile, /Showing 8 of 9 attempts/);
+  const observedAt = '2026-11-21T19:45:23Z';
+  const activity = {
+    attempts: [
+      { observed_at: observedAt, outcome: 'canceled', suggestedFilename: 'private-file.zip' },
+      { observed_at: observedAt, outcome: 'completed', url: 'blob:private-value' },
+      { observed_at: observedAt, outcome: 'unconfirmed' },
+    ],
+    truncated: true,
+  };
+  const observed = a.captureProvenance({ capture: { ...redirected, download_activity: activity } });
+  assert.match(observed, /Website download attempts \(3\+\)/);
+  assert.match(observed, /Browser reported cancellation/);
+  assert.match(observed, /Browser reported completion/);
+  assert.match(observed, /Outcome unconfirmed/);
+  assert.match(observed, /Additional attempts were observed/);
+  assert.match(observed, /<time datetime="2026-11-21T19:45:23\.000Z">/);
+  assert.doesNotMatch(observed, /private-file|blob:private-value/);
+  for (const attempts of [
+    [],
+    [null, { observed_at: observedAt, outcome: '__proto__' }],
+    [{ observed_at: '<img src=x>', outcome: 'canceled' }],
+  ]) {
+    assert.equal(a.downloadActivityMarkup({ attempts }), '');
+  }
+  const event = {
+    action: 'website_capture_failed',
+    detail: 'Website did not load',
+    created_at: observedAt,
+    metadata: { hostname: 'example.test', download_activity: activity },
+  };
+  const savedHistory = [{ ...event, metadata: JSON.stringify(event.metadata) }];
+  assert.match(a.activities(savedHistory), /Website did not load[\s\S]*Outcome unconfirmed/);
+  assert.doesNotMatch(
+    a.activities([{ ...event, metadata: 'old record' }]),
+    /Website download attempts/,
+  );
+  const originalApi = a.api;
+  a.api = async () => ({ items: [event], total: 1 });
+  const activityPage = await a.activityPage(new URLSearchParams());
+  assert.match(activityPage, /Website download attempts \(3\+\)/);
+  assert.match(activityPage, /example\.test/);
+  assert.doesNotMatch(activityPage, /private-file|blob:private-value/);
+  s.editor.dirty = false;
+  a.api = async (url, options) => {
+    if (options?.method === 'POST') return { id: 'failed-job' };
+    if (url.includes('website-captures'))
+      return { state: 'failed', message: event.detail, download_activity: activity };
+    return { ...s.editor.currentLead, history: savedHistory };
+  };
+  const beforeFailure = structuredClone(s.editor.draft);
+  await a.captureWebsite();
+  await new Promise((r) => setImmediate(r));
+  assert.match(a.captureMarkup(), /Website did not load[\s\S]*Website download attempts/);
+  assert.deepEqual(s.editor.currentLead.history, savedHistory);
+  assert.deepEqual(s.editor.draft, beforeFailure);
+  a.api = async (url, options) => {
+    if (options?.method === 'POST') return { id: 'canceled-job' };
+    if (url.includes('website-captures'))
+      return { state: 'cancelled', message: 'Capture cancelled', download_activity: activity };
+    throw new TypeError('History service is temporarily unavailable');
+  };
+  await a.captureWebsite();
+  await new Promise((r) => setImmediate(r));
+  assert.match(a.captureMarkup(), /Capture cancelled[\s\S]*Website download attempts/);
+  assert.doesNotMatch(a.captureMarkup(), /History service is temporarily unavailable/);
+  a.api = originalApi;
   s.editor.dirty = false;
   phase = 0;
   await a.captureWebsite();
@@ -186,9 +255,10 @@ const { loadApplication } = require('../../../tests/frontend_harness.cjs');
   await timers.shift()();
   await new Promise((r) => setImmediate(r));
   assert.equal(s.editor.currentLead.case_id, 'case-b');
+  assert.doesNotMatch(a.captureMarkup(), /Website download attempts/);
   a.stopWebsiteCapturePolling();
   console.log(
-    'Website capture UI: scope, provenance escaping, dirty-draft preservation and case navigation isolation passed.',
+    'Capture evidence, download outcomes, failed-job history, draft preservation and case isolation passed.',
   );
 })().catch((e) => {
   console.error(e);

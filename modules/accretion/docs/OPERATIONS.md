@@ -25,9 +25,19 @@ Accepted formats are `.xlsx`, `.xlsm`, `.csv` and `.csv.gz`.
 The service streams into a temporary file, hashes and flushes it, then publishes
 the original under `originals/<sha256><extension>`. An existing original is
 hash-checked before reuse. The import fingerprint combines source digest with
-captured policy, report-profile version, jurisdiction, acquisition kind and local
-catalog revision. Identical bytes under different applicable policies can produce
-separate imports; duplicate imports retain additional distinct API receipts.
+captured policy, input format, worksheet, effective report-profile selection,
+jurisdiction and local catalog revision. Uploading the same CSV and retrieving it
+through the API with the same selection reuses the import, its groups and leads.
+Each distinct API receipt survives, including a retrieval received while intake
+is processing the original. A matching import from policy version 14 keeps
+its original ID on redelivery. Re-evaluate original applies current policy.
+
+Workbook upload, manual API retrieval and scheduled API retrieval all enter the
+same Filter and qualification worker. The profile resolver uses the explicit
+workspace selection first, then a row's report type. In automatic mode a verified
+API receipt or recognizable filename supplies the report type for a row that
+omits it. Source files with different encodings or worksheet selections retain
+their own original and provenance.
 
 The import's `config` records admission/scoring policy, acquisition provenance,
 profile facts and progress. Reading an original through the HTTP API produces a
@@ -175,8 +185,10 @@ selected. Enabled report schedules require a subscription and report types.
 Intervals support 1–24 hours and lookback 1–30 days; missed runs coalesce.
 
 The sequence is `retrieving → importing → complete/partial/failed`. Reference
-updates belong to Library. Scheduled reports require a bootstrapped local CVE
-catalog and a complete listing; queued import IDs are persisted as they arrive.
+updates belong to Library. Report acquisition requires a complete listing from
+the selected subscription. With an incomplete local NVD catalog, Filter uses
+the same reported-severity and available-reference rules as a manual upload.
+The schedule persists queued import IDs as they arrive.
 Completion waits for Accretion import outcomes, not just downloads. Successful
 report intake advances its cursor even if reference refresh needs attention;
 an unsuccessful overall run retries after one hour. On restart, interrupted

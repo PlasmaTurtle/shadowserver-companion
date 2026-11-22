@@ -346,10 +346,6 @@ class AcquisitionSchedule:
                         run["reference_error"] = "Reference update failed; check Library status"
                     self._write(state)
             if config["shadowserver"]:
-                if not self.catalog.status().get("bootstrap_complete"):
-                    raise ValueError(
-                        "Download the complete CVE catalog before scheduled report intake"
-                    )
 
                 def queued(result):
                     if result["import_id"] not in run["imports"]:

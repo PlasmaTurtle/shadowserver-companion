@@ -14,6 +14,7 @@ retain their domain workflow, UI, persistence and authorization.
 | --- | --- |
 | Public website capture interface | [website_capture/__init__.py](../components/website_capture/__init__.py) |
 | Browser lifetime and PNG capture | [browser.py](../components/website_capture/browser.py) |
+| Browser download observations | [downloads.py](../components/website_capture/downloads.py) |
 | Navigation, main-site fallback and readiness | [navigation.py](../components/website_capture/navigation.py) |
 | URL normalization | [transport.py](../components/website_capture/transport.py) |
 | Offline suffix extraction and IP comparison | [network_identity.py](../components/network_identity.py) |
@@ -53,16 +54,24 @@ changing saved data formats merely to make interfaces uniform.
 
 ### Website capture interface
 
-Callers import `capture_website`, `web_url` and `WebsiteLoadError` from
+Callers import `capture_website`, `web_url`, `CaptureBrowserStartupError` and `WebsiteLoadError` from
 `modules.tools.components.website_capture`. The capture signature is
-`capture_website(url, *, cancel_event=None, executable=None, skip_urls=(), require_usable=False)` and returns
+`capture_website(url, *, cancel_event=None, executable=None, skip_urls=(), require_usable=False, page_check=None, deadline=None)` and returns
 `(png_bytes, metadata)`. `web_url(value)` normalizes a complete HTTP(S) URL.
 `require_usable=True` tries fallback candidates after partial/challenge output and
 returns only a functioning page or login page. The default keeps diagnostic captures
 available for case evidence. `skip_urls` avoids repeating earlier attempts when a
 caller checks several reported hosts in one group. No browser starts at import time.
+A caller may pass a monotonic deadline shared across requests and a page check
+that returns an exclusion reason or `None`. The check sees the final URL, title,
+visible heading, declared site name and a bounded visible-text excerpt before
+the viewport is saved. A rejection advances normal fallback. The excerpt is
+discarded after the check.
 Loading, fallback and temporary browser cleanup
 are owned by the tool; no database, case identifier or application server is needed.
+When the local browser fails during initialization, `CaptureBrowserStartupError`
+reports the available process exit code or operating system error number. No
+website has been attempted. A caller can pause a batch and offer a retry.
 
 Investigations calls this interface through `website_jobs.py`. It owns reported
 hostname selection, queue admission, case cancellation controls and guarded evidence
@@ -116,6 +125,24 @@ per-response AMSI gate or impose request-count/per-resource download quotas.
 The browser's normal TLS and sandbox behavior apply. There is no application
 public-address gate; HTTP(S) URL validation checks syntax, not destination trust.
 
+Before visiting any site, capture requires the browser to acknowledge a download
+policy of `deny` for the default browser context. It applies to the reported site,
+redirects, fallback tabs and popups in that context. If configuration fails, the
+tool closes the browser. A top-level navigation identified as a download proceeds
+to the next candidate. A rendered page that attempts a background download can
+still yield a screenshot. Page resources use the browser's normal rendering and
+caching behavior. [Chromium download policy](https://github.com/ChromeDevTools/devtools-protocol/blob/master/pdl/domains/Browser.pdl#L128-L145)
+
+When Chromium reports a download attempt, `download_activity` records the UTC
+observation time and browser outcome. `canceled` and `completed` require a
+terminal browser event. `unconfirmed` means capture ended before one arrived.
+The first 16 attempts across the capture session are retained. `truncated`
+indicates additional activity. The field is optional on successful captures and
+exceptions with metadata. Its absence on an older capture establishes no download
+history. Consumers use `download_activity(metadata)` to select these fields.
+Filenames, download URLs, paths, browser identifiers and file contents are
+excluded from this record. [Chromium events](https://github.com/ChromeDevTools/devtools-protocol/blob/master/pdl/domains/Browser.pdl#L153-L181)
+
 Start with the exact reported URL. A failed load can try the other HTTP/S scheme
 on that host, then the main site's apex/`www` candidates, using the existing
 private-aware Public Suffix List. Keep supplied paths, queries and fragments on
@@ -152,7 +179,7 @@ is not used.
 
 Browser startup and page loading have separate cancellable budgets. A Windows
 kill-on-close job owns the process tree without an arbitrary child-process ceiling;
-cleanup removes the temporary profile's cache and downloads as well. Synthetic
+cleanup removes the temporary profile and its cache. Synthetic
 protocol checks do not establish native browser, job or enterprise-policy acceptance;
 use the [Windows checklist](../../../docs/WINDOWS_ACCEPTANCE.md) for that scope.
 

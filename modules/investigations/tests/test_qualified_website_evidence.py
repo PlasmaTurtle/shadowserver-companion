@@ -102,6 +102,56 @@ def test_refresh_creates_new_revision_without_replacing_adopted_evidence(tmp_pat
         evidence.export_references(store, [prior])
 
 
+@pytest.mark.parametrize("same_host_revisions", [0, 1, 2])
+def test_direct_legacy_case_uses_only_unique_reported_host_evidence(tmp_path, same_host_revisions):
+    store = Store(tmp_path / "data")
+    entity = attributed_entity(store)
+    ids = []
+    for host in ["mail.example.com"] * same_host_revisions + ["sibling.example.com"]:
+        png, metadata = captured()
+        metadata["requested_url"] = "https://" + host + "/"
+        capture = evidence.retain(store, png, metadata, root_domain="example.com")
+        with store.transaction() as db:
+            evidence.bind(db, capture["id"], entity["id"], root_domain="example.com")
+        ids.append(capture["id"])
+    case = Cases(store).create(entity["id"])
+    attached = store.all(
+        "SELECT capture_id FROM website_capture_cases WHERE case_id=?", (case["case_id"],)
+    )
+    assert attached == ([{"capture_id": ids[0]}] if same_host_revisions == 1 else [])
+
+
+@pytest.mark.parametrize("job_host", ["mail.example.com", "sibling.example.com"])
+def test_legacy_qualification_id_must_belong_to_case_host(tmp_path, job_host):
+    store = Store(tmp_path / "data")
+    entity = attributed_entity(store)
+    ids = []
+    for host in (job_host, "mail.example.com"):
+        png, metadata = captured()
+        metadata["requested_url"] = "https://" + host + "/"
+        capture = evidence.retain(store, png, metadata, root_domain="example.com")
+        with store.transaction() as db:
+            evidence.bind(db, capture["id"], entity["id"], root_domain="example.com")
+        ids.append(capture["id"])
+    # Old imports retained the group decision before individual admission events existed.
+    with store.transaction() as db:
+        db.execute(
+            """INSERT INTO imports(id,fingerprint,sha256,name,path,created_at,config)
+               VALUES('old','old','digest','source.csv','source.csv','2026-11-01','{}')"""
+        )
+        db.execute("UPDATE entries SET import_id='old' WHERE lead_id=?", (entity["id"],))
+        db.execute(
+            """INSERT INTO jobs(id,import_id,domain,payload,status,qualification)
+               VALUES('before-admissions','old','example.com','[]','qualified',?)""",
+            (json.dumps({"website": {"id": ids[0]}}),),
+        )
+    case = Cases(store).create(entity["id"])
+    attached = store.all(
+        "SELECT capture_id FROM website_capture_cases WHERE case_id=?", (case["case_id"],)
+    )
+    assert attached == ([{"capture_id": ids[0]}] if job_host == "mail.example.com" else [])
+
+
 def test_manual_screenshot_reference_preserves_stated_source_without_browser_claims():
     assert evidence.reference_for_evidence(
         {

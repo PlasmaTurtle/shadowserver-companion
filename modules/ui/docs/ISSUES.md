@@ -16,6 +16,7 @@ mechanics. These remain UI-owned capabilities; Tools coordinates the inventory.
 | ISS013 | [Rendering resource inputs](#iss013-rendering-resource-inputs) | Deferred | UI; Investigations |
 | ISS018 | [Command-palette focus after search](#iss018-command-palette-focus-after-search) | Resolved | UI |
 | ISS047 | [Command palette reopen lifecycle](#iss047-command-palette-reopen-lifecycle) | Resolved | UI |
+| ISS050 | [Recovering the shell after a lost connection](#iss050-recovering-the-shell-after-a-lost-connection) | Resolved | UI |
 
 
 Shared checks for this completed batch are recorded in the [November 21 validation](../../../docs/history/validation/maintenance-2026-11-21.md).
@@ -173,6 +174,26 @@ full-verifier timeout remains in `verification-baseline.*`.
 
 Subsequent combined results and limits are in the
 [full-build record](../../../docs/history/validation/full-build-2026-11-21.md).
+
+## ISS050 Recovering the shell after a lost connection
+
+After a failed bootstrap request, the startup screen offered a retry that only
+rerendered the current route. It skipped initialization of the workspace profile,
+mutation token and background polling. A dropped Fetch response also exposed the
+browser's generic error in each affected view.
+
+**Resolved 2026-11-21.** Reload app restarts the shell with the existing browser
+session. The startup and view error screens also link to the local health endpoint after a connection failure or timeout. Its response can be checked while the original view and console remain open. Interrupted reads explain how to reconnect. Interrupted writes advise
+checking the operation's status first. Existing HTTP responses still carry their
+status and server detail.
+
+The maintained browser check interrupts one bootstrap request after a real
+session exchange, uses Reload app, opens Workspace and checks authenticated
+views. The shared request tests disconnect a loopback server during reads and
+writes and check HTTP errors, cancellation and timeout behavior. A separate
+Edge sweep opened all ten sidebar destinations after a synthetic HTTP report
+import, including Library products, catalog status, saved views and explainers.
+The cause of the reported workstation outage is still unconfirmed.
 
 ## Shared work affecting UI
 

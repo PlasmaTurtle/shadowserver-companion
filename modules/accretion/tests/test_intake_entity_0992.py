@@ -115,6 +115,7 @@ def test_progress_tracks_stages_and_retains_missing_catalog_warning(tmp_path, mo
     assert data["current"]["stats"]["admitted_rows"] == 1
     assert data["recent"]["source_rows"] == 2
     assert sum(r["count"] for r in data["recent"]["failures"]) == 1
+    stages.append(data["current"]["progress"]["phase"])
     transitions = [stage for i, stage in enumerate(stages) if i == 0 or stage != stages[i - 1]]
     assert transitions == ["filter", "qualify", "complete"]
     assert "urgency" not in stages and "associate" not in stages

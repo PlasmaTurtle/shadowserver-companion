@@ -28,11 +28,12 @@ The notification contract below determines the smaller set needed for intake.
 
 ## Report identity and supported adapters
 
-`resolve_profile(fields, filename="", configured_type="auto")` selects identity
-in this order: explicit import setting, row `report_type`, recognized filename.
+`resolve_profile(fields, filename="", configured_type="auto", *, receipt_type=None)` selects identity
+using the explicit import setting, then the row's `report_type`, then the
+verified API receipt's report type, then a recognized filename.
 Known report names/aliases normalize to canonical IDs. HTTP-like columns alone
 never turn an unknown file into a Vulnerable HTTP report. A generic filename
-therefore needs row identity or a deliberate profile selection.
+therefore needs a declared profile in the settings, row or API receipt.
 
 Each profile records its ID/name, selection basis, inventory digest/commit,
 declared fields, capability, adapter version, observation kind, version semantics,

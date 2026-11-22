@@ -1,5 +1,8 @@
 # 0.12.0 — Guided Setup
 
+- Review CVE and end-of-life findings in separate views of the same lead. Open the reported host or its root site, enlarge the saved screenshot and continue to the next lead after a decision.
+- Qualify the page actually reached and reuse recent verified captures. Associate records internal notification history and external referrals with separate exact-host and whole-domain scopes.
+- Count a notification once, on its first recorded delivery. Leads and Entities show the same count and last delivery date, including after case revision and entity merges.
 - Start with guided setup for API connections, agency identity and jurisdiction, then optional automatic acquisition. Resume unfinished setup and keep API secrets in the existing credential services.
 - Organize Settings around identity, jurisdiction, connections, automation, report defaults, data and software. Support agency presets, a custom agency and a name without a title.
 - Filter recognized state-specific API subscriptions by the saved jurisdiction. Revalidate catalog requests and scheduled imports when scope changes; retain clearly labeled national and custom account subscriptions.

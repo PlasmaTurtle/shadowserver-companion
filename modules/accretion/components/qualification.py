@@ -8,19 +8,30 @@ canonical entities; those are Evaluate and Associate responsibilities.
 from __future__ import annotations
 
 from dataclasses import dataclass, field, replace
+from datetime import datetime, timedelta, timezone
+from time import monotonic
 
 from modules.attribution.components.attribution_bridge import RegistrationAttribution
-from modules.tools.components.website_capture import capture_website, WebsiteLoadError, web_url
+from modules.tools.components.website_capture import (
+    CaptureBrowserStartupError,
+    capture_website,
+    download_activity,
+    WebsiteLoadError,
+    web_url,
+)
 from modules.investigations.components import website_evidence
-from modules.investigations.components.outreach_policy import entity_hold
 
 from . import awareness
+from .deconfliction import exact_host_entries, url_hostname
 from .intake.domains import registry_address
 from .intake_filter import IntakeInterrupted
 from .intake.records import observation_payload
 from .qualified_lead import QualifiedLead
 from .report import ReportCandidate
 from .qualification_context import recognize_group
+from .website_identity import rejection_reason as website_rejection
+
+GROUP_WEBSITE_SECONDS = 110
 
 
 @dataclass(frozen=True, slots=True)
@@ -70,9 +81,6 @@ def local_scope(store, group):
         return recognition, (), "association_conflict"
     entries = [observation_payload(entry) for entry in group.observations]
     with store.read_snapshot() as db:
-        hold = entity_hold(db, recognition["entity_id"])
-        if hold:
-            return recognition, (), "outreach_" + hold["state"]
         findings = awareness.actionable_scope(db, entries, entity_id=recognition["entity_id"])
     if not findings:
         return recognition, (), "no_actionable_findings"
@@ -89,7 +97,7 @@ def complete_lead(
 ) -> QualifiedLead:
     """Complete automatic or reviewed evidence without recapturing a saved page."""
     website = website_evidence.get(store, evidence["website"]["id"])
-    return QualifiedLead(
+    lead = QualifiedLead(
         candidate,
         attribution,
         tuple(coverage),
@@ -97,6 +105,41 @@ def complete_lead(
         tuple(evidence["findings"]),
         evidence["ownership_token"],
     )
+    if reason := website_rejection(website["capture"], candidate.group.root_domain):
+        raise ValueError("The saved page cannot establish business identity: " + reason)
+    return lead
+
+
+def prior_website_attempts(attempts):
+    """Retain bounded download observations per reported host when replacing a job's attempts."""
+    by_host = {}
+    for attempt in attempts:
+        host = attempt.get("hostname")
+        if not host or attempt.get("method") != "website" or "download_activity" not in attempt:
+            continue
+        observed = download_activity(attempt).get("download_activity")
+        if not observed:
+            continue
+        if host in by_host:
+            previous = by_host[host]
+            observed = download_activity(
+                {
+                    "download_activity": {
+                        "attempts": previous["attempts"] + observed["attempts"],
+                        "truncated": previous["truncated"] or observed["truncated"],
+                    },
+                }
+            )["download_activity"]
+        by_host[host] = observed
+    return [
+        {
+            "method": "website",
+            "hostname": host,
+            "status": "previous_capture",
+            "download_activity": activity,
+        }
+        for host, activity in by_host.items()
+    ]
 
 
 class Qualifier:
@@ -118,21 +161,82 @@ class Qualifier:
         if self.cancel_event.is_set():
             raise IntakeInterrupted()
 
-    def website(self, group):
-        attempts, seen_hosts, attempted_urls = [], set(), set()
-        for entry in group.observations:
-            host = str(entry.source.fields["hostname"]).strip().lower().rstrip(".")
-            if host in seen_hosts:
-                continue
-            seen_hosts.add(host)
+    def website(
+        self,
+        group,
+        *,
+        owner=None,
+        refresh=False,
+        resume_host=None,
+        candidate_indices=None,
+        referral_status=None,
+    ):
+        attempts, attempted_urls = [], set()
+        hosts = list(
+            dict.fromkeys(
+                entry.source.fields["hostname"].strip().lower().rstrip(".")
+                for index, entry in enumerate(group.observations)
+                if candidate_indices is None or index in candidate_indices
+            )
+        )
+        first = hosts.index(resume_host) if resume_host in hosts else 0
+        deadline = monotonic() + GROUP_WEBSITE_SECONDS
+
+        def page_check(page):
+            if reason := website_rejection(page, group.root_domain):
+                return reason
+            destination = url_hostname(page.get("final_url"))
+            if referral_status is not None:
+                if destination not in referral_status:
+                    with self.store.read_snapshot() as db:
+                        referral_status[destination] = bool(
+                            next(exact_host_entries(db, [destination]), None)
+                        )
+                if referral_status[destination]:
+                    return "website_deconflicted_destination"
+            return None
+
+        for host in hosts[first:]:
             self.checkpoint()
+            if monotonic() >= deadline:
+                attempts.append(
+                    {
+                        "method": "website",
+                        "hostname": host,
+                        "status": "work_limit",
+                        "reason": "website_budget_exhausted",
+                    }
+                )
+                return None, attempts, "website_budget_exhausted"
             requested_url = web_url("https://" + host + "/")
+            if owner and not refresh:
+                saved = website_evidence.recent_for_host(
+                    self.store,
+                    owner,
+                    requested_url,
+                    since=datetime.now(timezone.utc) - timedelta(days=1),
+                )
+                if saved and not page_check(saved["capture"]):
+                    attempts.append(
+                        {
+                            "method": "website",
+                            "hostname": host,
+                            "status": "reused",
+                            "capture_id": saved["id"],
+                            "captured_at": saved["captured_at"],
+                            "requested_url": requested_url,
+                            "final_url": saved["final_url"],
+                        }
+                    )
+                    return saved, attempts, None
             try:
                 png, metadata = self.capture(
                     requested_url,
                     cancel_event=self.cancel_event,
                     skip_urls=frozenset(attempted_urls),
                     require_usable=True,
+                    page_check=page_check,
+                    deadline=deadline,
                 )
             except WebsiteLoadError as error:
                 self.checkpoint()
@@ -144,21 +248,45 @@ class Qualifier:
                         "status": "load_failed",
                         "message": str(error),
                         "attempts": error.metadata.get("attempts", []),
+                        **download_activity(error.metadata),
                     }
                 )
+                for attempt in error.metadata.get("attempts", []):
+                    if attempt.get("outcome") == "rejected":
+                        attempts[-1]["reason"] = attempt["reason"]
                 continue
             except (OSError, ValueError, TimeoutError) as error:
                 self.checkpoint()
+                if monotonic() >= deadline:
+                    attempts.append(
+                        {
+                            "method": "website",
+                            "hostname": host,
+                            "status": "work_limit",
+                            "reason": "website_budget_exhausted",
+                            **download_activity(getattr(error, "metadata", {})),
+                        }
+                    )
+                    return None, attempts, "website_budget_exhausted"
                 attempts.append(
                     {
                         "method": "website",
                         "hostname": host,
                         "status": "tool_error",
                         "message": str(error)[:500],
+                        **download_activity(getattr(error, "metadata", {})),
                     }
                 )
                 # A broken browser/tool cannot be repaired by trying every host.
-                return None, attempts, "website_capture_error"
+                return (
+                    None,
+                    attempts,
+                    (
+                        "capture_browser_startup"
+                        if isinstance(error, CaptureBrowserStartupError)
+                        else "website_capture_error"
+                    ),
+                )
             self.checkpoint()
             if metadata.get("requested_url") != requested_url:
                 attempts.append(
@@ -180,10 +308,15 @@ class Qualifier:
                     "status": status,
                     "requested_url": metadata.get("requested_url"),
                     "final_url": metadata.get("final_url"),
+                    "redirects": metadata.get("redirects", []),
                     "attempts": metadata.get("attempts", []),
+                    **download_activity(metadata),
                 }
             )
-            if website_evidence.is_usable_capture(metadata) and related:
+            identity_reason = (
+                page_check(metadata) if website_evidence.is_usable_capture(metadata) else None
+            )
+            if website_evidence.is_usable_capture(metadata) and related and not identity_reason:
                 return (
                     website_evidence.retain(
                         self.store, png, metadata, root_domain=group.root_domain
@@ -191,16 +324,14 @@ class Qualifier:
                     attempts,
                     None,
                 )
-            if website_evidence.is_usable_capture(metadata) and not related:
-                attempts[-1]["reason"] = "website_identity_review"
-        reason = (
-            "website_identity_review"
-            if any(a.get("reason") == "website_identity_review" for a in attempts)
-            else "website_unavailable"
-        )
+            if identity_reason:
+                attempts[-1]["reason"] = identity_reason
+        reason = next((a["reason"] for a in attempts if a.get("reason")), "website_unavailable")
         return None, attempts, reason
 
-    def qualify(self, candidate: ReportCandidate, *, refresh=False) -> QualificationDecision:
+    def qualify(
+        self, candidate: ReportCandidate, *, refresh=False, resume_host=None
+    ) -> QualificationDecision:
         from modules.attribution.components.attribution_reuse import reuse_attribution, reuse_review
         from modules.entities.components.ownership import (
             OwnershipChanged,
@@ -225,7 +356,26 @@ class Qualifier:
                 reason,
                 ({"method": "local", "status": reason, "message": recognition["basis"]},),
             )
-        website, attempts, reason = self.website(group)
+        # Choose evidence from admissible sources before network work. Associate
+        # still owns the decision and checks current referrals at commit time.
+        hosts = [
+            entry.source.fields["hostname"].casefold().rstrip(".") for entry in group.observations
+        ]
+        with self.store.read_snapshot() as db:
+            referred = {row["identifier"] for row in exact_host_entries(db, hosts)}
+        admissible = {
+            item["entry_index"] for item in findings if hosts[item["entry_index"]] not in referred
+        }
+        selected = admissible if referred and admissible else None
+        website, attempts, reason = self.website(
+            group,
+            owner=recognition["entity_id"],
+            refresh=refresh,
+            resume_host=resume_host,
+            candidate_indices=selected,
+            # A fully referred group can still qualify before Associate excludes it.
+            referral_status={host: host in referred for host in hosts} if admissible else None,
+        )
         evidence = {
             "version": 1,
             "root_domain": group.root_domain,
@@ -234,7 +384,12 @@ class Qualifier:
             "ownership_token": recognition["ownership_token"],
         }
         if reason:
-            return QualificationDecision("deferred", reason, tuple(attempts), evidence)
+            return QualificationDecision(
+                "dismissed" if reason in {"website_parked", "website_unidentified"} else "deferred",
+                reason,
+                tuple(attempts),
+                evidence,
+            )
         self.checkpoint()
         try:
             with self.store.read_snapshot() as db:
@@ -253,7 +408,7 @@ class Qualifier:
                 self.store, self.config, cancel_event=self.cancel_event
             )
         decision = None
-        if recognition["state"] == "known":
+        if recognition["state"] == "known" and selected is None:
             decision = reuse_attribution(
                 self.store,
                 group,
@@ -262,9 +417,11 @@ class Qualifier:
                 saved_proof=recognition.get("saved_proof"),
                 refresh=refresh,
             )
-        if decision is None:
+        if selected is not None:
+            decision = self.client.qualify(group, refresh=refresh, candidate_indices=selected)
+        elif decision is None:
             decision = self.client.qualify(group, refresh=refresh)
-        if decision.status == "review" and not refresh:
+        if decision.status == "review" and not refresh and selected is None:
             decision = (
                 reuse_review(self.store, group, self.client.module.store, decision.result_id)
                 or decision

@@ -14,6 +14,12 @@ from .dark_matter import enqueue_outcomes
 from .intake.records import observation_payload
 from .evaluated_lead import EvaluatedLead
 from .report import Report
+from .deconfliction import (
+    AssociationEvidenceChanged,
+    check as check_deconfliction,
+    exact_host_entries,
+    url_hostname,
+)
 
 
 @dataclass(frozen=True, slots=True)
@@ -21,11 +27,21 @@ class AssociationResult:
     """Published references; contact enrichment may still be queued."""
 
     report_id: str
-    entity_id: str
-    queue_id: str
+    entity_id: str | None
+    queue_id: str | None
     website_capture_id: str
     observations_added: int
     contact_work_queued: bool
+    matches: tuple = ()
+
+    def attempts(self):
+        return [{"method": "associate", "status": item["action"], **item} for item in self.matches]
+
+
+def _ineligible_reason(entry):
+    return (entry.get("normalized", {}).get("eligibility") or {}).get(
+        "reason"
+    ) or "no_actionable_findings"
 
 
 def associate_lead(store, evaluated: EvaluatedLead, *, db=None) -> AssociationResult:
@@ -58,11 +74,8 @@ def associate_lead(store, evaluated: EvaluatedLead, *, db=None) -> AssociationRe
             raise ValueError(
                 "Review the ownership association and observation dates before qualifying this group"
             )
-        from modules.investigations.components.outreach_policy import entity_hold
         from .awareness import actionable_scope
 
-        if entity_hold(db, matched):
-            raise ValueError("Outreach was held while this group was qualifying")
         if not demo and not actionable_scope(db, entries, entity_id=matched):
             raise ValueError("No actionable findings remain for this group")
         from modules.leads.components.lead_frontier import preview_scope
@@ -76,14 +89,92 @@ def associate_lead(store, evaluated: EvaluatedLead, *, db=None) -> AssociationRe
             != frontier_scope["fingerprint"]
         ):
             raise ValueError("Pending work changed after Evaluate; retry this qualified group")
+        matches, blocked = check_deconfliction(db, group.root_domain, entries, matched)
+        scopes = lead.condition_scopes()
+        excluded = blocked.intersection(scopes)
+        if excluded:
+            scopes = {idx: values for idx, values in scopes.items() if idx not in blocked}
+            if not scopes:
+                enqueue_outcomes(
+                    db,
+                    import_id,
+                    [
+                        (
+                            entry,
+                            "rejected",
+                            "association_deconflicted"
+                            if idx in blocked
+                            else _ineligible_reason(entry),
+                        )
+                        for idx, entry in enumerate(entries)
+                    ],
+                    stage="associate",
+                )
+                return AssociationResult(
+                    import_id, None, None, evidence["website"]["id"], 0, False, tuple(matches)
+                )
+            from .evaluation import evaluate_scope
+            from .evaluated_lead import EvaluationScope
+            from .intake.versions import project_conditions
+
+            admitted_entries = [
+                project_conditions(entries[idx], values) for idx, values in scopes.items()
+            ]
+            frontier_scope = preview_scope(
+                db, import_id, group.root_domain, admitted_entries, entity_id=matched
+            )
+            intake_score = evaluate_scope(EvaluationScope(frontier_scope)).payload()
+            active_cves = {
+                v for e in frontier_scope["entries"] for v in e["normalized"]["active_cves"]
+            }
+            cve_records = [record for record in cve_records if record["id"] in active_cves]
+        # A referral may have been added while the browser or registry was
+        # running. Never attach its proof to a sibling merely sharing the root.
+        website = evidence["website"]
+        proof_hosts = {
+            url_hostname(website["requested_url"]),
+            url_hostname(website["final_url"]),
+            str(attribution["attribution"].get("matched_domain") or "").casefold().rstrip("."),
+        }
+        referred_proof = next(exact_host_entries(db, proof_hosts), None)
+        if referred_proof:
+            raise AssociationEvidenceChanged(
+                f"Evidence uses referred host {referred_proof['identifier']} "
+                f"({referred_proof['external_reference']}). Retry to qualify the remaining sources."
+            )
+        if blocked:
+            supported_hosts = {group.root_domain, "www." + group.root_domain}
+            supported_hosts.update(
+                entries[idx]["source"]["fields"]["hostname"].casefold().rstrip(".")
+                for idx in scopes
+            )
+            if url_hostname(website["requested_url"]) not in supported_hosts:
+                raise AssociationEvidenceChanged(
+                    "The saved screenshot was requested for a different host. Retry to capture the remaining sources."
+                )
+            if not any(entries[idx]["ip"] == attribution["ip"] for idx in scopes):
+                raise AssociationEvidenceChanged(
+                    "The registration proof has no matching address in the remaining findings. "
+                    "Retry to qualify the remaining sources."
+                )
         imported = db.execute("SELECT * FROM imports WHERE id=?", (import_id,)).fetchone()
         if imported is None or Report.from_record(imported) != lead.report:
             raise ValueError("Evaluated lead does not match the retained report")
         source_hash = lead.report.sha256
+        retained_entries = [entry for idx, entry in enumerate(entries) if idx not in blocked]
+        if blocked:
+            hosts = {
+                entry["source"]["fields"]["hostname"].casefold().rstrip(".")
+                for entry in retained_entries
+            }
+            attribution = {
+                **attribution,
+                "coverage": [row for row in attribution["coverage"] if row["hostname"] in hosts],
+            }
         entity_id, inserted = record_group(
             db,
             group.root_domain,
-            entries,
+            retained_entries,
             attribution,
             import_id=import_id,
             source_hash=source_hash,
@@ -129,18 +220,13 @@ def associate_lead(store, evaluated: EvaluatedLead, *, db=None) -> AssociationRe
                 }
             ),
         }
-        scopes = lead.condition_scopes()
         dispositions = []
         for index, entry in enumerate(entries):
+            if index in blocked:
+                dispositions.append((entry, "rejected", "association_deconflicted"))
+                continue
             allowed = None if demo else scopes.get(index, ())
-            reason = (
-                "qualified"
-                if demo or allowed
-                else (
-                    (entry.get("normalized", {}).get("eligibility") or {}).get("reason")
-                    or "no_actionable_findings"
-                )
-            )
+            reason = "qualified" if demo or allowed else _ineligible_reason(entry)
             associate(
                 db,
                 entry,
@@ -167,5 +253,11 @@ def associate_lead(store, evaluated: EvaluatedLead, *, db=None) -> AssociationRe
         )
         enqueue_outcomes(db, import_id, dispositions, stage="associate")
     return AssociationResult(
-        import_id, entity_id, queue_reference, evidence["website"]["id"], inserted, contact_queued
+        import_id,
+        entity_id,
+        queue_reference,
+        evidence["website"]["id"],
+        inserted,
+        contact_queued,
+        tuple(matches),
     )

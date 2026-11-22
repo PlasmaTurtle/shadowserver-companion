@@ -148,6 +148,39 @@ def test_candidate_order_preserves_reported_host_path_and_private_suffix():
     assert len(list(navigation.navigation_candidates("http://localhost:1234/"))) == 2
 
 
+def test_rendered_page_policy_can_reject_a_200_and_select_main_site(
+    sites, native_capture, monkeypatch
+):
+    origin, _ = sites(
+        {
+            "/reported": (302, {"Location": "/signin"}, b""),
+            "/signin": html('<title>Sign in</title><h1>Sign in</h1><input type="password">'),
+            "/main": html(
+                '<meta property="og:site_name" content="Oak Manufacturing"><h1>Oak Manufacturing</h1>'
+            ),
+        }
+    )
+    monkeypatch.setattr(
+        navigation, "navigation_candidates", lambda url: [(url, False), (origin + "/main", True)]
+    )
+    observed = []
+
+    def identify(page):
+        observed.append((page["final_url"], page["http_status"], page["heading"]))
+        return None if page["site_name"] == "Oak Manufacturing" else "website_unidentified"
+
+    run, _ = native_capture
+    png, meta = run(origin + "/reported", require_usable=True, page_check=identify)
+    assert png.startswith(b"\x89PNG")
+    assert observed == [
+        (origin + "/signin", 200, "Sign in"),
+        (origin + "/main", 200, "Oak Manufacturing"),
+    ]
+    assert meta["fallback_used"] and meta["final_url"] == origin + "/main"
+    assert meta["attempts"][0]["reason"] == "website_unidentified"
+    assert "page_text" not in json.dumps(meta)
+
+
 def test_native_redirect_cookie_relative_assets_and_original_identity(sites, native_capture):
     output = BytesIO()
     Image.new("RGB", (100, 100), "green").save(output, "PNG")
@@ -177,6 +210,35 @@ def test_native_redirect_cookie_relative_assets_and_original_identity(sites, nat
     )
     assert Image.open(BytesIO(png)).convert("RGB").getpixel((900, 700)) == (0, 128, 0)
     assert metadata["content_scanning"] == "not_performed"
+
+
+def test_native_page_renders_while_attachment_download_is_canceled(sites, native_capture):
+    filename = "capture-fixture.txt"
+    origin, requests = sites(
+        {
+            "/": html(
+                "<title>Download fixture</title><style>body{background:rgb(0,128,0)}</style>"
+                '<h1>Download fixture</h1><iframe hidden src="/attachment"></iframe>'
+            ),
+            "/attachment": (
+                200,
+                {
+                    "Content-Type": "text/plain",
+                    "Content-Disposition": f'attachment; filename="{filename}"',
+                },
+                b"Harmless capture test attachment.\n",
+            ),
+        }
+    )
+    run, _ = native_capture
+    png, metadata = run(origin + "/", require_usable=True)
+    assert metadata["capture_status"] == "captured" and metadata["title"] == "Download fixture"
+    assert Image.open(BytesIO(png)).convert("RGB").getpixel((900, 700)) == (0, 128, 0)
+    assert any(path == "/attachment" for _, path, _, _ in requests)
+    activity = metadata["download_activity"]
+    assert not activity["truncated"]
+    assert [attempt["outcome"] for attempt in activity["attempts"]] == ["canceled"]
+    assert filename not in json.dumps(activity)
 
 
 def test_native_cross_origin_preflight_post_and_json_render(sites, native_capture):

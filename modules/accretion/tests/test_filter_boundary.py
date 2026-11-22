@@ -11,6 +11,7 @@ import pytest
 
 from modules.accretion.components import intake_filter as filtering
 from modules.accretion.components.intake.files import SourceFormatError, read_entries
+from modules.accretion.components.intake_progress import overview
 from modules.accretion.components.intake_service import IntakeService
 from modules.accretion.components.shadowserver_reports.download import iter_rows
 from modules.accretion.components.shadowserver_reports.errors import DownloadError
@@ -88,6 +89,18 @@ def test_only_selected_groups_and_their_context_receive_full_envelopes(tmp_path,
         True,
     ]
     assert prepared == [2, 3]
+    current = overview(store)["current"]
+    stats = current["stats"]
+    assert current["rows_read"] == 4
+    assert stats["admitted_rows"] == current["valid_rows"] == 2
+    assert stats["context_rows"] == 1 and stats["filtered_rows"] == 2
+    assert current["progress"]["filtered_rows"] == stats["filtered_rows"]
+    with store.transaction() as db:
+        db.execute(
+            "UPDATE imports SET config=json_set(config, '$.intake_progress.filtered_rows', 1)"
+        )
+    assert overview(store)["current"]["progress"]["filtered_rows"] == 2
+    assert current["groups_done"] == current["groups_total"] == 1
     assert registry.calls == ["8.8.8.8", "1.1.1.1"]
     assert store.dark_matter.query()["total"] == 4
     assert not store.all("SELECT * FROM awareness_findings")

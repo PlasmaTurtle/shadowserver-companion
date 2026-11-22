@@ -11,7 +11,7 @@ from .intake.versions import entry_fields
 from modules.library.components.cve_sources import verify
 from modules.library.components.intelligence.identifiers import identifiers
 
-VERSION = 2
+VERSION = 3
 
 
 def evaluate_scope(scope: EvaluationScope) -> UrgencyAssessment:
@@ -80,10 +80,6 @@ def evaluate_lead(
         )
         if state == "review":
             raise ValueError("Review the ownership association before ranking this group")
-        from modules.investigations.components.outreach_policy import entity_hold
-
-        if entity_hold(db, owner):
-            raise ValueError("Outreach was held while this group was qualifying")
         scope = preview_scope(db, import_id, group.root_domain, entries, entity_id=owner)
         if not scope["entries"]:
             raise ValueError("No actionable findings remain for Evaluate")

@@ -1986,6 +1986,16 @@
               "type": "string",
               "title": "Capture Id"
             }
+          },
+          {
+            "name": "original",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Original"
+            }
           }
         ],
         "responses": {
@@ -3482,6 +3492,138 @@
             }
           }
         },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/intake/deconfliction": {
+      "get": {
+        "summary": "Deconfliction Entries",
+        "operationId": "deconfliction_entries_api_intake_deconfliction_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Add Deconfliction Entry",
+        "operationId": "add_deconfliction_entry_api_intake_deconfliction_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeconflictionValues"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/intake/deconfliction/{entry_id}": {
+      "put": {
+        "summary": "Edit Deconfliction Entry",
+        "operationId": "edit_deconfliction_entry_api_intake_deconfliction__entry_id__put",
+        "parameters": [
+          {
+            "name": "entry_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Entry Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/DeconflictionValues"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Remove Deconfliction Entry",
+        "operationId": "remove_deconfliction_entry_api_intake_deconfliction__entry_id__delete",
+        "parameters": [
+          {
+            "name": "entry_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Entry Id"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "Successful Response",
@@ -9498,6 +9640,45 @@
           "secret"
         ],
         "title": "CredentialsUpdate"
+      },
+      "DeconflictionValues": {
+        "properties": {
+          "scope": {
+            "type": "string",
+            "enum": [
+              "domain",
+              "host"
+            ],
+            "title": "Scope"
+          },
+          "identifier": {
+            "type": "string",
+            "maxLength": 254,
+            "minLength": 1,
+            "title": "Identifier"
+          },
+          "external_reference": {
+            "type": "string",
+            "maxLength": 500,
+            "minLength": 1,
+            "title": "External Reference"
+          },
+          "reason": {
+            "type": "string",
+            "maxLength": 2000,
+            "minLength": 1,
+            "title": "Reason"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "scope",
+          "identifier",
+          "external_reference",
+          "reason"
+        ],
+        "title": "DeconflictionValues"
       },
       "DeleteData": {
         "properties": {

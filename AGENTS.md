@@ -22,6 +22,12 @@ agent-written restrictions. See the complete
 
 ## Where work runs
 
+Use the local repository designated by the user as the delivery target. When
+working in a separate checkout, sync the verified changes into that repository
+and check its working tree before reporting delivery. Preserve unrelated local
+edits. If workspace permissions block the sync, report the exact target and
+provide a patch verified against its current working tree.
+
 Work locally first and use available Windows workstations for native evidence.
 **Paid GitHub Actions usage has a zero budget.** Check all hosted triggers and
 included usage; do not enable paid runs, raise caps or retry exhausted budgets.
