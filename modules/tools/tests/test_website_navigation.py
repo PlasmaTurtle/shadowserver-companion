@@ -1,21 +1,19 @@
 """Real native Chromium loading against controlled loopback HTTP sites."""
 
-import base64
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from io import BytesIO
 import json
 import os
 from pathlib import Path
 import random
-import socket
 import threading
 import time
 
 from PIL import Image
+from playwright.async_api import Browser, BrowserType, Page
 import pytest
 
 from modules.tools.components.website_capture import browser, navigation
-from modules.tools.components.website_capture.cdp import CDP
 
 
 def html(body, status=200, **headers):
@@ -81,34 +79,39 @@ def sites():
 
 @pytest.fixture
 def native_capture(monkeypatch, tmp_path):
+    override = os.environ.get("CHROMIUM_EXECUTABLE")
     try:
-        executable = os.environ.get("CHROMIUM_EXECUTABLE") or browser.find_browser()
+        executable = override or browser.find_browser()
     except ValueError:
         pytest.skip("Native browser checks require installed Edge/Chrome or CHROMIUM_EXECUTABLE")
     if not Path(executable).is_file():
         pytest.skip("The selected native capture browser is not installed")
-    actual_cdp, actual_popen = browser.CDP, browser.subprocess.Popen
-    actual_profile, actual_loader = browser.tempfile.mkdtemp, browser.load_page
-    commands, profiles, processes = [], [], []
+    actual_launch, actual_context = BrowserType.launch, Browser.new_context
+    actual_screenshot, actual_loader = Page.screenshot, browser.load_page
+    commands, browsers = [], []
 
-    class ObservedCDP(actual_cdp):
-        def send(self, method, params=None, **kwargs):
-            commands.append((method, params))
-            return super().send(method, params, **kwargs)
+    async def launch(self, *args, **kwargs):
+        assert kwargs.get("chromium_sandbox") is True
+        assert kwargs.get("headless") is True
+        assert not kwargs.get("args")  # The library owns its browser launch switches.
+        commands.append(("launch", kwargs))
+        result = await actual_launch(self, *args, **kwargs)
+        browsers.append(result)
+        return result
 
-    def profile(**kwargs):
-        value = actual_profile(dir=tmp_path, **kwargs)
-        profiles.append(Path(value))
-        return value
+    async def context(self, *args, **kwargs):
+        assert kwargs.get("accept_downloads") is False
+        assert kwargs.get("ignore_https_errors", False) is False
+        commands.append(("context", kwargs))
+        return await actual_context(self, *args, **kwargs)
 
-    def popen(*args, **kwargs):
-        process = actual_popen(*args, **kwargs)
-        processes.append(process)
-        return process
+    async def screenshot(self, *args, **kwargs):
+        commands.append(("screenshot", kwargs))
+        return await actual_screenshot(self, *args, **kwargs)
 
-    def load(*args, **kwargs):
+    async def load(*args, **kwargs):
         try:
-            return actual_loader(*args, **kwargs)
+            return await actual_loader(*args, **kwargs)
         except Exception:
             path = tmp_path / "navigation-failure.json"
             path.write_text(
@@ -119,19 +122,23 @@ def native_capture(monkeypatch, tmp_path):
             print(json.dumps(kwargs["metadata"], indent=2))
             raise
 
-    monkeypatch.setattr(browser, "CDP", ObservedCDP)
-    monkeypatch.setattr(browser.tempfile, "mkdtemp", profile)
-    monkeypatch.setattr(browser.subprocess, "Popen", popen)
+    monkeypatch.setattr(BrowserType, "launch", launch)
+    monkeypatch.setattr(Browser, "new_context", context)
+    monkeypatch.setattr(Page, "screenshot", screenshot)
     monkeypatch.setattr(browser, "load_page", load)
     monkeypatch.setattr(browser, "MAX_SECONDS", 15)
 
     def run(url, **kwargs):
-        return browser.capture_website(url, executable=executable, **kwargs)
+        if override:
+            kwargs["executable"] = override
+        png, metadata = browser.capture_website(url, **kwargs)
+        assert Image.open(BytesIO(png)).size == (1440, 900)
+        (tmp_path / "capture.png").write_bytes(png)
+        (tmp_path / "capture.json").write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+        return png, metadata
 
     yield run, commands
-    assert all(process.poll() is not None for process in processes)
-    assert all(not profile.exists() for profile in profiles)
-    assert not any(method.startswith("Fetch.") for method, _ in commands)
+    assert all(not instance.is_connected() for instance in browsers)
 
 
 def test_candidate_order_preserves_reported_host_path_and_private_suffix():
@@ -239,6 +246,86 @@ def test_native_page_renders_while_attachment_download_is_canceled(sites, native
     assert not activity["truncated"]
     assert [attempt["outcome"] for attempt in activity["attempts"]] == ["canceled"]
     assert filename not in json.dumps(activity)
+
+
+def test_top_level_download_falls_back_without_saving_a_file(sites, native_capture, monkeypatch):
+    filename = "capture-fixture.txt"
+    origin, requests = sites(
+        {
+            "/reported": (
+                200,
+                {
+                    "Content-Type": "text/plain",
+                    "Content-Disposition": f'attachment; filename="{filename}"',
+                },
+                b"Harmless capture test attachment.",
+            ),
+            "/main": html("<title>Rendered main site</title><h1>Working organization website</h1>"),
+        }
+    )
+    requested, main = origin + "/reported", origin + "/main"
+    monkeypatch.setattr(
+        navigation, "navigation_candidates", lambda _: [(requested, False), (main, True)]
+    )
+    run, commands = native_capture
+    _, metadata = run(requested, require_usable=True)
+    assert metadata["attempted_urls"] == [requested, main]
+    assert metadata["attempts"][0]["outcome"] == "load_failed"
+    assert metadata["attempts"][0]["reason"] == "Website offered a file download"
+    assert metadata["final_url"] == main and metadata["fallback_used"]
+    assert metadata["capture_status"] == "captured"
+    assert [path for _, path, _, _ in requests if path in {"/reported", "/main"}] == [
+        "/reported",
+        "/main",
+    ]
+    assert sum(method == "screenshot" for method, _ in commands) == 1
+    activity = metadata["download_activity"]
+    assert [entry["outcome"] for entry in activity["attempts"]] == ["canceled"]
+    assert filename not in json.dumps(activity)
+
+
+@pytest.mark.parametrize("in_popup", [False, True])
+def test_javascript_blob_download_is_canceled_across_capture_tabs(sites, native_capture, in_popup):
+    download_script = (
+        "const link=document.createElement('a');"
+        "link.href=URL.createObjectURL(new Blob(['Harmless fixture'],{type:'text/plain'}));"
+        "link.download='private-fixture.txt';link.click();"
+    )
+    script = "window.open('/popup','download-fixture')" if in_popup else download_script
+    origin, requests = sites(
+        {
+            "/": html(
+                "<title>Organization website</title><style>body{background:rgb(0,128,0)}</style>"
+                "<h1>Rendered organization website</h1><script>" + script + "</script>"
+            ),
+            "/popup": html("<h1>Download window</h1><script>" + download_script + "</script>"),
+        }
+    )
+    run, _ = native_capture
+    png, metadata = run(origin + "/", require_usable=True)
+    assert metadata["capture_status"] == "captured"
+    assert metadata["final_url"] == origin + "/" and metadata["title"] == "Organization website"
+    assert Image.open(BytesIO(png)).convert("RGB").getpixel((900, 700)) == (0, 128, 0)
+    assert any(path == "/popup" for _, path, _, _ in requests) is in_popup
+    activity = metadata["download_activity"]
+    assert [entry["outcome"] for entry in activity["attempts"]] == ["canceled"]
+    assert "private-fixture" not in json.dumps(activity)
+
+
+def test_separate_captures_do_not_share_website_cookies(sites, native_capture):
+    origin, requests = sites(
+        {
+            "/": html(
+                "<h1>Isolated website session</h1>", **{"Set-Cookie": "capture_session=yes; Path=/"}
+            )
+        }
+    )
+    run, _ = native_capture
+    run(origin + "/")
+    run(origin + "/")
+    main_requests = [headers for _, path, headers, _ in requests if path == "/"]
+    assert len(main_requests) == 2
+    assert all("capture_session" not in headers.get("Cookie", "") for headers in main_requests)
 
 
 def test_native_cross_origin_preflight_post_and_json_render(sites, native_capture):
@@ -367,7 +454,7 @@ def test_all_failed_pages_do_not_save_a_screenshot(sites, native_capture, monkey
     run, commands = native_capture
     with pytest.raises(ValueError, match="could not be loaded"):
         run(requested)
-    assert not any(method == "Page.captureScreenshot" for method, _ in commands)
+    assert not any(method == "screenshot" for method, _ in commands)
 
 
 @pytest.mark.parametrize("kind", ["blank", "challenge"])
@@ -435,16 +522,16 @@ def test_qualification_target_failure_returns_attempt_provenance(
         run(requested, require_usable=True)
     assert failure.value.attempted_urls == (requested,)
     assert failure.value.metadata["attempts"][0]["outcome"] == "load_failed"
-    assert not any(method == "Page.captureScreenshot" for method, _ in commands)
+    assert not any(method == "screenshot" for method, _ in commands)
 
 
-def test_native_cancellation_closes_browser_and_profile(sites, native_capture):
+def test_native_cancellation_closes_browser_and_context(sites, native_capture):
     entered = threading.Event()
     release = threading.Event()
 
     def slow(request, body):
         entered.set()
-        release.wait(3)
+        release.wait(10)
         return html("<h1>Cancelled page</h1>")
 
     origin, _ = sites({"/": slow})
@@ -452,7 +539,7 @@ def test_native_cancellation_closes_browser_and_profile(sites, native_capture):
     cancel = threading.Event()
 
     def stop():
-        entered.wait(3)
+        entered.wait(10)
         cancel.set()
 
     thread = threading.Thread(target=stop)
@@ -462,24 +549,38 @@ def test_native_cancellation_closes_browser_and_profile(sites, native_capture):
             run(origin + "/", cancel_event=cancel)
     finally:
         release.set()
-        thread.join(timeout=4)
-    assert not any(method == "Page.captureScreenshot" for method, _ in commands)
+        thread.join(timeout=11)
+    assert entered.is_set(), "Cancellation should interrupt an actual website navigation"
+    assert not any(method == "screenshot" for method, _ in commands)
 
 
-def test_idle_cdp_command_observes_user_cancellation():
-    peer = object.__new__(CDP)
-    peer.cancel_event = threading.Event()
-    peer.deadline = time.monotonic() + 30
-    peer.results = {}
-    peer.send = lambda *a, **k: 1
-
-    def idle():
-        peer.cancel_event.set()
-        raise socket.timeout()
-
-    peer.receive = idle
-    with pytest.raises(ValueError, match="cancelled"):
-        peer.call("Runtime.evaluate")
+def test_busy_page_script_leaves_time_for_a_functioning_fallback(
+    sites, native_capture, monkeypatch
+):
+    origin, _ = sites(
+        {
+            "/busy": html(
+                "<h1>Stalled application</h1><script>setTimeout(()=>{"
+                "const until=performance.now()+20000;while(performance.now()<until){}"
+                "},20)</script>"
+            ),
+            "/main": html(
+                "<title>Responsive main site</title><h1>Working organization website</h1>"
+            ),
+        }
+    )
+    requested, main = origin + "/busy", origin + "/main"
+    monkeypatch.setattr(
+        navigation, "navigation_candidates", lambda _: [(requested, False), (main, True)]
+    )
+    monkeypatch.setattr(navigation, "NAVIGATION_SECONDS", 8)
+    run, _ = native_capture
+    started = time.monotonic()
+    _, metadata = run(requested, require_usable=True)
+    assert metadata["capture_status"] == "captured" and metadata["final_url"] == main
+    assert metadata["attempted_urls"] == [requested, main] and metadata["fallback_used"]
+    assert metadata["attempts"][0]["outcome"] in {"partial", "load_failed"}
+    assert time.monotonic() - started < 9
 
 
 def test_persistent_background_request_does_not_hold_rendered_viewport(sites, native_capture):

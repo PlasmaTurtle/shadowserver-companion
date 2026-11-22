@@ -206,11 +206,28 @@
         "modules.attribution.components.api_models",
         "modules.accretion.components.api_models",
         "modules.entities.components.api_models",
-        "modules.settings.components.api_models",
         "modules.library.components.api_models",
         "modules.investigations.components.api_models"
       ],
       "allow_internal": [],
+      "deny_external": [
+        "requests",
+        "httpx",
+        "socket",
+        "sqlite3",
+        "fastapi",
+        "urllib.request"
+      ]
+    },
+    {
+      "name": "Settings request models use only their pure profile catalog",
+      "source": [
+        "modules.settings.components.api_models",
+        "modules.settings.components.profile_catalog"
+      ],
+      "allow_internal": [
+        "modules.settings.components.profile_catalog"
+      ],
       "deny_external": [
         "requests",
         "httpx",
@@ -256,6 +273,7 @@
     {
       "name": "Pure CVE adapters do not acquire or persist",
       "source": [
+        "modules.library.components.intelligence.redhat",
         "modules.library.components.intelligence.adapters",
         "modules.library.components.intelligence.identifiers",
         "modules.library.components.cve_intelligence",
@@ -288,6 +306,7 @@
         "modules.library.components.intelligence.acquisition"
       ],
       "allow_internal": [
+        "modules.library.components.intelligence.redhat",
         "modules.library.components.intelligence.adapters",
         "modules.workspace.components.primitives",
         "modules.library.components.cve_intelligence",
@@ -535,6 +554,7 @@
       "allow_internal": [
         "modules.library.components.intelligence.metrics",
         "modules.library.components.cve_catalog.risk",
+        "modules.library.components.cve_catalog.risk_policy",
         "modules.investigations.components.repositories.reference_usage"
       ],
       "deny_external": [

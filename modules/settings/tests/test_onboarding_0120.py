@@ -98,6 +98,10 @@ def test_invalid_profile_has_no_partial_identity_or_progress_write(tmp_path):
         ("office", ""),
         ("regions", []),
         ("display_timezone", "Invalid/Place"),
+        ("agency", "Unknown agency"),
+        ("department", "Wrong department"),
+        ("email", "not an email address"),
+        ("regions", ["Atlantis"]),
     ]:
         payload = identity()
         payload[field] = value
@@ -220,3 +224,66 @@ def test_setup_routes_require_session_and_mutation_token(api_app):
     client.cookies.clear()
     assert client.get("/api/setup").status_code == 401
     assert remote.api_calls == remote.download_calls == 0
+
+
+def test_setup_validates_its_profile_without_revalidating_unrelated_legacy_preferences(tmp_path):
+    store = Store(tmp_path)
+    save_existing(store, {"report_type": "historical unsupported report", "timeout": "old value"})
+    setup = SetupService(store)
+    values = identity()
+    values["agency"] = "Federal Bureau of Investigation"
+    values.pop("department")
+    values["regions"] = [" nc ", "North Carolina"]
+    result = setup.save_profile(values)
+    assert result["settings"]["department"] == "U.S. Department of Justice"
+    assert result["settings"]["regions"] == ["North Carolina"]
+    assert result["settings"]["report_type"] == "historical unsupported report"
+    assert result["settings"]["timeout"] == "old value"
+    save_existing(store, {"display_timezone": "Legacy/Zone"})
+    before = store.settings()
+    values.pop("display_timezone")
+    with pytest.raises(ValueError, match="timezone"):
+        setup.save_profile(values)
+    assert store.settings() == before
+
+
+def test_setup_agency_change_reviews_targeted_reason_without_changing_mode(tmp_path):
+    store = Store(tmp_path)
+    save_existing(
+        store,
+        {
+            "outreach_mode": "targeted",
+            "critical_only": False,
+            "targeted_reason": "Synthetic investigation.",
+        },
+    )
+    setup = SetupService(store)
+    setup.save_profile(identity())
+    before = store.settings()
+    progress = store.one("SELECT value FROM settings WHERE key=?", (KEY,))["value"]
+    values = identity()
+    values.update(agency="Federal Bureau of Investigation", department="U.S. Department of Justice")
+    with pytest.raises(ValueError, match="reason"):
+        setup.save_profile(values)
+    assert store.settings() == before
+    assert store.one("SELECT value FROM settings WHERE key=?", (KEY,))["value"] == progress
+    values["targeted_reason"] = (
+        "Review the synthetic nexus to the federal cybercrime investigation."
+    )
+    result = setup.save_profile(values)
+    assert result["settings"]["outreach_mode"] == "targeted"
+    assert result["settings"]["targeted_authority"]["agency_id"] == "fbi"
+    assert result["setup"]["profile"]["targeted_reason"] == values["targeted_reason"]
+    assert result["setup"]["profile"]["outreach_mode"] == "targeted"
+    with pytest.raises(ValidationError):
+        ProfileValues.model_validate({**values, "outreach_mode": "critical"})
+    with pytest.raises(ValidationError):
+        ProfileValues.model_validate({**values, "targeted_authority": {"agency_id": "forged"}})
+
+
+def test_setup_catalog_output_cannot_mutate_saved_authority_or_shared_choices(tmp_path):
+    setup = SetupService(Store(tmp_path))
+    status = setup.status()
+    assert {agency["id"] for agency in status["agencies"]} == {"cisa", "fbi", "usss"}
+    status["agencies"][0]["authority"]["authorities"].clear()
+    assert setup.status()["agencies"][0]["authority"]["authorities"]

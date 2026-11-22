@@ -1,15 +1,18 @@
+import {
+  requireProfileCatalog,
+  profileInput,
+  agencyFields,
+  jurisdictionFields,
+  timezoneField,
+  targetedFields,
+  applyAgencySelection,
+  validateProfileFields,
+  removeUnsupportedRegions,
+} from './profile_fields.js';
+
 /** Guided setup. Credential values never enter state or browser persistence. */
 const STEPS = ['connections', 'profile', 'automation'];
 const LABELS = ['API connections', 'Identity & jurisdiction', 'Retrieval schedule'];
-const ZONES = [
-  'America/New_York',
-  'America/Chicago',
-  'America/Denver',
-  'America/Los_Angeles',
-  'America/Anchorage',
-  'Pacific/Honolulu',
-  'UTC',
-];
 
 export function install(ctx) {
   const state = {
@@ -38,9 +41,6 @@ export function install(ctx) {
   const esc = (value) => ctx.actions.esc(value ?? '');
   const input = (label, name, value = '', options = {}) =>
     `<div class="field ${options.full ? 'full' : ''}"><label for="setup-${name}">${label}</label><input id="setup-${name}" name="${name}" type="${options.type || 'text'}" value="${esc(value)}" maxlength="${options.max || 500}" ${options.required ? 'required' : ''} ${options.autocomplete ? `autocomplete="${options.autocomplete}"` : ''}>${options.help ? `<small>${options.help}</small>` : ''}</div>`;
-  const selectedAgency = (profile) =>
-    state.status?.agencies?.find((a) => a.id !== 'custom' && a.name === profile.agency)?.id ||
-    'custom';
   const notice = (message, kind = 'info') =>
     `<div class="notice ${kind === 'error' ? 'warn' : ''}" role="${kind === 'error' ? 'alert' : 'status'}"><p>${esc(message)}</p></div>`;
 
@@ -98,19 +98,10 @@ export function install(ctx) {
       body: { step: 'connections', mode: 'configured' },
     });
   }
-  function agencyOptions(profile) {
-    return (state.status?.agencies || [])
-      .map(
-        (a) =>
-          `<option value="${esc(a.id)}" ${a.id === selectedAgency(profile) ? 'selected' : ''}>${esc(a.id === 'custom' ? a.name : `${a.short_name} — ${a.name}`)}</option>`,
-      )
-      .join('');
-  }
   function profileMarkup() {
     const profile = state.profileDraft || state.status.profile;
-    const known = new Set(state.status.regions || []);
-    const selected = profile.regions || [];
-    return `<p class="setup-intro">Identify the sender for new notifications and select the jurisdictions you work. Your office location and report jurisdiction are separate.</p><form id="setup-profile-form" class="form-grid"><div class="field full"><label for="setup-agency-preset">Agency</label><select id="setup-agency-preset">${agencyOptions(profile)}</select><small>Choose Other for state, local, tribal, international or custom organizations.</small></div>${input('Agency name', 'agency', profile.agency, { full: true, required: true })}${input('Department / parent organization', 'department', profile.department, { full: true })}${input('Your name', 'analyst_name', profile.analyst_name, { required: true, max: 300, autocomplete: 'name' })}${input('Title (optional)', 'analyst_title', profile.analyst_title, { max: 300, help: 'Leave blank to show your name without a title.' })}${input('Office / location', 'office', profile.office, { required: true, help: 'For example, a field office or city and state.' })}${input('Contact email (optional)', 'email', profile.email, { type: 'email', autocomplete: 'email' })}<fieldset class="full setup-regions"><legend>Report jurisdictions</legend><p class="help">Available API report choices and workspace scope follow these selections. Agency identity does not grant access to other states.</p><div class="setup-region-grid">${(state.status.regions || []).map((name) => `<label class="checkbox"><input type="checkbox" name="regions" value="${esc(name)}" ${selected.includes(name) ? 'checked' : ''}><span>${esc(name)}</span></label>`).join('')}</div></fieldset><div class="field full"><label for="setup-other-regions">Other report region names (optional)</label><textarea id="setup-other-regions" name="other_regions" rows="2" maxlength="2000">${esc(selected.filter((name) => !known.has(name)).join('\n'))}</textarea><small>Use the exact names supplied by your reports, one per line.</small></div><div class="field"><label for="setup-display_timezone">Display time zone</label><select id="setup-display_timezone" name="display_timezone">${[...new Set([...ZONES, profile.display_timezone].filter(Boolean))].map((zone) => `<option value="${esc(zone)}" ${zone === profile.display_timezone ? 'selected' : ''}>${esc(zone.replaceAll('_', ' '))}</option>`).join('')}</select></div><div class="setup-footer full"><button type="button" class="button" data-action="setup-step" data-step="connections">Back</button><button type="submit" class="button primary">Save profile &amp; continue</button></div></form>`;
+    const catalog = requireProfileCatalog(state.status);
+    return `<p class="setup-intro">Identify the sender for new notifications and select the jurisdictions you work. Your office location and report jurisdiction are separate.</p><form id="setup-profile-form" class="form-grid" novalidate>${agencyFields(esc, profile, catalog, 'setup-', 'setup-agency-preset')}${profileInput(esc, 'setup-', 'Your name', 'analyst_name', profile.analyst_name, { required: true, max: 300, autocomplete: 'name' })}${profileInput(esc, 'setup-', 'Title (optional)', 'analyst_title', profile.analyst_title, { max: 300, help: 'Leave blank to show your name without a title.' })}${profileInput(esc, 'setup-', 'Office / location', 'office', profile.office, { required: true, help: 'For example, a field office or city and state.' })}${profileInput(esc, 'setup-', 'Contact email (optional)', 'email', profile.email, { type: 'email', max: 254, autocomplete: 'email' })}${jurisdictionFields(esc, profile, catalog, 'setup-remove-unsupported-regions')}${timezoneField(esc, profile, catalog, 'setup-display_timezone')}${profile.outreach_mode === 'targeted' ? targetedFields(esc, profile, catalog, 'setup-', 'setup-agency-authority') : ''}<div class="setup-footer full"><button type="button" class="button" data-action="setup-step" data-step="connections">Back</button><button type="submit" class="button primary">Save profile &amp; continue</button></div></form>`;
   }
   function automationMarkup() {
     const status = state.shadow || {},
@@ -210,8 +201,9 @@ export function install(ctx) {
         connectionDraft())
     );
   }
-  function setupMarkDirty() {
+  function setupMarkDirty(form = ctx.actions.$('#setup-profile-form')) {
     state.dirty = true;
+    if (form) validateProfileFields(form);
   }
   function confirmDiscardSetup() {
     if (!state.open) return true;
@@ -266,8 +258,15 @@ export function install(ctx) {
     if (!form || !state.dirty) return;
     const data = new FormData(form),
       values = Object.fromEntries(data);
-    if (state.step === 'profile') state.profileDraft = profileValues(values, data);
-    else state.scheduleDraft = scheduleValues(values, data);
+    if (state.step === 'profile') {
+      const previous = state.profileDraft || state.status.profile;
+      state.profileDraft = {
+        ...profileValues(values, data),
+        agency: values.agency || previous.agency,
+        display_timezone: values.display_timezone || previous.display_timezone,
+        outreach_mode: state.status.profile.outreach_mode,
+      };
+    } else state.scheduleDraft = scheduleValues(values, data);
   }
   async function changeSetupStep(step) {
     if (!STEPS.includes(step) || state.busy || step === state.step) return;
@@ -416,18 +415,19 @@ export function install(ctx) {
       office: values.office,
       email: values.email || '',
       display_timezone: values.display_timezone,
-      regions: [
-        ...new Set([
-          ...data.getAll('regions'),
-          ...String(values.other_regions || '')
-            .split('\n')
-            .map((s) => s.trim())
-            .filter(Boolean),
-        ]),
-      ],
+      regions: [...new Set(data.getAll('regions'))],
+      ...(state.status.profile.outreach_mode === 'targeted'
+        ? { targeted_reason: values.targeted_reason || '' }
+        : {}),
     };
   }
   async function saveSetupProfile(form, values, data) {
+    validateProfileFields(form);
+    if (form.checkValidity && !form.checkValidity()) {
+      setupError(new Error('Review the highlighted profile fields before continuing.'));
+      form.reportValidity();
+      return false;
+    }
     return stepOperation(async () => {
       const profile = profileValues(values, data);
       if (!profile.regions.length) throw new Error('Select at least one report jurisdiction.');
@@ -521,33 +521,14 @@ export function install(ctx) {
     return `<section class="settings-setup-card"><div><span class="dm-overline">Workspace setup</span><h2>Identity, connections and retrieval schedule</h2><p>Review the guided setup or update each section below.</p></div><button type="button" class="button" data-action="open-setup">Review setup</button></section>`;
   }
   function applyAgencyPreset(select) {
-    const agency = state.status?.agencies?.find((item) => item.id === select.value);
-    const prefix = select.id.startsWith('setup-') ? 'setup-' : 'f-';
-    if (!agency || agency.id === 'custom') return;
-    const name = ctx.actions.$(`#${prefix}agency`),
-      department = ctx.actions.$(`#${prefix}department`);
-    if (name) name.value = agency.name;
-    if (department) department.value = agency.department;
-    if (prefix === 'setup-') state.dirty = true;
-    else ctx.actions.settingsChanged(select.closest?.('#settings-form'));
+    applyAgencySelection(select, state.status, esc, 'setup-agency-authority');
+    setupMarkDirty(select.closest('form'));
   }
-  async function loadSettingsSetupStatus() {
-    const initial = ctx.actions.$('#settings-agency-preset');
-    try {
-      state.status = await setupApi('/api/setup');
-      const select = ctx.actions.$('#settings-agency-preset');
-      if (select && select === initial) {
-        const selected = select.options?.length > 1 ? select.value : null;
-        select.innerHTML = agencyOptions({
-          ...ctx.state.navigation.boot.settings,
-          agency: ctx.actions.$('#f-agency')?.value ?? ctx.state.navigation.boot.settings.agency,
-        });
-        if (selected && [...select.options].some((option) => option.value === selected))
-          select.value = selected;
-      }
-    } catch {
-      /* The editable agency fields remain usable offline. */
-    }
+  function removeSetupUnsupportedRegions(button) {
+    const form = button.closest('form');
+    removeUnsupportedRegions(button);
+    state.dirty = true;
+    validateProfileFields(form);
   }
   Object.assign(ctx.actions, {
     openSetup,
@@ -568,7 +549,7 @@ export function install(ctx) {
     afterSettingsProfileSave,
     setupStatusMarkup,
     applyAgencyPreset,
-    loadSettingsSetupStatus,
+    removeSetupUnsupportedRegions,
     setupMarkDirty,
   });
 }
@@ -580,7 +561,7 @@ export function createHandlers(ctx) {
     },
     change: [
       {
-        matches: (el) => ['setup-agency-preset', 'settings-agency-preset'].includes(el.id),
+        matches: (el) => el.id === 'setup-agency-preset',
         run: (el) => ctx.actions.applyAgencyPreset(el),
       },
       {
@@ -590,6 +571,7 @@ export function createHandlers(ctx) {
     ],
     click: [],
     actions: {
+      'setup-remove-unsupported-regions': (el) => ctx.actions.removeSetupUnsupportedRegions(el),
       'open-setup': () => ctx.actions.openSetup(),
       'open-setup-automation': () => ctx.actions.openSetup('automation'),
       'setup-step': (el) => ctx.actions.changeSetupStep(el.dataset.step),

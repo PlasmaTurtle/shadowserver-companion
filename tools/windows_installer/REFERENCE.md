@@ -12,6 +12,10 @@ credentials and shortcuts.
 The Windows package includes the CPython runtime pinned in `runtime-lock.json`
 and the dependencies pinned in root `requirements-windows.txt`. No separate
 Python, Node or Word installation is required to run the installed application.
+Python Playwright includes its own Node driver in the locked Windows wheel.
+Website capture uses installed Edge/Chrome; setup does not download a browser.
+The offline installation self-test starts the bundled driver to detect missing
+assets, while native screenshot acceptance remains a separate check.
 The source ZIP remains a separate way to run the application with Python 3.14.
 The source ZIP filename follows the current version and release name.
 

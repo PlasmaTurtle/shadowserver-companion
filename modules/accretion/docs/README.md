@@ -15,6 +15,8 @@ contact work begin only at their owning later stages.
 | Archive invalid/context rows or query complete original fields | [Dark Matter component contract](DARK_MATTER.md) |
 | Operate imports, reviews, retries, acquisition and schedules | [Operations and recovery](OPERATIONS.md) |
 | Review unresolved work and dated implementation evidence | [Module issues](ISSUES.md) |
+| Review or record module changes | [Changelog](CHANGELOG.md) |
+| Choose a framework or justify custom code | [Library selection](../../../docs/DEVELOPMENT.md#library-selection) |
 
 The guides describe current behavior. The issue register separates delivered work
 from open policy/performance questions and historical audit evidence. Shared

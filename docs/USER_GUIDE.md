@@ -73,7 +73,7 @@ For practice, open **Start → Shadowserver Eclipse → Shadowserver Eclipse Dem
 A new workspace opens **Set up your workspace**. Review its three steps:
 
 1. **API connections.** Existing keys appear as completed credential setup, without asking you to enter them again. If both keys are detected, this step is marked complete; choose **Continue**. **Test connection** checks Shadowserver access and loads report choices when needed. For a missing Shadowserver connection, enter your API key and secret, then choose **Save & connect**. An NVD key is optional and allows faster API updates. On Windows, **Save in Windows Credential Manager** makes the selected key available after restarting. To begin without keys or a connection, choose **Use manual imports for now**. You can add connections later.
-2. **Identity & jurisdiction.** Choose your agency from the presets or select **Other agency or organization**. Enter your name and office or location, and select your report jurisdictions. A preset fills agency and department; it does not change your jurisdiction or grant subscription access. **Title** and **Contact email** are optional. Leave the title blank for a name-only sender. Choose **Save profile & continue**.
+2. **Identity & jurisdiction.** Select CISA, FBI or USSS; the department follows the agency. Enter your name and office or location, and select at least one jurisdiction from the state, DC and territory checklist. Select a supported display timezone. These selections do not grant subscription access. **Title** and **Contact email** are optional. Leave the title blank for a name-only sender. Choose **Save profile & continue**.
 3. **Retrieval schedule.** Leave **Enable retrieval schedule** off to skip this schedule, or enable it and select the services, time, subscription, and report types you need. Review the workspace summary, then choose **Save choices & finish setup**. Library has separate daily NVD catalog and EPSS/KEV update controls; turning this schedule off does not disable them. Review those controls in Library after setup.
 
 **Finish later** retains completed steps. Resume from **Settings → Review setup**. An existing workspace with a complete saved identity keeps that profile; you can review setup when you want to change it.
@@ -82,7 +82,9 @@ A new workspace opens **Set up your workspace**. Review its three steps:
 
 Use the section buttons at the top of **Settings** to reach **Profile**, **Jurisdiction**, **Connections**, **Automation**, **Reports**, **Display**, **Data & recovery**, or **Software**.
 
-Under **Review & import defaults**, review **Outreach scope**. **Critical or known exploited** is the default. **Targeted outreach** requires a reason for the deliberate change in scope. Priority cities and products affect urgency; they do not bypass intake requirements. Use **Appearance, branding & display** for workspace appearance, report branding, and display time zone.
+Under **Review & import defaults**, review **Outreach scope**. **Critical or known exploited** is the default. **Targeted outreach** displays the selected agency's mission and linked authority references. Enter a specific explanation connecting the findings or report type to that mission. Changing agencies clears the prior explanation for review. The saved explanation and authority reference accompany new intake decisions; earlier imports retain theirs. Priority cities and products affect urgency; they do not bypass intake requirements. Use **Appearance, branding & display** for workspace appearance, report branding, and display time zone.
+
+Agency, jurisdiction, report profile and timezone use controlled choices in Settings. If older saved choices are unsupported, they remain visible until you explicitly select replacements. For an unsupported jurisdiction, select its replacement and choose **Remove unsupported saved jurisdictions** before saving. Empty jurisdiction, malformed email and out-of-range numeric values are rejected by both forms and the API.
 
 Choose **Save settings** for profile and preference edits, and confirm **Settings saved**. If a field needs correction inside a closed section, that section opens and the field receives focus. API keys, the retrieval schedule, and maintenance actions have their own controls. Automation also shows whether Library daily reference updates are enabled and links to their separate controls. Unsaved changes are protected when you navigate away or open setup. Your office describes where you work; **Jurisdiction** controls the report scope.
 
@@ -409,7 +411,7 @@ Drag to pan and use the zoom controls. **Fit jurisdiction** returns to the state
 
 ## 13 Use the Library for research and explanations
 
-Library brings together reusable **Explainers** and **Products & vulnerabilities**. The catalog tabs are **Products**, **CVEs**, **Fields**, **Changes**, and **Dark Matter**. Library's plural **Fields** explores CVE data; Observatory's singular **Field** visualizes workspace evidence.
+Library brings together **Reviewed explainers**, editable workspace explainers and **Products & vulnerabilities**. The catalog tabs are **Products**, **CVEs**, **Most reported**, **Fields**, **Changes**, and **Dark Matter**. Library's **Fields** explores CVE data. Observatory's **Field** visualizes workspace evidence.
 
 ### Check reference freshness
 
@@ -419,9 +421,11 @@ Review **Local intelligence · CVSS, EPSS & KEV** separately. **Sync EPSS & KEV*
 
 ### Answer a specific research question
 
-Use the Library search to find CVEs, products and explainer titles together. Results
-are grouped by type; an unavailable catalog does not hide available explanation
-text. Select a result to continue in its detailed view.
+Use Library search to find CVEs, products and explanations. Enter a report identifier such as `scan_rdp`, a tag such as `basic-auth`, or a field such as `rdp_protocol` to open a cited guide even before downloading the CVE catalog.
+
+Open **Most reported** to see which CVEs and products recur in retained workspace observations. Each observation counts once per value. The view shows how many observations supplied a CVE or product and flags incomplete coverage.
+
+On a CVE, **Red Hat guidance** shows the saved publisher statement and applicable product or package rows. **Fetch from Red Hat** checks the publisher for that CVE. **Captured source** identifies the exact retrieved version. Open **Changes** to see where a current CISA known-exploitation listing differs from the evidence selected in an open notification.
 
 In **CVEs**, use **Search CVEs** with an identifier, product, or description. Open a result to read CVSS assessments, known exploitation, EPSS probability and percentile, dates, references, and **Source record**. **Open NVD record** opens the public source; **See observed connections** connects the reference to locally retained observations.
 

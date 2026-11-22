@@ -4,8 +4,9 @@ Library owns local CVE and risk catalogs, provider intelligence capture/parsing,
 reference content, source revisions, catalog search and reference-data tools.
 Use this guide to locate maintenance work and preserve its evidence contracts.
 
-[Module issues](ISSUES.md) · [Architecture](../../../docs/ARCHITECTURE.md) ·
-[Project maintenance workflow](../../../docs/DEVELOPMENT.md#maintenance-workflow)
+[Module issues](ISSUES.md) · [Changelog](CHANGELOG.md) · [Architecture](../../../docs/ARCHITECTURE.md) ·
+[Project maintenance workflow](../../../docs/DEVELOPMENT.md#maintenance-workflow) ·
+[Library selection](../../../docs/DEVELOPMENT.md#library-selection)
 
 The [November 21 audit and work sequence](ISSUES.md#november-21-library-audit)
 records reproduced correctness problems, measured performance, ownership repairs
@@ -13,6 +14,15 @@ and proposed workflow improvements. Status and completion criteria live there;
 the guide below describes current implementation contracts.
 
 ## Boundary
+
+Accretion uses Library's CVE and risk references when evaluating imported
+observations. Leads and Investigations use local reference records when opening
+work, and Investigations owns the analyst's choice to adopt a revision, prepare
+outreach and certify a report. Observatory and Entities can add Library context
+to observations they already hold. Attribution owns evidence of identity and
+Entities owns contacts. A catalog match supplies a source for an analyst to check.
+The [module ownership table](../../../docs/ARCHITECTURE.md#find-the-owner)
+covers Workspace, Settings, Activity, the shared UI and Tools.
 
 The Dark Matter tab hosts Observatory's
 [source browser](../../observatory/static/dark_matter_browser.js). Library keeps
@@ -27,6 +37,16 @@ and current evidence. Publishing a source revision does not silently adopt it
 into an investigation. Source capture, parsed reference content and explicit case
 adoption remain separate. The module owns provider schema checks and pacing;
 generic safety helpers remain shared.
+
+## Analyst reference workflows
+
+**Most reported** ranks CVEs and reported product or service labels by the number of distinct retained observations containing each value. An observation can contribute to several values. Another sighting of the same endpoint can count again. Each list shows how many observations supplied that kind of value. Use the coverage message when reading counts. The Observatory projection supplies the data for `GET /api/library/observed-references`.
+
+**Reviewed explainers** contains the versioned report, finding and report-context bank. Search by title, report ID, finding tag or qualifying field. `GET /api/library/guides?q=…` returns matching wording, criteria and citations. `GET /api/library/guides/{guide_id}` resolves a specific entry. Investigations owns selection and pins the wording used in a case.
+
+**Red Hat guidance** on a CVE reads the last captured statement and the product and package rows supplied by Red Hat. Checking the publisher is an explicit action. Other modules can use `GET /api/library/vendor-statements/redhat/{cve_id}` offline and `POST /api/library/vendor-statements/redhat/{cve_id}/refresh` to acquire the record. The response distinguishes absent prose, an unavailable record and a failed update, and includes the capture revision, SHA-256, retrieval time and source URLs. [Red Hat CVE data](https://docs.redhat.com/en/documentation/red_hat_security_data_api/1.0/security_data_api-cve)
+
+**Changes** compares open notifications with the current, verified local CISA KEV feed as the view opens. `GET /api/library/changes/open-kev` returns a paged list of proven membership differences, a count of unknown comparisons and the source date. It accepts a historical negative only when the pinned selection recorded a complete catalog. Older drafts with insufficient evidence are summarized together. Investigations owns any decision to revise a case.
 
 ## Source ownership
 
@@ -101,6 +121,18 @@ severity (all severities), field predicates and Dark Matter filters. They surviv
 browser changes; equal names do not merge different views. Mounted Library panels
 load independently and only the active catalog view loads its data. Request
 generations prevent cleared or replaced selections from accepting stale responses.
+
+The Fields tab remembers the dimension being explored. A selected CVE filter
+retains its own field and value when paging, reopening a workspace view or
+following a shared link. In links, `field` identifies the explorer dimension and
+`field_value` identifies the selected value. `filter_field` is present when
+the selection uses a different field. Older links use `field` for both.
+
+Grouped search returns a `notice` when the local catalog has no records or the
+product index covers only some locally stored CVEs. Partial product matches
+remain available and carry the indexed and total CVE counts. A failed read
+uses the affected group's `error`. Explainer search uses the workspace's own
+reference bank.
 
 `components/reference_changes.py` consumes Investigations'
 `repositories/reference_usage.py` read interface. Investigations owns exact CVE

@@ -1,6 +1,8 @@
 import { createDarkMatterBrowser } from '../../observatory/static/dark_matter_browser.js';
 import { createLibraryRender } from './catalog_library_render.js';
 import { createCatalogSearch } from './catalog_search.js';
+import { createReportedView } from './reported_references.js';
+import { createOpenKevChanges } from './open_kev_changes.js';
 
 /** Shared selections for product research, CVEs, fields and material changes. */
 export function installLibrary(ctx) {
@@ -33,11 +35,13 @@ export function installLibrary(ctx) {
   });
   const darkMatter = createDarkMatterBrowser(ctx, { onChange: updateSelectionControls });
   const research = createCatalogSearch(ctx);
+  const loadReported = createReportedView(ctx);
+  const loadOpenKev = createOpenKevChanges(ctx);
   state.darkMatterSelection = darkMatter.selection;
   const render = createLibraryRender(ctx, state, darkMatter),
     esc = (value) => ctx.actions.esc(value ?? ''),
     allowedScopes = new Set(['critical', 'critical_kev', 'kev', 'all']),
-    allowedViews = new Set(['products', 'cves', 'fields', 'changes', 'dark-matter']);
+    allowedViews = new Set(['products', 'cves', 'fields', 'changes', 'dark-matter', 'reported']);
   const api = (path, params) =>
     ctx.actions.api('/api/cve-catalog/' + path + (params ? '?' + new URLSearchParams(params) : ''));
   const optional = (promise) => promise.catch(() => null);
@@ -58,6 +62,7 @@ export function installLibrary(ctx) {
   }
 
   function catalogSelectionURL(selection = state) {
+    if (selection.view === 'reported') return '#library?view=reported';
     if (selection.view === 'dark-matter') {
       const params = new URLSearchParams({ view: 'dark-matter' });
       for (const [key, value] of Object.entries(selection.darkMatterSelection || {})) {
@@ -70,7 +75,11 @@ export function installLibrary(ctx) {
     if (selection.productId) params.set('product', selection.productId);
     if (selection.version) params.set('version', selection.version);
     if (selection.field) params.set('field', selection.field);
-    if (selection.fieldSelection?.value) params.set('field_value', selection.fieldSelection.value);
+    if (selection.fieldSelection) {
+      params.set('field_value', selection.fieldSelection.value);
+      if (selection.fieldSelection.field !== selection.field)
+        params.set('filter_field', selection.fieldSelection.field);
+    }
     if (selection.view === 'cves') {
       const catalog = ctx.state.resources.catalog;
       params.set('q', catalog.query);
@@ -85,10 +94,10 @@ export function installLibrary(ctx) {
     if (ctx.state.navigation.currentRoute?.split('?')[0] !== 'library') return;
     if (typeof window !== 'undefined' && window.history?.replaceState) {
       let url = catalogSelectionURL();
-      const item = new URLSearchParams((window.location?.hash || '').split('?')[1] || '').get(
-        'item',
-      );
-      if (item) url += '&item=' + encodeURIComponent(item);
+      const params = new URLSearchParams((window.location?.hash || '').split('?')[1] || '');
+      for (const key of ['item', 'guide']) {
+        if (params.get(key)) url += '&' + key + '=' + encodeURIComponent(params.get(key));
+      }
       window.history.replaceState(null, '', url);
       if (ctx.state.navigation.currentRoute?.startsWith('library'))
         ctx.state.navigation.currentRoute = url.slice(1);
@@ -104,6 +113,7 @@ export function installLibrary(ctx) {
     return `${research.markup()}<div id="catalog-library"><div class="catalog-library-nav"><nav class="catalog-tabs" aria-label="Library catalog views">${[
       ['products', 'Products'],
       ['cves', 'CVEs'],
+      ['reported', 'Most reported'],
       ['fields', 'Fields'],
       ['changes', 'Changes'],
       ['dark-matter', 'Dark Matter'],
@@ -114,7 +124,7 @@ export function installLibrary(ctx) {
       )
       .join(
         '',
-      )}</nav><a id="catalog-view-link" class="text-link" href="${esc(catalogSelectionURL())}">Link to this view</a></div><div id="catalog-saved-views">${savedMarkup()}</div><section id="catalog-products-panel" ${state.view === 'products' ? '' : 'hidden'}>${render.productsPanel()}</section><section id="catalog-cves-panel" ${state.view === 'cves' ? '' : 'hidden'}><div id="catalog-cve-context">${cveContext()}</div>${cveMarkup}</section><section id="catalog-fields-panel" ${state.view === 'fields' ? '' : 'hidden'}>${render.fieldsPanel()}</section><section id="catalog-changes-panel" ${state.view === 'changes' ? '' : 'hidden'}>${render.changesPanel()}</section><section id="catalog-dark-matter-panel" ${state.view === 'dark-matter' ? '' : 'hidden'}>${render.darkMatterPanel()}</section></div>`;
+      )}</nav><a id="catalog-view-link" class="text-link" href="${esc(catalogSelectionURL())}">Link to this view</a></div><div id="catalog-saved-views">${savedMarkup()}</div><section id="catalog-products-panel" ${state.view === 'products' ? '' : 'hidden'}>${render.productsPanel()}</section><section id="catalog-cves-panel" ${state.view === 'cves' ? '' : 'hidden'}><div id="catalog-cve-context">${cveContext()}</div>${cveMarkup}</section><section id="catalog-fields-panel" ${state.view === 'fields' ? '' : 'hidden'}>${render.fieldsPanel()}</section><section id="catalog-changes-panel" ${state.view === 'changes' ? '' : 'hidden'}>${render.changesPanel()}</section><section id="catalog-reported-panel" ${state.view === 'reported' ? '' : 'hidden'}><h3>Most reported in this workspace</h3></section><section id="catalog-dark-matter-panel" ${state.view === 'dark-matter' ? '' : 'hidden'}>${render.darkMatterPanel()}</section></div>`;
   }
 
   function cveContext() {
@@ -155,7 +165,7 @@ export function installLibrary(ctx) {
     state.version = (params.get('version') || '').slice(0, 160);
     state.field = (params.get('field') || 'weakness').slice(0, 80);
     state.fieldSelection = params.has('field_value')
-      ? { field: state.field, value: params.get('field_value').slice(0, 300) }
+      ? { field: params.get('filter_field') ?? state.field, value: params.get('field_value') }
       : null;
     const catalog = ctx.state.resources.catalog;
     catalog.query = (params.get('q') || '').slice(0, 200);
@@ -188,6 +198,7 @@ export function installLibrary(ctx) {
       generation = catalog.generation,
       request = ++state.loadRequest,
       view = state.view,
+      initialField = view === 'fields' ? ctx.actions.$('#catalog-field')?.value : null,
       region = ctx.actions.$('#catalog-' + view + '-panel'),
       current = () =>
         generation === catalog.generation &&
@@ -204,6 +215,10 @@ export function installLibrary(ctx) {
     if (view === 'fields') state.fieldRequest++;
     if (view === 'changes') state.changeRequest++;
     state.error = '';
+    if (view === 'reported') {
+      await loadReported();
+      return;
+    }
     if (view === 'dark-matter') {
       await darkMatter.load();
       return;
@@ -276,7 +291,9 @@ export function installLibrary(ctx) {
       if (current() && region) {
         if (view === 'products') renderProductData();
         else if (view === 'cves') renderCveData();
-        else region.innerHTML = view === 'fields' ? render.fieldsPanel() : render.changesPanel();
+        else if (view === 'fields') renderFields(region, initialField);
+        else region.innerHTML = render.changesPanel();
+        if (view === 'changes') void loadOpenKev();
         region.removeAttribute('aria-busy');
         updateSelectionControls();
       }
@@ -302,7 +319,10 @@ export function installLibrary(ctx) {
       results.innerHTML = state.error
         ? `<p class="catalog-error" role="status">${esc(state.error)}</p>`
         : ctx.actions.catalogResultsMarkup();
-    if (detail) detail.innerHTML = ctx.actions.catalogDetailMarkup();
+    if (detail) {
+      detail.innerHTML = ctx.actions.catalogDetailMarkup();
+      void ctx.actions.loadVendorGuidance?.();
+    }
   }
 
   function syncSelectionInputs() {
@@ -426,10 +446,25 @@ export function installLibrary(ctx) {
     });
   }
 
+  function renderFields(region, initialChoice) {
+    // An incoming result may replace the form between choosing a field and pressing Explore.
+    const choice = ctx.actions.$('#catalog-field')?.value;
+    region.innerHTML = render.fieldsPanel();
+    const select = ctx.actions.$('#catalog-field');
+    if (
+      choice &&
+      choice !== initialChoice &&
+      select &&
+      [...select.options].some((option) => option.value === choice)
+    )
+      select.value = choice;
+  }
+
   async function loadCatalogFields(field = state.field) {
     const region = ctx.actions.$('#catalog-fields-panel');
     if (!region) return;
     const request = ++state.fieldRequest;
+    const initialChoice = ctx.actions.$('#catalog-field')?.value;
     state.loadRequest++;
     state.field = field;
     region.setAttribute('aria-busy', 'true');
@@ -439,20 +474,20 @@ export function installLibrary(ctx) {
         return;
       state.fields = result;
       state.error = '';
-      region.innerHTML = render.fieldsPanel();
+      renderFields(region, initialChoice);
       updateSelectionControls();
     } catch (error) {
       if (request === state.fieldRequest && ctx.actions.$('#catalog-fields-panel') === region) {
         state.error = error.message;
-        region.innerHTML = render.fieldsPanel();
+        renderFields(region, initialChoice);
       }
     } finally {
       if (request === state.fieldRequest) region.removeAttribute('aria-busy');
     }
   }
 
-  async function selectCatalogFieldValue(value, offset = 0) {
-    state.fieldSelection = { field: state.field, value };
+  async function selectCatalogFieldValue(value, offset = 0, field = state.field) {
+    state.fieldSelection = { field, value };
     await showCatalogView('cves', { load: false });
     const region = ctx.actions.$('#cve-catalog-results');
     if (!region) return;
@@ -462,7 +497,7 @@ export function installLibrary(ctx) {
     region.innerHTML = '<p class="catalog-empty" role="status">Loading matching CVEs…</p>';
     try {
       const result = await api('fields/records', {
-        field: state.field,
+        field,
         value,
         scope: state.scope,
         product_id: state.productId,
@@ -501,7 +536,10 @@ export function installLibrary(ctx) {
         region.innerHTML = render.changesPanel();
       }
     } finally {
-      if (request === state.changeRequest) region.removeAttribute('aria-busy');
+      if (request === state.changeRequest) {
+        region.removeAttribute('aria-busy');
+        if (ctx.actions.$('#catalog-changes-panel') === region) void loadOpenKev();
+      }
     }
   }
 
@@ -545,6 +583,7 @@ export function installLibrary(ctx) {
   }
 
   function selectionLabel() {
+    if (state.view === 'reported') return 'Most reported in this workspace';
     const catalog = ctx.state.resources.catalog;
     return (
       state.view === 'dark-matter'
@@ -581,6 +620,8 @@ export function installLibrary(ctx) {
     const text = (key, fallback = '', length = 200) =>
       typeof item[key] === 'string' ? item[key].slice(0, length) : fallback;
     const field = text('field', 'weakness', 80);
+    // Legacy browser values can exceed workspace limits, which count Unicode code points.
+    const bounded = (value, length) => Array.from(value).slice(0, length).join('');
     return {
       schema_version: 1,
       view: allowedViews.has(item.view) ? item.view : 'products',
@@ -591,7 +632,13 @@ export function installLibrary(ctx) {
       field,
       fieldSelection:
         typeof item.fieldSelection?.value === 'string'
-          ? { field, value: item.fieldSelection.value.slice(0, 300) }
+          ? {
+              field:
+                typeof item.fieldSelection.field === 'string'
+                  ? bounded(item.fieldSelection.field, 200)
+                  : field,
+              value: bounded(item.fieldSelection.value, 2000),
+            }
           : null,
       cveQuery: text('cveQuery'),
       cveSeverity: ['', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW', 'NONE', 'UNKNOWN'].includes(
@@ -704,10 +751,7 @@ export function installLibrary(ctx) {
         source: 'normalized',
       },
     );
-    state.fieldSelection =
-      item.fieldSelection && typeof item.fieldSelection.value === 'string'
-        ? { field: state.field, value: item.fieldSelection.value.slice(0, 300) }
-        : null;
+    state.fieldSelection = item.fieldSelection;
     ctx.state.resources.catalog.query =
       typeof item.cveQuery === 'string' ? item.cveQuery.slice(0, 200) : '';
     ctx.state.resources.catalog.severity =
@@ -758,6 +802,8 @@ export function installLibrary(ctx) {
 
   Object.assign(ctx.actions, {
     catalogLibraryMarkup,
+    loadReported,
+    loadOpenKev,
     searchLibrary: research.search,
     loadCatalogLibrary,
     restoreCatalogSelection: restoreSelection,

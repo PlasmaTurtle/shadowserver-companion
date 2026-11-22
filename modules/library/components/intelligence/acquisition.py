@@ -14,6 +14,7 @@ from dataclasses import dataclass
 from datetime import datetime, timezone, timedelta
 from email.utils import parsedate_to_datetime
 from pathlib import Path
+from weakref import WeakValueDictionary
 import requests
 import httpx
 from attribution.bounded_http import capture_response as _response_get, CaptureCancelled
@@ -24,6 +25,7 @@ from modules.workspace.components.primitives import now, uid
 from ..repositories.sources import SourceRepository
 from modules import __version__
 from ..cve_intelligence import ADAPTER_VERSION
+import modules.library.components.intelligence.redhat as redhat
 from .adapters import summarize, summarize_nvd, _validate_risk_response
 
 MAX_RESPONSE = 2 * 1024 * 1024
@@ -33,7 +35,8 @@ EPSS_URL = "https://api.first.org/data/v1/epss?cve="
 KEV_URL = "https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json"
 _rate_lock = threading.Lock()
 _next_nvd = {}
-_feed_locks = {}
+# Callers hold a strong reference while acquiring or using a key's lock.
+_feed_locks = WeakValueDictionary()
 
 
 class SourceCancelled(Exception):
@@ -114,6 +117,9 @@ def _validate_source_url(url, publisher):
     }
     if publisher == "CISA KEV" and url == KEV_URL:
         return
+    if publisher == redhat.PUBLISHER and isinstance(url, str) and url.startswith(redhat.API):
+        if url == redhat.source_url(url[len(redhat.API) :].removesuffix(".json")):
+            return
     prefix = prefixes.get(publisher)
     if prefix and isinstance(url, str) and url.startswith(prefix):
         identifier = url[len(prefix) :]
@@ -189,6 +195,8 @@ def _capture_catalog(store, cve_id, public_url):
 
 
 def risk_fingerprint(store, key):
+    if key != "kev" and not key.startswith("epss:"):
+        return None
     if not (Path(str(store.root) + "-reference") / "nvd" / "risk.sqlite3").is_file():
         return None
     try:
@@ -292,6 +300,8 @@ def validate_capture_body(body, publisher, *, cve_id="", url=""):
             _validate_risk_response("epss:" + identifier, raw)
         elif publisher == "CISA KEV":
             _validate_risk_response("kev", raw)
+        elif publisher == redhat.PUBLISHER:
+            redhat.record(identifier.removesuffix(".json"), raw)
         else:
             raise ValueError("Source publisher is not supported for retained provider records")
     except UnicodeError as error:
@@ -320,6 +330,12 @@ def retained_risk_data(store, key, source):
         publisher, identifier = "CVE Program", key.partition(":")[2]
     elif key == "kev":
         publisher, identifier = "CISA KEV", ""
+    elif key.startswith("redhat:"):
+        publisher, identifier = redhat.PUBLISHER, key.partition(":")[2]
+        if source.get("publisher") != publisher or source.get("url") != redhat.source_url(
+            identifier
+        ):
+            raise ValueError("Saved Red Hat source differs from the requested provider or CVE")
     else:
         raise ValueError("Unknown captured provider key")
     return retained_provider_data(store, source, publisher, cve_id=identifier)
@@ -591,6 +607,8 @@ def cached_json(store, key, url, *, refresh=False, cancel_event=None):
 
 
 def capture_json(store, key, url, *, refresh=False, cancel_event=None):
+    if key.startswith("redhat:") and url != redhat.source_url(key.partition(":")[2]):
+        raise ValueError("Red Hat source URL differs from the requested CVE")
     # A store-wide lock coalesces concurrent KEV requests. Forced refreshes are
     # also coalesced for a minute, so a batch of CVEs refreshes one shared feed.
     lock_key = (str(store.db), key)
@@ -645,6 +663,8 @@ def _cached_json(store, key, url, *, refresh=False, cancel_event=None):
             "CVE Program",
             "https://www.cve.org/CVERecord?id=" + key.split(":", 1)[1],
         )
+    elif key.startswith("redhat:"):
+        publisher, public_url = redhat.PUBLISHER, redhat.PORTAL + key.partition(":")[2]
     else:
         publisher, public_url = (
             "CISA KEV",
@@ -665,13 +685,21 @@ def _cached_json(store, key, url, *, refresh=False, cancel_event=None):
                 cancel_event=cancel_event,
             )
         if source["http_status"] != 200 and source.get("transport") != "local_catalog":
+            if key.startswith("redhat:"):
+                message = f"Red Hat returned HTTP {source['http_status']} for this CVE record"
+                if source["retry_after"]:
+                    message += f" (Retry-After: {source['retry_after']})"
+                raise ValueError(message)
             raise ValueError(
                 f"HTTP {source['http_status']}; retry after {source['retry_after'] or 'the service recovers'}"
             )
         if source.get("validation_error"):
             raise ValueError(source["validation_error"])
         raw = strict_json_loads(body, max_bytes=8 * 1024 * 1024, require_object=True)
-        _validate_risk_response(key, raw)
+        if key.startswith("redhat:"):
+            source["date_published"] = raw["public_date"]
+        else:
+            _validate_risk_response(key, raw)
         if key.startswith("program:"):
             summary = summarize(key.split(":", 1)[1], raw)
             source.update(

@@ -8,6 +8,9 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 from modules.workspace.components.primitives import now, uid
+from .reviewed_guides import guides
+
+NO_CATALOG_RECORDS = "No CVE records are stored locally yet. Check the catalog download in Library."
 
 
 class FieldSelection(BaseModel):
@@ -30,7 +33,7 @@ class ArchiveSelection(BaseModel):
 class ResearchSelection(BaseModel):
     model_config = ConfigDict(extra="forbid")
     schema_version: Literal[1] = 1
-    view: Literal["products", "cves", "fields", "changes", "dark-matter"] = "products"
+    view: Literal["products", "cves", "fields", "changes", "dark-matter", "reported"] = "products"
     query: str = Field(default="", max_length=200)
     scope: Literal["critical", "critical_kev", "kev", "all"] = "critical"
     productId: str = Field(default="", max_length=100)
@@ -147,17 +150,34 @@ class Research:
 
     def search(self, query, limit):
         query = query.strip()
-        empty = {"items": [], "total": 0, "error": None}
-        groups = {key: dict(empty) for key in ("cves", "products", "explainers")}
+        empty = {"items": [], "total": 0, "error": None, "notice": None}
+        groups = {key: dict(empty) for key in ("cves", "products", "explainers", "guides")}
         if not query:
             return {"query": query, "groups": groups}
+        reviewed = guides(query)
+        groups["guides"].update(
+            items=[{key: row[key] for key in ("id", "title", "kind")} for row in reviewed[:limit]],
+            total=len(reviewed),
+        )
         for kind, search in (
             ("cves", lambda: self.catalog.catalog.search(query, limit=limit, severity="")),
             ("products", lambda: self.catalog.catalog.products(query, scope="all", limit=limit)),
         ):
             try:
                 value = search()
-                groups[kind] = {"items": value["items"], "total": value["total"], "error": None}
+                group = groups[kind]
+                group.update(items=value["items"], total=value["total"])
+                if kind == "cves" and not value["has_records"]:
+                    group["notice"] = NO_CATALOG_RECORDS
+                if kind == "products":
+                    index = value["index"]
+                    if not index["total"]:
+                        group["notice"] = NO_CATALOG_RECORDS
+                    elif not index["ready"]:
+                        group["notice"] = (
+                            f"Product search covers {index['indexed']:,} of {index['total']:,} local CVE records. "
+                            "Review indexing in Library."
+                        )
             except (OSError, ValueError, sqlite3.Error):
                 groups[kind]["error"] = (
                     "Local reference data is unavailable. Review catalog status."
@@ -171,11 +191,7 @@ class Research:
                     "SELECT e.id,e.title,e.revision" + base + " ORDER BY e.title,e.id LIMIT ?",
                     (term, limit),
                 )
-                groups["explainers"] = {
-                    "items": [dict(row) for row in rows],
-                    "total": total,
-                    "error": None,
-                }
+                groups["explainers"].update(items=[dict(row) for row in rows], total=total)
         except (OSError, ValueError, sqlite3.Error):
             groups["explainers"]["error"] = (
                 "Explainers are unavailable. Try loading the explanation panel again."

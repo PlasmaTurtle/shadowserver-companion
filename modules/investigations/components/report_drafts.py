@@ -229,9 +229,9 @@ def readiness(lead, draft, settings=None):
                 "ok": selection_is_current(lead, draft),
             }
         )
-    if draft.get("finding_explainer_revision") == "finding-explainers-2026-11-10-v1":
-        from .finding_explainers import selection_is_current as findings_current
+    from .finding_explainers import SUPPORTED_REVISIONS, selection_is_current as findings_current
 
+    if draft.get("finding_explainer_revision") in SUPPORTED_REVISIONS:
         checks.append(
             {
                 "key": "finding_explainers",

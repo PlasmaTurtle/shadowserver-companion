@@ -4,8 +4,9 @@ Leads owns qualified lead queues, frontier/scope selection, eligibility policy
 and safe lead export contracts. This guide maps maintenance work to those
 responsibilities.
 
-[Architecture](../../../docs/ARCHITECTURE.md) · [Leads issues](ISSUES.md) ·
-[Analyst workflow](../../../docs/USER_GUIDE.md#4-review-leads-and-decide-what-deserves-outreach)
+[Architecture](../../../docs/ARCHITECTURE.md) · [Leads issues](ISSUES.md) · [Changelog](CHANGELOG.md) ·
+[Analyst workflow](../../../docs/USER_GUIDE.md#4-review-leads-and-decide-what-deserves-outreach) ·
+[Library selection](../../../docs/DEVELOPMENT.md#library-selection)
 
 ## Start here
 

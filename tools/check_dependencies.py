@@ -11,7 +11,6 @@ import argparse
 from datetime import datetime, timezone
 from email.parser import BytesParser
 import hashlib
-from itertools import product
 import json
 from pathlib import Path
 import re
@@ -86,9 +85,11 @@ def wheel_inventory(root, *, folder=None):
             raise ValueError(f"Wheel metadata directory differs from its identity: {filename}")
         prefix = stem + ("-" + wheel_info["Build"] if wheel_info.get("Build") else "")
         parts = filename.removesuffix(".whl").rsplit("-", 3)
-        tags = {"-".join(tag) for tag in product(*(part.split(".") for part in parts[1:]))}
-        if len(parts) != 4 or parts[0] != prefix or tags != set(wheel_info.get_all("Tag", [])):
-            raise ValueError(f"Wheel filename differs from its metadata/tags: {filename}")
+        # pip validates target compatibility from the filename during installation.
+        # Upstream wheels can bundle a platform driver while retaining pure-Python
+        # WHEEL tags; reproducing pip's compatibility rules here rejects those wheels.
+        if len(parts) != 4 or parts[0] != prefix:
+            raise ValueError(f"Wheel filename differs from its metadata identity: {filename}")
         records[name] = {"name": name, "version": version, "artifact": filename, "sha256": digest}
     if set(records) != set(lock):
         raise ValueError("Requirements contain an unbundled dependency")

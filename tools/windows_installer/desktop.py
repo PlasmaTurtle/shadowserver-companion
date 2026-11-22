@@ -163,10 +163,16 @@ def runtime_self_test() -> None:
     import pydantic_core
     import pillow_heif
     from PIL import Image
+    from playwright.sync_api import sync_playwright
     from docx import Document
     from lxml import etree
     from reportlab.pdfgen.canvas import Canvas
     from modules.workspace.components.api import create_app
+
+    # Start the bundled driver without a browser or network access. An import
+    # alone cannot detect missing Node/driver assets in the installed payload.
+    with sync_playwright() as playwright:
+        assert playwright.chromium.name == "chromium"
 
     with tempfile.TemporaryDirectory(prefix="outreach-self-test-") as folder:
         root = Path(folder)

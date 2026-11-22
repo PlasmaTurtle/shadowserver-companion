@@ -93,11 +93,10 @@ def test_lock_requires_exactly_one_approved_artifact_per_package(tmp_path, chang
     [
         "example-2.0-py3-none-any.whl",
         "other-1.0-py3-none-any.whl",
-        "example-1.0-cp314-cp314-win32.whl",
         "invalid.whl",
     ],
 )
-def test_approved_wheel_cannot_be_renamed_to_another_identity_or_tags(tmp_path, filename):
+def test_approved_wheel_cannot_be_renamed_to_another_identity(tmp_path, filename):
     folder = tmp_path / "wheelhouse"
     folder.mkdir()
     digest = write_test_wheel(folder / filename)

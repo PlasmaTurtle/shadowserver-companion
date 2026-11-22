@@ -1,7 +1,7 @@
 # Documentation
 
 Use the [maintenance workflow](DEVELOPMENT.md#maintenance-workflow) before changing
-code, then read the owning module's guide and tracker below. The
+code, then read the owning module's guide, tracker and changelog below. The
 [project overview](../README.md) covers installation and capabilities; the
 [user guide](USER_GUIDE.md) covers analyst work.
 
@@ -33,30 +33,33 @@ implementation and issue detail in its module, and link it from this index.
 | Security reporting, trust boundaries and limitations | [Security](../SECURITY.md) |
 | GitHub-specific collaboration, workflow configuration and administration | [GitHub maintenance](GITHUB_MAINTENANCE.md) |
 | Exact-version workstation acceptance | [Windows checklist](WINDOWS_ACCEPTANCE.md) |
-| Recent product changes consumed by the app's release notices | [Changelog](../CHANGELOG.md) |
+| Product highlights shown in the app's What's New view | [Release changelog](../CHANGELOG.md) |
 | Dated plans, audits and verification evidence | [History](history/README.md) |
 
 ## Module documentation and tracking
 
-The guide owns the module's responsibilities, important entry points, contracts
-and verification. The tracker owns its issues, status and completion evidence.
-Related modules link the canonical issue instead of copying it. An empty tracker
-means no owned work is recorded, not that the module has been certified defect-free.
+The guide describes the module's contracts and verification. The tracker records
+problems, status and evidence. The changelog records completed changes under
+`Unreleased` until they ship under an application version. Add the entry in the
+same change as the implementation. See [Building a release](DEVELOPMENT.md#building-a-release)
+for how module entries feed the product changelog. All modules use the same
+[library selection rule](DEVELOPMENT.md#library-selection)
+and keep the evidence in the owning issue.
 
-| Module | Maintenance guide | Issue tracker |
-| --- | --- | --- |
-| Workspace | [Guide](../modules/workspace/docs/README.md) | [Issues](../modules/workspace/docs/ISSUES.md) |
-| Investigations | [Guide](../modules/investigations/docs/README.md) | [Issues](../modules/investigations/docs/ISSUES.md) |
-| Observatory | [Guide](../modules/observatory/docs/README.md) | [Issues](../modules/observatory/docs/ISSUES.md) |
-| Entities | [Guide](../modules/entities/docs/README.md) | [Issues](../modules/entities/docs/ISSUES.md) |
-| Leads | [Guide](../modules/leads/docs/README.md) | [Issues](../modules/leads/docs/ISSUES.md) |
-| Attribution | [Guide](../modules/attribution/docs/README.md) | [Issues](../modules/attribution/docs/ISSUES.md) |
-| Accretion (Data) | [Guide](../modules/accretion/docs/README.md) | [Issues](../modules/accretion/docs/ISSUES.md) |
-| Library | [Guide](../modules/library/docs/README.md) | [Issues](../modules/library/docs/ISSUES.md) |
-| Settings | [Guide](../modules/settings/docs/README.md) | [Issues](../modules/settings/docs/ISSUES.md) |
-| Activity | [Guide](../modules/activity/docs/README.md) | [Issues](../modules/activity/docs/ISSUES.md) |
-| UI | [Guide](../modules/ui/docs/README.md) | [Issues](../modules/ui/docs/ISSUES.md) |
-| Tools | [Guide](../modules/tools/docs/README.md) | [Issues](../modules/tools/docs/ISSUES.md) |
+| Module | Maintenance guide | Issue tracker | Changelog |
+| --- | --- | --- | --- |
+| Workspace | [Guide](../modules/workspace/docs/README.md) | [Issues](../modules/workspace/docs/ISSUES.md) | [Changes](../modules/workspace/docs/CHANGELOG.md) |
+| Investigations | [Guide](../modules/investigations/docs/README.md) | [Issues](../modules/investigations/docs/ISSUES.md) | [Changes](../modules/investigations/docs/CHANGELOG.md) |
+| Observatory | [Guide](../modules/observatory/docs/README.md) | [Issues](../modules/observatory/docs/ISSUES.md) | [Changes](../modules/observatory/docs/CHANGELOG.md) |
+| Entities | [Guide](../modules/entities/docs/README.md) | [Issues](../modules/entities/docs/ISSUES.md) | [Changes](../modules/entities/docs/CHANGELOG.md) |
+| Leads | [Guide](../modules/leads/docs/README.md) | [Issues](../modules/leads/docs/ISSUES.md) | [Changes](../modules/leads/docs/CHANGELOG.md) |
+| Attribution | [Guide](../modules/attribution/docs/README.md) | [Issues](../modules/attribution/docs/ISSUES.md) | [Changes](../modules/attribution/docs/CHANGELOG.md) |
+| Accretion (Data) | [Guide](../modules/accretion/docs/README.md) | [Issues](../modules/accretion/docs/ISSUES.md) | [Changes](../modules/accretion/docs/CHANGELOG.md) |
+| Library | [Guide](../modules/library/docs/README.md) | [Issues](../modules/library/docs/ISSUES.md) | [Changes](../modules/library/docs/CHANGELOG.md) |
+| Settings | [Guide](../modules/settings/docs/README.md) | [Issues](../modules/settings/docs/ISSUES.md) | [Changes](../modules/settings/docs/CHANGELOG.md) |
+| Activity | [Guide](../modules/activity/docs/README.md) | [Issues](../modules/activity/docs/ISSUES.md) | [Changes](../modules/activity/docs/CHANGELOG.md) |
+| UI | [Guide](../modules/ui/docs/README.md) | [Issues](../modules/ui/docs/ISSUES.md) | [Changes](../modules/ui/docs/CHANGELOG.md) |
+| Tools | [Guide](../modules/tools/docs/README.md) | [Issues](../modules/tools/docs/ISSUES.md) | [Changes](../modules/tools/docs/CHANGELOG.md) |
 
 Component documentation stays beside its implementation:
 
@@ -84,8 +87,8 @@ the source branch; distributing it requires a separately built and validated rel
 **One topic, one maintained home.** Put operating instructions in the user guide,
 developer commands in Development, architectural contracts in Architecture or the
 owning module guide, outstanding problems and planned work in their canonical
-project or module issue tracker, and release changes in the changelog. Link to these
-homes instead of copying their content into the README or a new release log.
+project or module issue tracker, and completed module changes in that module's
+changelog. The root changelog summarizes the highlights for users.
 
 Update the relevant guide in the same change that alters behavior. Use current
 interface labels and commands that work from the stated directory. Explain who a
@@ -105,10 +108,9 @@ removing a document, update inbound links, indexes and distribution allowlists
 in the same change.
 
 Keep the root README short: purpose, supported platform, status, first steps, and
-navigation. Each module starts with `docs/README.md` and `docs/ISSUES.md`.
-Keep substantive ownership, contracts and verification in that guide; add a
-separate runbook, reference or checklist only for a distinct task that would make
-the guide unwieldy. Do not create empty reference, roadmap or changelog copies.
+navigation. Each module maintains `docs/README.md`, `docs/ISSUES.md` and
+`docs/CHANGELOG.md`. Keep ownership, contracts and verification in the guide.
+Add a separate runbook, reference or checklist when it serves a distinct task.
 Standalone libraries retain their independent package documentation.
 
 Before a refactor, check the module guide, canonical issue and affected caller

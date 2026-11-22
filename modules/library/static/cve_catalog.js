@@ -1,7 +1,9 @@
 import { installLibrary } from './catalog_library.js';
+import { createVendorGuidance } from './vendor_guidance.js';
 
 /** Local CVE browsing. Network synchronization is owned by the catalog service. */
 export function install(ctx) {
+  const vendor = createVendorGuidance(ctx);
   const state = (ctx.state.resources.catalog = {
     status: null,
     statusLoading: false,
@@ -107,6 +109,15 @@ export function install(ctx) {
   }
 
   function catalogDetailMarkup(record = state.detail) {
+    const id = record?.cve?.id || state.selected;
+    const markup =
+      !record && id
+        ? `<p class="catalog-empty">CVE catalog details are unavailable for ${esc(id)}.</p>`
+        : catalogRecordMarkup(record);
+    return markup + vendor.shell(id);
+  }
+
+  function catalogRecordMarkup(record) {
     if (!record)
       return '<div class="catalog-detail-empty"><span class="dm-overline">Reference record</span><p>Select a CVE to read its description, severity and sources.</p></div>';
     const cve = record.cve || {};
@@ -286,9 +297,13 @@ export function install(ctx) {
       region.innerHTML = catalogDetailMarkup();
     } catch (error) {
       if (request === state.detailRequest && ctx.actions.$('#cve-catalog-detail') === region)
-        region.innerHTML = `<p class="catalog-error" role="status">${esc(error.message)}</p>`;
+        region.innerHTML =
+          `<p class="catalog-error" role="status">${esc(error.message)}</p>` + vendor.shell(id);
     } finally {
-      if (request === state.detailRequest) region.removeAttribute?.('aria-busy');
+      if (request === state.detailRequest) {
+        region.removeAttribute?.('aria-busy');
+        if (ctx.actions.$('#cve-catalog-detail') === region) void vendor.load();
+      }
     }
   }
 
@@ -312,6 +327,7 @@ export function install(ctx) {
     catalogDetailMarkup,
     searchCatalog,
     selectCatalogRecord,
+    loadVendorGuidance: vendor.load,
     refreshCatalogStatus,
     catalogCommand,
     stopCatalogPolling,

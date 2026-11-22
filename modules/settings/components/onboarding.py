@@ -5,82 +5,18 @@ from __future__ import annotations
 from copy import deepcopy
 import json
 
-from modules.settings.components.api_models import (
-    SettingsUpdate,
+from modules.settings.components.api_models import ProfileValues, merge_settings
+from modules.settings.components.profile_catalog import (
+    AGENCIES,
+    REGIONS,
+    TIMEZONES,
+    agency_for_name,
 )
 from modules.workspace.components.primitives import dump, now
 
 KEY = "workspace_setup"
 SCHEMA_VERSION = 1
 STEPS = ("connections", "profile", "automation")
-# Identity presets only: selecting an agency never grants geography or API access.
-AGENCIES = (
-    {
-        "id": "usss",
-        "name": "United States Secret Service",
-        "department": "U.S. Department of Homeland Security",
-        "short_name": "USSS",
-    },
-    {
-        "id": "fbi",
-        "name": "Federal Bureau of Investigation",
-        "department": "U.S. Department of Justice",
-        "short_name": "FBI",
-    },
-    {
-        "id": "hsi",
-        "name": "Homeland Security Investigations",
-        "department": "U.S. Department of Homeland Security",
-        "short_name": "HSI",
-    },
-    {
-        "id": "atf",
-        "name": "Bureau of Alcohol, Tobacco, Firearms and Explosives",
-        "department": "U.S. Department of Justice",
-        "short_name": "ATF",
-    },
-    {
-        "id": "dea",
-        "name": "Drug Enforcement Administration",
-        "department": "U.S. Department of Justice",
-        "short_name": "DEA",
-    },
-    {
-        "id": "usms",
-        "name": "United States Marshals Service",
-        "department": "U.S. Department of Justice",
-        "short_name": "USMS",
-    },
-    {
-        "id": "uspis",
-        "name": "United States Postal Inspection Service",
-        "department": "United States Postal Service",
-        "short_name": "USPIS",
-    },
-    {
-        "id": "irs-ci",
-        "name": "Internal Revenue Service - Criminal Investigation",
-        "department": "U.S. Department of the Treasury",
-        "short_name": "IRS-CI",
-    },
-    {
-        "id": "dss",
-        "name": "Diplomatic Security Service",
-        "department": "U.S. Department of State",
-        "short_name": "DSS",
-    },
-    {
-        "id": "custom",
-        "name": "Other agency or organization",
-        "department": "",
-        "short_name": "Custom",
-    },
-)
-REGIONS = tuple(
-    "Alabama|Alaska|Arizona|Arkansas|California|Colorado|Connecticut|Delaware|District of Columbia|Florida|Georgia|Hawaii|Idaho|Illinois|Indiana|Iowa|Kansas|Kentucky|Louisiana|Maine|Maryland|Massachusetts|Michigan|Minnesota|Mississippi|Missouri|Montana|Nebraska|Nevada|New Hampshire|New Jersey|New Mexico|New York|North Carolina|North Dakota|Ohio|Oklahoma|Oregon|Pennsylvania|Rhode Island|South Carolina|South Dakota|Tennessee|Texas|Utah|Vermont|Virginia|Washington|West Virginia|Wisconsin|Wyoming|American Samoa|Guam|Northern Mariana Islands|Puerto Rico|U.S. Virgin Islands".split(
-        "|"
-    )
-)
 PROFILE_FIELDS = {
     "analyst_name",
     "analyst_title",
@@ -90,6 +26,7 @@ PROFILE_FIELDS = {
     "email",
     "regions",
     "display_timezone",
+    "targeted_reason",
 }
 
 
@@ -168,9 +105,13 @@ class SetupService:
             "step": step,
             "steps": deepcopy(steps),
             "profile_missing": missing,
-            "profile": {key: deepcopy(profile.get(key)) for key in PROFILE_FIELDS},
+            "profile": {
+                key: deepcopy(profile.get(key))
+                for key in PROFILE_FIELDS | {"outreach_mode", "targeted_authority"}
+            },
             "agencies": deepcopy(AGENCIES),
             "regions": list(REGIONS),
+            "timezones": list(TIMEZONES),
             "connections": {
                 key: shadow.get(key)
                 for key in ("configured", "connected", "storage", "can_remember")
@@ -206,17 +147,22 @@ class SetupService:
             raise ValueError("Unknown setup profile field")
         with self.store.transaction() as db:
             previous = self.store.settings(db)
-            merged = {**previous, **values}
-            checked = SettingsUpdate.model_validate(merged).model_dump()
-            if profile_missing(checked):
+            submitted = ProfileValues.model_validate(values).model_dump(exclude_unset=True)
+            # Setup explicitly reviews the entire identity, not unrelated legacy
+            # preferences. The optional reason remains an explicit review signal.
+            profile = {key: previous.get(key) for key in PROFILE_FIELDS - {"targeted_reason"}}
+            profile.update(submitted)
+            if "department" not in submitted:
+                profile["department"] = agency_for_name(profile["agency"])["department"]
+            changes = ProfileValues.model_validate(profile).model_dump(exclude_unset=True)
+            merged = merge_settings(previous, changes)
+            if profile_missing(merged):
                 raise ValueError(
                     "Enter your name, agency, office or location, and at least one jurisdiction"
                 )
-            # Normalize identity while retaining preferences committed by other writers.
-            merged = {**previous, **{key: checked[key] for key in PROFILE_FIELDS}}
             if "agency" in values and previous.get("agency") != merged["agency"]:
                 merged["brand_profile"] = (
-                    "usss" if merged["agency"] == AGENCIES[0]["name"] else "companion"
+                    "usss" if agency_for_name(merged["agency"])["id"] == "usss" else "companion"
                 )
             db.execute("UPDATE settings SET value=? WHERE key='profile'", (dump(merged),))
             record = self._read(db)

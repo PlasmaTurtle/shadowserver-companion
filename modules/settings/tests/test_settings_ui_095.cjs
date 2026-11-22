@@ -4,6 +4,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const { loadApplication } = require('../../../tests/frontend_harness.cjs');
+const catalog = require('./support/profile_catalog.cjs');
 
 let completed = false;
 process.on('beforeExit', () => {
@@ -43,7 +44,7 @@ process.on('beforeExit', () => {
       { id: 'scan_rdp', name: 'Accessible RDP', notification_mode: 'targeted' },
     ],
   };
-  ctx.actions.api = async () => ({ pending: null });
+  ctx.actions.api = async (url) => (url === '/api/setup' ? catalog : { pending: null });
   let html = await ctx.actions.settingsPage();
   assert.match(html, /<h3>Shadowserver Eclipse<\/h3>/);
   assert(html.indexOf('Notification profile') < html.indexOf('Appearance, branding'));
@@ -79,6 +80,106 @@ process.on('beforeExit', () => {
     /<option value="previous_custom_profile" selected>Saved profile: previous_custom_profile<\/option>/,
   );
   delete settings.report_type;
+
+  // Shared native validation preserves legacy values until an explicit correction.
+  const profileFields = new vm.SourceTextModule(
+    fs.readFileSync(path.join(__dirname, '../static/profile_fields.js'), 'utf8'),
+    { context },
+  );
+  await profileFields.link(() => {
+    throw new Error('Profile fields must remain pure');
+  });
+  await profileFields.evaluate();
+  const fields = profileFields.namespace;
+  const legacy = {
+    agency: 'Legacy agency',
+    department: 'Legacy parent',
+    display_timezone: 'Europe/London',
+    regions: ['North Carolina', 'Unknown saved region'],
+  };
+  const legacyAgency = fields.agencyFields(
+    ctx.actions.esc,
+    legacy,
+    catalog,
+    'f-',
+    'settings-agency-preset',
+  );
+  assert.match(legacyAgency, /<option value="" selected>Review saved agency/);
+  assert.match(legacyAgency, /Legacy agency/);
+  assert.match(legacyAgency, /Legacy parent/);
+  assert.match(
+    fields.agencyFields(
+      ctx.actions.esc,
+      { ...legacy, agency: catalog.agencies[0].name },
+      catalog,
+      'f-',
+      'settings-agency-preset',
+    ),
+    /<option value="" selected>Review saved agency/,
+  );
+  assert.match(
+    fields.timezoneField(ctx.actions.esc, legacy, catalog, 'display-timezone'),
+    /<option value="" selected>Review saved timezone: Europe\/London/,
+  );
+  const legacyRegions = fields.jurisdictionFields(
+    ctx.actions.esc,
+    legacy,
+    catalog,
+    'settings-remove-unsupported-regions',
+  );
+  assert.match(legacyRegions, /type="hidden" name="regions" value="Unknown saved region"/);
+  assert.match(legacyRegions, /Remove unsupported saved jurisdictions/);
+  assert.throws(() => fields.requireProfileCatalog({}), /choices could not be loaded/);
+  let unsupportedPresent = true;
+  let regionMessage = '';
+  let nameMessage = '';
+  let regionFocused = false;
+  const firstRegion = {
+    checked: true,
+    setCustomValidity: (message) => {
+      regionMessage = message;
+    },
+    focus: () => {
+      regionFocused = true;
+    },
+  };
+  const requiredName = {
+    value: '   ',
+    setCustomValidity: (message) => {
+      nameMessage = message;
+    },
+  };
+  const validationForm = {
+    querySelectorAll: (selector) =>
+      selector === '[data-profile-trim-required]'
+        ? [requiredName]
+        : selector.includes('[name="regions"]')
+          ? [firstRegion]
+          : [],
+    querySelector: () => (unsupportedPresent ? {} : null),
+  };
+  fields.validateProfileFields(validationForm);
+  assert.match(regionMessage, /Remove unsupported saved jurisdictions/);
+  assert.match(nameMessage, /Blank spaces/);
+  fields.removeUnsupportedRegions({
+    closest: (selector) =>
+      selector === 'fieldset'
+        ? { querySelector: () => firstRegion }
+        : {
+            remove: () => {
+              unsupportedPresent = false;
+            },
+          },
+  });
+  assert(regionFocused);
+  firstRegion.checked = false;
+  fields.validateProfileFields(validationForm);
+  assert.match(regionMessage, /at least one/);
+  firstRegion.checked = true;
+  requiredName.value = 'Synthetic valid name';
+  fields.validateProfileFields(validationForm);
+  assert.equal(regionMessage, '');
+  assert.equal(nameMessage, '');
 
   // Release status belongs in About; legacy edition identifiers are not branding.
   for (const [channel, label] of [
@@ -159,6 +260,46 @@ process.on('beforeExit', () => {
   );
   await module.evaluate();
   const handlers = module.namespace.createHandlers(ctx);
+
+  // Correcting native custom errors updates validity immediately, without another save.
+  let liveReasonError = '';
+  let liveRegionError = '';
+  const liveReason = {
+    value: '   ',
+    setCustomValidity: (value) => {
+      liveReasonError = value;
+    },
+  };
+  const liveRegion = {
+    checked: false,
+    setCustomValidity: (value) => {
+      liveRegionError = value;
+    },
+  };
+  const liveForm = {
+    id: 'settings-form',
+    dataset: { dirty: 'false', editRevision: '0' },
+    querySelectorAll: (selector) =>
+      selector === '[data-profile-trim-required]'
+        ? [liveReason]
+        : selector.includes('[name="regions"]')
+          ? [liveRegion]
+          : [],
+    querySelector: () => null,
+  };
+  const liveTarget = { closest: (selector) => (selector === '#settings-form' ? liveForm : null) };
+  nodes.set('#settings-form', liveForm);
+  handlers.input({ target: liveTarget });
+  assert.match(liveReasonError, /Blank spaces/);
+  assert.match(liveRegionError, /at least one/);
+  liveReason.value = 'Specific mission connection';
+  handlers.input({ target: liveTarget });
+  assert.equal(liveReasonError, '', 'Corrected rationale clears its prior custom error on input');
+  liveRegion.checked = true;
+  await handlers.change.find((handler) => handler.matches(liveTarget)).run(liveTarget);
+  assert.equal(liveRegionError, '', 'Checked jurisdiction clears its prior custom error on change');
+  assert.equal(liveForm.dataset.dirty, 'true');
+  nodes.set('#settings-form', form);
 
   // The final visible theme must also be the final saved theme, even on slow requests.
   const originalApplyPresentation = ctx.actions.applyPresentation;
@@ -262,51 +403,68 @@ process.on('beforeExit', () => {
   delete ctx.state.navigation.boot.token;
   ctx.actions.applyPresentation = originalApplyPresentation;
 
-  // Slow setup metadata still supplies presets after an unrelated Settings edit.
-  const preset = { value: 'custom', options: [{ value: 'custom' }], innerHTML: '' };
-  const agency = { value: 'Synthetic custom agency' };
-  const department = { value: 'Synthetic department' };
-  nodes.set('#settings-agency-preset', preset);
-  nodes.set('#f-agency', agency);
-  nodes.set('#f-department', department);
+  // Catalogs resolve before the form is shown, so late metadata cannot replace drafts.
   let resolveSetupStatus;
-  ctx.actions.api = () =>
-    new Promise((resolve) => {
-      resolveSetupStatus = resolve;
-    });
-  const loadingPresets = ctx.actions.loadSettingsSetupStatus();
-  ctx.actions.settingsChanged(form);
-  const agencies = [
-    { id: 'custom', name: 'Other agency' },
-    { id: 'fbi', short_name: 'FBI', name: 'Federal Bureau of Investigation', department: 'DOJ' },
-  ];
-  resolveSetupStatus({ agencies });
-  await loadingPresets;
-  assert.match(preset.innerHTML, /value="fbi"/);
-  assert.equal(agency.value, 'Synthetic custom agency');
-  const onboarding = new vm.SourceTextModule(
-    fs.readFileSync(path.join(__dirname, '../static/onboarding.js'), 'utf8'),
-    { context },
-  );
-  await onboarding.link(() => {
-    throw new Error('Unexpected dependency');
+  ctx.actions.api = (url) =>
+    url === '/api/setup'
+      ? new Promise((resolve) => {
+          resolveSetupStatus = resolve;
+        })
+      : Promise.resolve({ pending: null });
+  let ready = false;
+  const loadingSettings = ctx.actions.settingsPage().then((markup) => {
+    ready = true;
+    return markup;
   });
-  await onboarding.evaluate();
-  Object.assign(preset, {
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(ready, false);
+  resolveSetupStatus(catalog);
+  const controlled = await loadingSettings;
+  assert.match(controlled, /<select id="settings-agency-preset" name="agency" required/);
+  assert.doesNotMatch(controlled, /<input[^>]+name="agency"/);
+  assert.match(controlled, /id="f-department"[^>]+readonly/);
+  assert.match(controlled, /name="regions" value="North Carolina" checked/);
+  assert.doesNotMatch(controlled, /<textarea[^>]+name="regions"/);
+  assert.match(controlled, /<select id="display-timezone" name="display_timezone" required/);
+  assert.match(controlled, /name="analyst_name"[^>]+maxlength="300" required/);
+  assert.match(controlled, /name="email"[^>]+maxlength="254"/);
+  ctx.actions.api = async (url) => {
+    if (url === '/api/setup') throw new Error('Catalog temporarily unavailable');
+    return { pending: null };
+  };
+  await assert.rejects(ctx.actions.settingsPage(), /Catalog temporarily unavailable/);
+
+  const department = { value: 'Synthetic department' };
+  const reason = { value: 'Previous mission rationale', required: true };
+  const authority = { innerHTML: '' };
+  const untouched = { value: 'Unrelated office draft' };
+  form.querySelector = (selector) =>
+    ({
+      '[name="department"]': department,
+      '[name="targeted_reason"]': reason,
+      '#settings-agency-authority': authority,
+      '[name="office"]': untouched,
+    })[selector] || null;
+  const preset = {
     id: 'settings-agency-preset',
-    value: 'fbi',
-    closest: (selector) => (selector === '#settings-form' ? form : null),
-  });
-  // Use the same first-matching dispatch order as UI, rather than directly calling the preset.
-  for (const feature of [handlers, onboarding.namespace.createHandlers(ctx)]) {
-    const change = feature.change.find((handler) => handler.matches(preset));
-    if (change) {
-      await change.run(preset);
-      break;
-    }
-  }
-  assert.equal(agency.value, 'Federal Bureau of Investigation');
-  assert.equal(department.value, 'DOJ');
+    value: catalog.agencies[1].name,
+    closest: () => form,
+  };
+  // Exercise the same first-matching event dispatch used by UI.
+  const agencyHandler = handlers.change.find((handler) => handler.matches(preset));
+  await agencyHandler.run(preset);
+  assert.equal(department.value, catalog.agencies[1].department);
+  assert.equal(reason.value, '', 'Changing agency requires a new purpose-specific explanation');
+  assert.match(authority.innerHTML, /FBI synthetic citation/);
+  assert.equal(untouched.value, 'Unrelated office draft');
+  reason.required = false;
+  reason.value = 'Old mission retained while critical';
+  await agencyHandler.run(preset);
+  assert.equal(
+    reason.value,
+    '',
+    'Changing agency while critical must not reuse a stale rationale when targeted is restored',
+  );
   assert.equal(form.dataset.dirty, 'true');
 
   const values = {
@@ -320,7 +478,10 @@ process.on('beforeExit', () => {
     accretion_priority_cities: 'Charlotte, Burnsville\n Asheville ',
     accretion_priority_products: 'Exchange\nPHP, Roundcube',
   };
-  const data = { has: () => false };
+  const data = {
+    has: () => false,
+    getAll: (name) => (name === 'regions' ? ['North Carolina', 'South Carolina'] : []),
+  };
   // Native constraints still apply inside collapsed groups, and every invalid group is opened.
   const nested = { open: false, parentElement: { closest: () => outer } };
   const outer = { open: false, parentElement: null };
@@ -353,6 +514,7 @@ process.on('beforeExit', () => {
     return { ...settings, ...saved };
   };
   await handlers.forms['settings-form'](form, values, data);
+  assert.deepEqual(Array.from(saved.regions), ['North Carolina', 'South Carolina']);
   assert.equal(saved.interval, 0.03);
   assert.equal(saved.timeout, 10.25);
   assert.equal(saved.com_only, undefined);

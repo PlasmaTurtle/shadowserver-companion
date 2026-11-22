@@ -5,8 +5,9 @@ identity, HTTP field parsing and filesystem operations. Each tool keeps its
 implementation, tests and resources here; callers
 retain their domain workflow, UI, persistence and authorization.
 
-[Architecture](../../../docs/ARCHITECTURE.md) · [Tools tracking](ISSUES.md) ·
-[Investigations integration](../../investigations/docs/README.md#website-loading-and-capture)
+[Architecture](../../../docs/ARCHITECTURE.md) · [Tools tracking](ISSUES.md) · [Changelog](CHANGELOG.md) ·
+[Investigations integration](../../investigations/docs/README.md#website-loading-and-capture) ·
+[Library selection](../../../docs/DEVELOPMENT.md#library-selection)
 
 ## Start here
 
@@ -15,7 +16,9 @@ retain their domain workflow, UI, persistence and authorization.
 | Public website capture interface | [website_capture/__init__.py](../components/website_capture/__init__.py) |
 | Browser lifetime and PNG capture | [browser.py](../components/website_capture/browser.py) |
 | Browser download observations | [downloads.py](../components/website_capture/downloads.py) |
-| Navigation, main-site fallback and readiness | [navigation.py](../components/website_capture/navigation.py) |
+| Reported-host and main-site fallback | [navigation.py](../components/website_capture/navigation.py) |
+| Viewport readiness and page classification inputs | [rendering.py](../components/website_capture/rendering.py) |
+| Page request and redirect observations | [page_observations.py](../components/website_capture/page_observations.py) |
 | URL normalization | [transport.py](../components/website_capture/transport.py) |
 | Offline suffix extraction and IP comparison | [network_identity.py](../components/network_identity.py) |
 | HTTP Retry-After field parsing | [http.py](../components/http.py) |
@@ -70,8 +73,9 @@ discarded after the check.
 Loading, fallback and temporary browser cleanup
 are owned by the tool; no database, case identifier or application server is needed.
 When the local browser fails during initialization, `CaptureBrowserStartupError`
-reports the available process exit code or operating system error number. No
-website has been attempted. A caller can pause a batch and offer a retry.
+reports a bounded diagnostic, including a process exit code when Playwright supplies
+one. Raw driver messages and launch paths are not persisted. No website has been
+attempted. A caller can pause a batch and offer a retry.
 
 Investigations calls this interface through `website_jobs.py`. It owns reported
 hostname selection, queue admission, case cancellation controls and guarded evidence
@@ -117,17 +121,29 @@ The [consolidation record](TOOL_AUDIT.md) links implementations, research and ou
 
 ## Website loading and capture
 
-Capture uses ordinary installed Edge/Chrome in a fresh temporary profile. The
-browser handles redirects, cookies created during the visit, HTTP methods, API
+Capture uses Playwright's Python library to launch installed stable Edge/Chrome
+in an isolated browser context. The pinned runtime dependency includes Playwright's
+driver; a separate system Node installation is not required. Browser executables
+are not downloaded automatically. Windows selects the supported `msedge` channel,
+or `chrome` when Edge is not installed; `executable` is an explicit caller-owned
+path override. Missing browsers or failed launches produce a startup error.
+[Browser channels](https://playwright.dev/python/docs/browsers#google-chrome--microsoft-edge)
+
+Playwright owns browser launch, temporary profiles, protocol transport and process
+cleanup. The application has no custom WebSocket client, browser launcher or
+Windows process guard. The browser handles redirects, cookies created during the
+visit, HTTP methods, API
 requests, images, video, fonts and caching. The application does not replay or
 filter page requests through its own HTTP client or proxy. It does not run a
 per-response AMSI gate or impose request-count/per-resource download quotas.
-The browser's normal TLS and sandbox behavior apply. There is no application
-public-address gate; HTTP(S) URL validation checks syntax, not destination trust.
+Capture explicitly enables Chromium sandboxing and retains normal TLS checks.
+There is no application public-address gate; HTTP(S) URL validation checks syntax,
+not destination trust.
 
-Before visiting any site, capture requires the browser to acknowledge a download
-policy of `deny` for the default browser context. It applies to the reported site,
-redirects, fallback tabs and popups in that context. If configuration fails, the
+Before visiting any site, capture creates its context with `accept_downloads=False`
+and requires the browser to acknowledge a download policy of `deny` for that owned
+isolated context. It applies to the reported site, redirects, fallback tabs and
+popups in that context. If configuration fails, the
 tool closes the browser. A top-level navigation identified as a download proceeds
 to the next candidate. A rendered page that attempts a background download can
 still yield a screenshot. Page resources use the browser's normal rendering and
@@ -143,6 +159,14 @@ history. Consumers use `download_activity(metadata)` to select these fields.
 Filenames, download URLs, paths, browser identifiers and file contents are
 excluded from this record. [Chromium events](https://github.com/ChromeDevTools/devtools-protocol/blob/master/pdl/domains/Browser.pdl#L153-L181)
 
+The only direct protocol integration uses Playwright's public browser CDP session
+for these download notifications and their policy acknowledgement. Playwright's
+denied-download artifact reports that the artifact is inaccessible; it does not
+expose the terminal cancellation result through `download.failure()`. The observer
+therefore identifies the sole owned context through the public protocol and keeps
+the existing bounded outcome record. Navigation, rendering and screenshots use
+Playwright's page API, with no private driver attributes.
+
 Start with the exact reported URL. A failed load can try the other HTTP/S scheme
 on that host, then the main site's apex/`www` candidates, using the existing
 private-aware Public Suffix List. Keep supplied paths, queries and fragments on
@@ -150,12 +174,14 @@ same-host attempts. IP addresses, single-label names and localhost names do not
 acquire invented domain fallbacks. A rendered page does not trigger an unrelated
 main-site request.
 
-[navigation.py](../components/website_capture/navigation.py) owns page loading,
-render readiness and fallback. [browser.py](../components/website_capture/browser.py)
-owns the temporary browser/profile and the 1440 × 900 PNG. It uses normal
-[Chrome Headless](https://developer.chrome.com/docs/automation-and-testing/headless)
-with the established navigation/screenshot commands in the
-[DevTools Page protocol](https://chromedevtools.github.io/devtools-protocol/tot/Page/).
+[navigation.py](../components/website_capture/navigation.py) owns fallback order;
+[rendering.py](../components/website_capture/rendering.py) owns the application's
+viewport-readiness policy. [page_observations.py](../components/website_capture/page_observations.py)
+observes requests and redirects without intercepting traffic.
+[browser.py](../components/website_capture/browser.py) owns the Playwright session
+and the 1440 × 900 PNG. Loading uses `page.goto`, bounded state probes use
+`page.wait_for_function`, and `page.screenshot` produces the viewport.
+[Playwright page API](https://playwright.dev/python/docs/api/class-page)
 Wait for rendered content, visible image/video data and fonts before capture.
 Main-frame rendering assets can delay readiness; background tracking frames,
 scripts and persistent API traffic do not require indefinite network idleness.
@@ -169,6 +195,10 @@ contains `/login`. Detailed timing belongs in the implementation and verificatio
 
 The tool returns PNG bytes and metadata: `requested_url`, `final_url`, `title`,
 `http_status`, `capture_status`, `redirects`, ordered `attempts` and `fallback_used`.
+New captures identify `policy` as `playwright-viewport-v1` and record the selected
+browser channel and version. `resource_bytes` is omitted because this implementation
+does not measure transferred bytes; old metadata remains readable. `fetched_requests`
+counts observed request starts, including requests that subsequently fail.
 It does not attach evidence or decide which results belong in a notification.
 Failed target loads raise `WebsiteLoadError` with `metadata` and `attempted_urls`;
 browser startup, process and protocol failures remain operational exceptions.
@@ -177,10 +207,16 @@ decides whether a target failure is retryable or reviewable. Completion, cancell
 browser processes and remove the temporary profile. The personal browser profile
 is not used.
 
-Browser startup and page loading have separate cancellable budgets. A Windows
-kill-on-close job owns the process tree without an arbitrary child-process ceiling;
-cleanup removes the temporary profile and its cache. Synthetic
-protocol checks do not establish native browser, job or enterprise-policy acceptance;
+The synchronous entry point runs Playwright's asynchronous API on the calling
+worker thread, using a Proactor event loop on Windows. Instances are not shared
+between threads. Startup and page loading have separate bounded budgets, also
+limited by the caller's monotonic deadline. A cancellation/deadline watcher closes
+the owned context and browser so pending calls unwind; it does not cancel an
+in-flight Playwright task. Shutdown closes the context before the browser and
+preserves the original failure if resources have already disconnected.
+[Threading and cancellation](https://playwright.dev/python/docs/library#threading)
+
+Synthetic checks do not establish native browser or enterprise-policy acceptance;
 use the [Windows checklist](../../../docs/WINDOWS_ACCEPTANCE.md) for that scope.
 
 The normal browser behavior is covered by [ISS020](ISSUES.md#iss020-reported-host-loading-and-redirects).

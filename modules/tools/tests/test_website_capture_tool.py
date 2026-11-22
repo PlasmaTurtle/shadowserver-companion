@@ -1,13 +1,9 @@
 """Reusable website-capture URL, browser-default and outcome contracts."""
 
-import threading
-import time
-from unittest.mock import Mock, call
-
 import pytest
 
-from modules.tools.components.website_capture import WebsiteLoadError, navigation, web_url
-from modules.tools.components.website_capture.browser import browser_arguments, classify_page
+from modules.tools.components.website_capture import browser, web_url
+from modules.tools.components.website_capture.browser import classify_page
 
 
 @pytest.mark.parametrize(
@@ -33,26 +29,6 @@ def test_query_and_fragment_policy():
     )
 
 
-def test_top_level_download_tries_next_candidate_without_rendering_a_file():
-    client = Mock()
-    client.call.return_value = {"isDownload": True, "errorText": "net::ERR_ABORTED"}
-    metadata = {"attempts": [], "attempted_urls": []}
-    with pytest.raises(WebsiteLoadError, match="Website offered a file download"):
-        navigation.load_page(
-            "https://localhost/file",
-            open_page=lambda: client,
-            deadline=time.monotonic() + 60,
-            cancel_event=threading.Event(),
-            metadata=metadata,
-            classify=classify_page,
-        )
-    assert client.call.call_args_list == [
-        call("Page.navigate", {"url": "https://localhost/file"}),
-        call("Page.navigate", {"url": "http://localhost/file"}),
-    ]
-    assert all(attempt["outcome"] == "load_failed" for attempt in metadata["attempts"])
-
-
 @pytest.mark.parametrize(
     "url",
     [
@@ -66,22 +42,22 @@ def test_native_browser_urls_are_not_restricted_by_old_transport(url):
     assert web_url(url) == url
 
 
-def test_browser_preserves_sandbox_and_has_no_user_profile():
-    args = browser_arguments("msedge.exe", "/temporary/profile")
-    assert "--user-data-dir=/temporary/profile" in args
-    assert not any(
-        arg.startswith(
-            ("--proxy", "--host-resolver", "--disable-gpu", "--disable-quic", "--disable-features")
-        )
-        for arg in args
-    )
-    assert "--remote-debugging-address=127.0.0.1" in args
-    assert not {
-        "--no-sandbox",
-        "--disable-web-security",
-        "--ignore-certificate-errors",
-        "--remote-allow-origins=*",
-    } & set(args)
+@pytest.mark.parametrize(
+    "executable,channel",
+    [
+        ("C:/Program Files/Microsoft/Edge/Application/msedge.exe", "msedge"),
+        ("C:/Program Files/Google/Chrome/Application/chrome.exe", "chrome"),
+    ],
+)
+def test_installed_browsers_use_supported_playwright_channels(monkeypatch, executable, channel):
+    monkeypatch.setattr(browser, "find_browser", lambda: executable)
+    assert browser.browser_options() == {"channel": channel}
+
+
+def test_explicit_browser_executable_is_an_opt_in_override():
+    assert browser.browser_options("C:/fixture/chromium.exe") == {
+        "executable_path": "C:/fixture/chromium.exe"
+    }
 
 
 @pytest.mark.parametrize(

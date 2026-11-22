@@ -11,7 +11,7 @@ from modules.ui.components.presentation import document_policy
 from modules.workspace.components.primitives import dump, now
 from ..report_layouts import CURRENT_REVISIONS, pristine_layout_defaults
 from ..report_explainers import select_report_explainers
-from ..finding_explainers import select_finding_explainers
+from ..finding_explainers import SUPPORTED_REVISIONS, select_finding_explainers
 
 
 def project_legacy_draft(db, entity_id, draft):
@@ -32,8 +32,7 @@ def initialize_legacy_draft(store, cases, lead):
         pin_layouts or lead["draft"].get("information_revision") == "information-2026-11-10-v1"
     ) and "report_explainer_snapshots" not in lead["draft"]
     pin_finding_snippets = (
-        pin_layouts
-        or lead["draft"].get("finding_explainer_revision") == "finding-explainers-2026-11-10-v1"
+        pin_layouts or lead["draft"].get("finding_explainer_revision") in SUPPORTED_REVISIONS
     ) and "finding_explainer_snapshots" not in lead["draft"]
     if lead.get("case", {}).get("stage") == "in_progress" and (
         pin_layouts
@@ -53,6 +52,8 @@ def initialize_legacy_draft(store, cases, lead):
             if pin_report_pages:
                 saved["report_explainer_snapshots"] = select_report_explainers(lead)
             if pin_finding_snippets:
-                saved["finding_explainer_snapshots"] = select_finding_explainers(lead)
+                saved["finding_explainer_snapshots"] = select_finding_explainers(
+                    lead, saved["finding_explainer_revision"]
+                )
             db.execute("UPDATE cases SET draft=? WHERE id=?", (dump(saved), lead["case_id"]))
             lead["draft"] = saved

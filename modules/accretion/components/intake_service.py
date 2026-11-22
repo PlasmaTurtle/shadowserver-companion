@@ -143,6 +143,10 @@ class IntakeService:
             },
             "filename_profile": profile,
         }
+        if config.get("outreach_mode") == "targeted" and config.get("targeted_authority"):
+            # A reviewed authority is part of the intake decision. Retain older
+            # policy fingerprints when no authority snapshot was recorded.
+            policy["targeted_authority"] = config["targeted_authority"]
 
         def fingerprint_for(settings):
             return hashlib.sha256((digest + dump(settings)).encode()).hexdigest()

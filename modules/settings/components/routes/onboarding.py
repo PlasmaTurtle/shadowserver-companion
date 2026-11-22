@@ -1,19 +1,9 @@
 """Authenticated local setup endpoints; credential values use existing APIs."""
 
 from typing import Literal
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict
 
-
-class ProfileValues(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    analyst_name: str = Field(min_length=1, max_length=300)
-    analyst_title: str = Field(default="", max_length=300)
-    agency: str = Field(min_length=1, max_length=500)
-    department: str = Field(default="", max_length=500)
-    office: str = Field(min_length=1, max_length=500)
-    email: str = Field(default="", max_length=500)
-    regions: list[str] = Field(min_length=1, max_length=100)
-    display_timezone: str = Field(default="America/New_York", max_length=100)
+from ..api_models import ProfileValues
 
 
 class ProgressValues(BaseModel):
@@ -29,7 +19,7 @@ def register(app, *, setup):
 
     @app.put("/api/setup/profile")
     def profile(body: ProfileValues):
-        return setup.save_profile(body.model_dump())
+        return setup.save_profile(body.model_dump(exclude_unset=True))
 
     @app.put("/api/setup/progress")
     def progress(body: ProgressValues):

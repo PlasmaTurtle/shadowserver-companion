@@ -1,25 +1,24 @@
-"""Capture the selected loaded page in an isolated installed Edge/Chrome session."""
+"""Playwright-managed browser lifetime and viewport capture for shared callers."""
 
-import base64
+import asyncio
+from contextlib import suppress
 import os
 from pathlib import Path
 import re
 import shutil
-import subprocess
-import tempfile
 import threading
 import time
 
-from .cdp import CDP
+from playwright.async_api import (
+    Error as PlaywrightError,
+    TimeoutError as PlaywrightTimeout,
+    async_playwright,
+)
+
 from .diagnostics import network_error
 from .downloads import DownloadObservations
-from .process_guard import BrowserProcessGuard
 from .transport import web_url
-from .navigation import (
-    WebsiteLoadError,
-    extract_root_domain as extract_root_domain,
-    load_page,
-)
+from .navigation import WebsiteLoadError, extract_root_domain as extract_root_domain, load_page
 from modules.workspace.components.primitives import now
 
 VIEWPORT = {"width": 1440, "height": 900, "deviceScaleFactor": 1, "mobile": False}
@@ -61,18 +60,16 @@ def find_browser():
     )
 
 
-def browser_arguments(executable, profile):
-    return [
-        executable,
-        "--headless=new",
-        "--remote-debugging-port=0",
-        "--remote-debugging-address=127.0.0.1",
-        "--user-data-dir=" + str(profile),
-        "--no-first-run",
-        "--no-default-browser-check",
-        "--window-size=1440,900",
-        "about:blank",
-    ]
+def browser_options(executable=None):
+    """Prefer supported installed browser channels; explicit paths are caller-owned."""
+    if executable is not None:
+        return {"executable_path": str(executable)}
+    name = Path(find_browser()).name.lower()
+    if name in {"msedge.exe", "microsoft-edge"}:
+        return {"channel": "msedge"}
+    if name in {"chrome.exe", "google-chrome"}:
+        return {"channel": "chrome"}
+    return {"executable_path": find_browser()}
 
 
 def classify_page(info, http_status, loaded, document_failed):
@@ -119,17 +116,43 @@ def capture_website(
     page_check=None,
     deadline=None,
 ):
-    requested_url = web_url(url)
+    """Capture synchronously from a worker; Playwright stays on this owning thread."""
+    requested = web_url(url)
     cancel_event = cancel_event or threading.Event()
-    start = time.monotonic()
     if cancel_event.is_set():
         raise ValueError("Website capture cancelled")
-    operation_deadline = deadline if deadline is not None else float("inf")
-    deadline = min(start + STARTUP_SECONDS, operation_deadline)
-    if start >= deadline:
+    if deadline is not None and time.monotonic() >= deadline:
         raise TimeoutError("The website capture time budget has expired")
-    profile = None
-    process = client = guard = target = None
+    return asyncio.run(
+        _capture(
+            requested,
+            cancel_event=cancel_event,
+            executable=executable,
+            skip_urls=skip_urls,
+            require_usable=require_usable,
+            page_check=page_check,
+            operation_deadline=deadline,
+        ),
+        loop_factory=asyncio.ProactorEventLoop if os.name == "nt" else asyncio.new_event_loop,
+    )
+
+
+async def _capture(
+    requested_url,
+    *,
+    cancel_event,
+    executable,
+    skip_urls,
+    require_usable,
+    page_check,
+    operation_deadline,
+):
+    start = time.monotonic()
+    operation_deadline = operation_deadline if operation_deadline is not None else float("inf")
+    deadline = min(start + STARTUP_SECONDS, operation_deadline)
+    native = context = page = close_task = None
+    finished = asyncio.Event()
+    expired = False
     downloads = DownloadObservations()
     metadata = {
         "requested_url": requested_url,
@@ -145,137 +168,117 @@ def capture_website(
         "attempts": [],
         "fallback_used": False,
         "blocked_requests": 0,
-        "resource_bytes": 0,
-        "policy": "native-browser-viewport-v3",
+        "policy": "playwright-viewport-v1",
         "browser": "",
         "resource_failures": [],
         "content_scans": {},
         "content_scanning": "not_performed",
         "fetched_requests": 0,
+        "browser_stage": "startup",
     }
 
-    def open_page():
-        nonlocal target
-        client.deadline = deadline
-        # The first target is still about:blank. Failures configuring it precede
-        # any navigation; a later fallback target follows a site attempt.
-        metadata["browser_stage"] = "startup" if target is None else "page_setup"
-        if target is not None:
-            client.call("Target.closeTarget", {"targetId": target}, browser=True)
-            client.session = None
-        target = client.call("Target.createTarget", {"url": "about:blank"}, browser=True)[
-            "targetId"
-        ]
-        client.session = client.call(
-            "Target.attachToTarget", {"targetId": target, "flatten": True}, browser=True
-        )["sessionId"]
-        client.call("Page.enable")
-        client.call("Page.setLifecycleEventsEnabled", {"enabled": True})
-        client.call("Emulation.setDeviceMetricsOverride", VIEWPORT)
-        client.call("Network.enable")
-        metadata["browser_stage"] = "navigation"
-        return client
+    async def release():
+        try:
+            with suppress(PlaywrightError):
+                if context is not None:
+                    await context.close()
+        finally:
+            with suppress(PlaywrightError):
+                if native is not None:
+                    await native.close()
 
+    async def close():
+        nonlocal close_task
+        if close_task is None and native is not None:
+            close_task = asyncio.create_task(release())
+        if close_task is not None:
+            await close_task
+
+    async def watch():
+        nonlocal expired
+        while not finished.is_set():
+            expired = time.monotonic() >= deadline
+            if (cancel_event.is_set() or expired) and native is not None:
+                await close()
+                return
+            await asyncio.sleep(0.05)
+
+    async def open_page():
+        nonlocal page
+        metadata["browser_stage"] = "startup" if page is None else "page_setup"
+        if page is not None:
+            await page.close()
+        page = await context.new_page()
+        metadata["browser_stage"] = "navigation"
+        return page
+
+    monitor = asyncio.create_task(watch())
     try:
-        metadata["browser_stage"] = "startup"
-        profile = Path(tempfile.mkdtemp(prefix="companion-website-"))
-        process = subprocess.Popen(
-            browser_arguments(executable or find_browser(), profile),
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL,
-            creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
-        )
-        guard = BrowserProcessGuard(process)
-        port_file = profile / "DevToolsActivePort"
-        while not port_file.is_file():
-            if cancel_event.wait(0.05):
-                raise ValueError("Website capture cancelled")
-            if time.monotonic() >= deadline:
-                raise ValueError("Capture browser did not become ready in time")
-            exit_code = process.poll()
-            if exit_code is not None:
-                raise ValueError(f"Capture browser exited before startup (exit code {exit_code})")
-        lines = port_file.read_text(encoding="ascii").splitlines()
-        if (
-            len(lines) < 2
-            or not lines[0].isdigit()
-            or not lines[1].startswith("/devtools/browser/")
-        ):
-            raise ValueError("Invalid capture browser endpoint")
-        client = CDP("ws://127.0.0.1:" + lines[0] + lines[1], deadline, downloads=downloads)
-        client.cancel_event = cancel_event
-        metadata["browser"] = client.call("Browser.getVersion", browser=True).get("product", "")[
-            :160
-        ]
-        # All capture tabs share this context. Require its policy before visiting a site.
-        client.call(
-            "Browser.setDownloadBehavior", {"behavior": "deny", "eventsEnabled": True}, browser=True
-        )
-        metadata["browser_stage"] = "candidate_selection"
-        deadline = min(time.monotonic() + MAX_SECONDS, operation_deadline)
-        load_page(
-            requested_url,
-            open_page=open_page,
-            deadline=deadline,
-            cancel_event=cancel_event,
-            metadata=metadata,
-            classify=classify_page,
-            skip_urls=skip_urls,
-            require_usable=require_usable,
-            page_check=page_check,
-        )
+        async with async_playwright() as playwright:
+            try:
+                options = browser_options(executable)
+                native = await playwright.chromium.launch(
+                    **options,
+                    headless=True,
+                    chromium_sandbox=True,
+                    timeout=max(1, (deadline - time.monotonic()) * 1000),
+                )
+                metadata["browser"] = options.get("channel", "Chromium") + "/" + native.version
+                context = await native.new_context(
+                    viewport={"width": 1440, "height": 900},
+                    device_scale_factor=1,
+                    accept_downloads=False,
+                )
+                await downloads.attach(native)
+                deadline = min(time.monotonic() + MAX_SECONDS, operation_deadline)
+                page = await load_page(
+                    requested_url,
+                    open_page=open_page,
+                    deadline=deadline,
+                    cancel_event=cancel_event,
+                    metadata=metadata,
+                    classify=classify_page,
+                    skip_urls=skip_urls,
+                    require_usable=require_usable,
+                    page_check=page_check,
+                )
+                metadata["browser_stage"] = "screenshot"
+                png = await page.screenshot(
+                    type="png",
+                    full_page=False,
+                    timeout=max(1, (deadline - time.monotonic()) * 1000),
+                )
+                metadata["captured_at"] = now()
+                metadata["browser_stage"] = "complete"
+            finally:
+                finished.set()
+                await monitor
+                await close()
+    except (PlaywrightError, OSError, ValueError) as error:
         if cancel_event.is_set():
-            raise ValueError("Website capture cancelled")
-        metadata["browser_stage"] = "screenshot"
-        screenshot = client.call(
-            "Page.captureScreenshot",
-            {
-                "format": "png",
-                "fromSurface": True,
-                "captureBeyondViewport": False,
-                "clip": {"x": 0, "y": 0, "width": 1440, "height": 900, "scale": 1},
-            },
-        )
-        png = base64.b64decode(screenshot["data"], validate=True)
-        metadata["captured_at"] = now()
-        metadata["browser_stage"] = "complete"
-    except WebsiteLoadError:
-        raise
-    except (OSError, ValueError) as error:
-        if downloads.attempts:
-            raise CaptureOperationError(network_error(error), metadata) from error
-        if metadata["browser_stage"] != "startup" or cancel_event.is_set():
+            raise CaptureOperationError("Website capture cancelled", metadata) from error
+        if metadata["browser_stage"] == "startup":
+            # Playwright diagnostics can contain paths and command lines. Retain
+            # only the safe native failure information at the application boundary.
+            match = re.search(r"exitCode=(-?\d+)", str(error))
+            detail = (
+                f"Capture browser exited before startup (exit code {match[1]})"
+                if match
+                else "Capture browser did not become ready in time"
+                if expired or isinstance(error, PlaywrightTimeout)
+                else network_error(error)
+            )
+            raise CaptureBrowserStartupError(f"Capture browser startup failed: {detail}") from error
+        if expired:
+            raise CaptureOperationError("Website capture timed out", metadata) from error
+        if isinstance(error, WebsiteLoadError):
             raise
-        native_code = getattr(error, "winerror", None) or getattr(error, "errno", None)
-        detail = f"OS error {native_code}" if isinstance(native_code, int) else network_error(error)
-        raise CaptureBrowserStartupError(f"Capture browser startup failed: {detail}") from error
+        raise CaptureOperationError(network_error(error), metadata) from error
     finally:
-        if client:
-            try:
-                if not cancel_event.is_set():
-                    client.finish_downloads()
-            except (OSError, ValueError):
-                pass  # Preserve observations and the original capture outcome on disconnect.
-            metadata.update(downloads.snapshot())
-            try:
-                client.send("Browser.close", browser=True)
-            except (OSError, ValueError):
-                pass
-            client.close()
-        if guard:
-            guard.close()
-        if process:
-            try:
-                process.wait(timeout=2)
-            except subprocess.TimeoutExpired:
-                process.terminate()
-                try:
-                    process.wait(timeout=2)
-                except subprocess.TimeoutExpired:
-                    process.kill()
-                    process.wait(timeout=2)
-        if profile is not None:
-            shutil.rmtree(profile, ignore_errors=True)
+        finished.set()
+        await monitor
+        metadata.update(downloads.snapshot())
+    if cancel_event.is_set():
+        raise CaptureOperationError("Website capture cancelled", metadata)
     metadata["elapsed_seconds"] = round(time.monotonic() - start, 2)
     return png, metadata

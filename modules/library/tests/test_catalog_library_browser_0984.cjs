@@ -16,6 +16,7 @@ const { chromium } = require('playwright');
     external = [],
     requests = [],
     checks = [];
+  const fieldValues = { weakness: 'CWE-79', attack_vector: 'NETWORK' };
   const product = {
     id: 'p-example',
     vendor: 'Example Software',
@@ -70,6 +71,7 @@ const { chromium } = require('playwright');
     releaseInitialProducts = resolve;
   });
   let firstProducts = true;
+  let fieldGate;
   try {
     const context = await browser.newContext({
       viewport: { width: 1440, height: 1000 },
@@ -84,6 +86,11 @@ const { chromium } = require('playwright');
       }
       if (!url.pathname.startsWith('/api/cve-catalog/')) return route.continue();
       requests.push({ path: url.pathname, query: url.search, method: req.method() });
+      if (url.pathname.endsWith('/fields') && fieldGate) {
+        const gate = fieldGate;
+        fieldGate = null;
+        await gate();
+      }
       let data;
       if (url.pathname.endsWith('/settings')) enabled = req.postDataJSON().enabled;
       if (['/status', '/settings', '/sync', '/risk/sync'].some((end) => url.pathname.endsWith(end)))
@@ -138,6 +145,11 @@ const { chromium } = require('playwright');
             },
           ],
         };
+      else if (
+        url.pathname.endsWith('/fields/records') &&
+        fieldValues[url.searchParams.get('field')] !== url.searchParams.get('value')
+      )
+        data = { items: [], total: 0 };
       else if (url.pathname.endsWith('/fields/records') || url.pathname.endsWith('/search'))
         data = {
           items: [
@@ -162,7 +174,7 @@ const { chromium } = require('playwright');
           ],
           items: [
             {
-              value: url.searchParams.get('field') === 'attack_vector' ? 'NETWORK' : 'CWE-79',
+              value: fieldValues[url.searchParams.get('field')],
               count: 1,
             },
           ],
@@ -302,6 +314,30 @@ const { chromium } = require('playwright');
     await page.locator('[data-catalog-field-value="NETWORK"]').click();
     await page.locator('#catalog-cves-panel').waitFor({ state: 'visible' });
     assert.match(await page.locator('#catalog-cve-context').innerText(), /NETWORK/);
+    let resumeField;
+    const holdField = new Promise((resolve) => {
+      resumeField = resolve;
+    });
+    let fieldRequested;
+    const oldFieldRequested = new Promise((resolve) => {
+      fieldRequested = resolve;
+    });
+    fieldGate = () => {
+      fieldRequested();
+      return holdField;
+    };
+    await page.locator('[data-catalog-view="fields"]').click();
+    await oldFieldRequested;
+    await page.locator('#catalog-field').selectOption('weakness');
+    resumeField();
+    await page.waitForFunction(
+      () => !document.querySelector('#catalog-fields-panel').hasAttribute('aria-busy'),
+    );
+    assert.equal(await page.locator('#catalog-field').inputValue(), 'weakness');
+    await page.locator('#catalog-field-form button').click();
+    await page.locator('[data-catalog-field-value="CWE-79"]').waitFor();
+    await page.locator('[data-catalog-view="cves"]').click();
+    await page.locator('#cve-catalog-results [data-catalog-cve="CVE-2026-12345"]').waitFor();
     await page.locator('[data-action="catalog-save-view"]').click();
     await page.waitForFunction(
       () => document.querySelectorAll('#catalog-saved-view option').length === 2,
@@ -316,11 +352,15 @@ const { chromium } = require('playwright');
         'Network critical review',
     );
     const persisted = await page.evaluate(async () => (await fetch('/api/library/views')).json());
-    assert.equal(persisted.find((view) => view.id === savedViewId).revision, 2);
-    assert.match(
-      await page.locator('#catalog-view-link').getAttribute('href'),
-      /field_value=NETWORK/,
-    );
+    const savedView = persisted.find((view) => view.id === savedViewId);
+    assert.equal(savedView.revision, 2);
+    assert.equal(savedView.selection.field, 'weakness');
+    assert.deepEqual(savedView.selection.fieldSelection, {
+      field: 'attack_vector',
+      value: 'NETWORK',
+    });
+    const shareLink = await page.locator('#catalog-view-link').getAttribute('href');
+    assert.match(shareLink, /field_value=NETWORK/);
     await page.locator('[data-catalog-view="changes"]').click();
     await page.locator('.catalog-change').waitFor();
     assert.match(await page.locator('.catalog-change').innerText(), /HIGH/);
@@ -347,7 +387,11 @@ const { chromium } = require('playwright');
       .waitFor({ state: 'attached' });
     await another.locator('#catalog-saved-view').selectOption(savedViewId);
     await another.locator('#catalog-cves-panel').waitFor({ state: 'visible' });
-    assert.match(await another.locator('#catalog-cve-context').innerText(), /NETWORK/);
+    await another.locator('#cve-catalog-results [data-catalog-cve="CVE-2026-12345"]').waitFor();
+    assert.match(
+      await another.locator('#catalog-cve-context').innerText(),
+      /attack_vector.*NETWORK/,
+    );
     assert.equal(
       await another.locator('#catalog-view-name').inputValue(),
       'Network critical review',
@@ -368,12 +412,105 @@ const { chromium } = require('playwright');
     await another
       .locator('#library-search-results a[href*="item=' + explainers[0].id + '"]')
       .waitFor();
-    assert.equal(await another.locator('.catalog-search-group').count(), 3);
+    assert.equal(await another.locator('.catalog-search-group').count(), 4);
+    for (const title of ['CVEs', 'Products']) {
+      const group = another.locator('.catalog-search-group').filter({
+        has: another.getByRole('heading', { name: title, exact: true }),
+      });
+      assert.match(await group.innerText(), /No CVE records are stored locally/i);
+      assert.doesNotMatch(await group.innerText(), /No matching references/);
+    }
+    await another.locator('#library-search-query').fill('basic-auth');
+    await another.locator('#library-search-form button').click();
+    const guideLink = another.locator('#library-search-results a[href*="guide="]').first();
+    await guideLink.click();
+    const openedGuide = another.locator('#library-reviewed-guides details[data-guide-id][open]');
+    await openedGuide.locator('a[href*="rfc7617"]').waitFor();
+    await another.reload();
+    await openedGuide.locator('a[href*="rfc7617"]').waitFor();
+    await another.locator('[data-catalog-view="reported"]').click();
+    await another.getByRole('heading', { name: 'Most reported CVEs' }).waitFor();
+    let observationRevision = 'A';
+    await another.route('**/api/library/observed-references?*', (route) => {
+      const offset = Number(new URL(route.request().url()).searchParams.get('cve_offset'));
+      const group = { total: 11, offset, limit: 10, observations_with_value: 20 };
+      return route.fulfill({
+        json: {
+          revision: observationRevision,
+          observation_count: 23,
+          coverage_complete: false,
+          warnings: ['Partial archive'],
+          cves: {
+            ...group,
+            items: [{ value: offset ? 'CVE-2026-1023' : 'CVE-2026-1001', count: offset ? 1 : 9 }],
+          },
+          products: {
+            ...group,
+            total: 1,
+            offset: 0,
+            items: [{ value: 'Example <em>router</em>', count: 15 }],
+          },
+        },
+      });
+    });
+    await another.locator('[data-catalog-view="reported"]').click();
+    const ranking = another.locator('#catalog-reported-panel');
+    await ranking.getByRole('link', { name: 'CVE-2026-1001' }).waitFor();
+    assert.match(await ranking.innerText(), /Coverage is partial/);
+    assert.equal(await ranking.locator('td em').count(), 0);
+    await ranking.getByRole('button', { name: 'Next' }).click();
+    await ranking.getByRole('link', { name: 'CVE-2026-1023' }).waitFor();
+    await ranking.getByRole('button', { name: 'Previous' }).click();
+    await ranking.getByRole('link', { name: 'CVE-2026-1001' }).waitFor();
+    observationRevision = 'B';
+    await ranking.getByRole('button', { name: 'Next' }).click();
+    await ranking.getByText(/ranking changed/).waitFor();
+    await ranking.getByRole('link', { name: 'CVE-2026-1001' }).waitFor();
+    await another.locator('[data-catalog-view="changes"]').click();
+    await another.locator('#library-open-kev p').first().waitFor();
+    let vendorFetches = 0;
+    await another.route('**/api/library/vendor-statements/redhat/*/refresh', async (route) => {
+      vendorFetches++;
+      return route.fulfill({
+        json: {
+          status: 'available',
+          retrieved_at: '2026-11-22',
+          sha256: 'f'.repeat(64),
+          revision_id: 'synthetic-redhat-revision',
+          publisher_statement: 'Exact <em>publisher text</em>.',
+          total: 0,
+          statements: [],
+        },
+      });
+    });
+    await another.goto(base + '/#library?view=cves&cve=CVE-2026-12345');
+    await another.getByRole('button', { name: 'Fetch from Red Hat' }).click();
+    assert.equal(vendorFetches, 1);
+    const statement = another.locator('#catalog-vendor-guidance blockquote');
+    assert.equal(await statement.innerText(), 'Exact <em>publisher text</em>.');
+    assert.equal(await statement.locator('em').count(), 0);
+    await another.getByText('Captured source', { exact: true }).click();
+    assert.equal(
+      await another.locator('#catalog-vendor-guidance code').innerText(),
+      'f'.repeat(64),
+    );
     await another.close();
+    const shared = await context.newPage();
+    await shared.goto(base + '/' + shareLink);
+    await shared.locator('#cve-catalog-results [data-catalog-cve="CVE-2026-12345"]').waitFor();
+    assert.match(
+      await shared.locator('#catalog-cve-context').innerText(),
+      /attack_vector.*NETWORK/,
+    );
+    await shared.locator('[data-catalog-view="fields"]').click();
+    await shared.locator('[data-catalog-field-value="CWE-79"]').waitFor();
+    assert.equal(await shared.locator('#catalog-field').inputValue(), 'weakness');
+    await shared.close();
     checks.push(
       'Field coverage and value drilldown, saved cohort restoration, shareable selection and semantic changes',
       'Named views persist across windows, rename with revision checks, and remove independently; typed search uses real local reference endpoints',
       'Changes review loads through the actual impact endpoint with completed-work toggle and explicit read-only guidance',
+      'Reviewed finding links survive reload, workspace frequency and open-case comparisons load, and vendor prose and capture receipts render safely',
     );
     await page.locator('#catalog-enabled').uncheck();
     await page.waitForFunction(() => !document.querySelector('#catalog-enabled')?.checked);

@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 from modules.workspace.components.primitives import dump
-from ..api_models import SettingsUpdate
+from modules.accretion.components.report_profiles import supported_profiles
+from ..api_models import SettingsUpdate, merge_settings
 
 
 def register(app, *, store):
@@ -12,12 +13,12 @@ def register(app, *, store):
         with store.transaction() as db:
             previous = store.settings(db)
             changes = body.model_dump(exclude_unset=True)
-            values = {**previous, **changes}
-            if "outreach_mode" not in changes and "critical_only" in changes:
-                values["outreach_mode"] = "critical" if changes["critical_only"] else "targeted"
-            values["critical_only"] = values["outreach_mode"] == "critical"
-            if not values["critical_only"] and not values["targeted_reason"].strip():
-                raise ValueError("Targeted outreach requires a recorded reason.")
+            if "report_type" in changes and changes["report_type"] not in {
+                "auto",
+                *supported_profiles(),
+            }:
+                raise ValueError("Select a supported report profile or automatic detection")
+            values = merge_settings(previous, changes)
             db.execute("UPDATE settings SET value=? WHERE key=?", (dump(values), "profile"))
         if previous.get("regions") != values.get("regions"):
             acquisition = getattr(app.state, "api_acquisition", None)

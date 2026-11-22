@@ -4,8 +4,9 @@ Workspace owns application composition, current-work queues, shared persistence,
 local sessions, backup/recovery, workspace health and common input security.
 This guide is the entry point for maintaining those responsibilities.
 
-[Architecture](../../../docs/ARCHITECTURE.md) · [Workspace issues](ISSUES.md) ·
-[Data management runbook](DATA_MANAGEMENT.md)
+[Architecture](../../../docs/ARCHITECTURE.md) · [Workspace issues](ISSUES.md) · [Changelog](CHANGELOG.md) ·
+[Data management runbook](DATA_MANAGEMENT.md) ·
+[Library selection](../../../docs/DEVELOPMENT.md#library-selection)
 
 ## Start here
 

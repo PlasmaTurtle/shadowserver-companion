@@ -249,15 +249,11 @@ export function install(ctx) {
       if (page === 'data' && ctx.actions.$('#dropzone')) ctx.actions.wireDropzone();
       if (page === 'settings') {
         void ctx.actions.loadNvdKeyStatus();
-        void ctx.actions.loadSettingsSetupStatus?.();
         void ctx.actions.loadSoftwareStatus?.().catch((error) => {
           if (id === ctx.state.navigation.renderId && error.name !== 'AbortError')
             ctx.actions.toast('Could not refresh software status: ' + error.message, true);
         });
       }
-      if (page === 'settings')
-        ctx.actions.$('#f-targeted_reason').required =
-          ctx.actions.$('#outreach-mode').value === 'targeted';
       if (!force)
         window.scrollTo({
           top: ctx.state.navigation.positions.get(wanted) || 0,
@@ -359,7 +355,6 @@ export async function start(ctx, isCurrent = () => true) {
         .api('/api/settings', {
           method: 'PUT',
           body: {
-            ...ctx.state.navigation.boot.settings,
             appearance:
               window.CompanionPresentation?.preference() ||
               document.documentElement.dataset.theme ||

@@ -1973,53 +1973,6 @@
         }
       }
     },
-    "/api/website-evidence/{capture_id}/image": {
-      "get": {
-        "summary": "Website Evidence Image",
-        "operationId": "website_evidence_image_api_website_evidence__capture_id__image_get",
-        "parameters": [
-          {
-            "name": "capture_id",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "title": "Capture Id"
-            }
-          },
-          {
-            "name": "original",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "boolean",
-              "default": false,
-              "title": "Original"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {}
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/pending-leads/{pending_id}/start": {
       "post": {
         "summary": "Start Pending",
@@ -4149,6 +4102,53 @@
         }
       }
     },
+    "/api/website-evidence/{capture_id}/image": {
+      "get": {
+        "summary": "Website Evidence Image",
+        "operationId": "website_evidence_image_api_website_evidence__capture_id__image_get",
+        "parameters": [
+          {
+            "name": "capture_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Capture Id"
+            }
+          },
+          {
+            "name": "original",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "boolean",
+              "default": false,
+              "title": "Original"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/cases/{case_id}/website-capture": {
       "get": {
         "summary": "Capture Scope",
@@ -5726,6 +5726,86 @@
         }
       }
     },
+    "/api/library/guides": {
+      "get": {
+        "summary": "Reviewed Guides",
+        "operationId": "reviewed_guides_api_library_guides_get",
+        "parameters": [
+          {
+            "name": "q",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "string",
+              "maxLength": 200,
+              "default": "",
+              "title": "Q"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GuideResults"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/library/guides/{guide_id}": {
+      "get": {
+        "summary": "Reviewed Guide",
+        "operationId": "reviewed_guide_api_library_guides__guide_id__get",
+        "parameters": [
+          {
+            "name": "guide_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Guide Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReviewedGuide"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/library/views": {
       "get": {
         "summary": "Views",
@@ -5955,6 +6035,60 @@
         }
       }
     },
+    "/api/library/changes/open-kev": {
+      "get": {
+        "summary": "Open Kev Changes",
+        "operationId": "open_kev_changes_api_library_changes_open_kev_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500000,
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/OpenKevChanges"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/library/changes/{cve_id}/impact": {
       "get": {
         "summary": "Impact",
@@ -6010,6 +6144,108 @@
             "content": {
               "application/json": {
                 "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/library/vendor-statements/redhat/{cve_id}": {
+      "get": {
+        "summary": "Vendor Statement",
+        "operationId": "vendor_statement_api_library_vendor_statements_redhat__cve_id__get",
+        "parameters": [
+          {
+            "name": "cve_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cve Id"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 500000,
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Limit"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VendorStatementResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/library/vendor-statements/redhat/{cve_id}/refresh": {
+      "post": {
+        "summary": "Refresh",
+        "operationId": "refresh_api_library_vendor_statements_redhat__cve_id__refresh_post",
+        "parameters": [
+          {
+            "name": "cve_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Cve Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/VendorStatementResponse"
+                }
               }
             }
           },
@@ -8439,6 +8675,70 @@
         }
       }
     },
+    "/api/library/observed-references": {
+      "get": {
+        "summary": "Observed References",
+        "operationId": "observed_references_api_library_observed_references_get",
+        "parameters": [
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 10,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "cve_offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Cve Offset"
+            }
+          },
+          {
+            "name": "product_offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Product Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ObservedReferenceSummary"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/cve-catalog/records/{cve_id}/observations": {
       "get": {
         "summary": "Record Observations",
@@ -9920,7 +10220,8 @@
             "type": "string",
             "enum": [
               "legacy",
-              "finding-explainers-2026-11-10-v1"
+              "finding-explainers-2026-11-10-v1",
+              "finding-explainers-2026-11-22-v1"
             ],
             "title": "Finding Explainer Revision",
             "default": "legacy"
@@ -10461,6 +10762,22 @@
         "type": "object",
         "title": "GroupRetryValues"
       },
+      "GuideResults": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReviewedGuide"
+            },
+            "type": "array",
+            "title": "Items"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items"
+        ],
+        "title": "GuideResults"
+      },
       "HTTPValidationError": {
         "properties": {
           "detail": {
@@ -10629,6 +10946,237 @@
           "reason"
         ],
         "title": "ObservationScopeChange"
+      },
+      "ObservedReferenceCount": {
+        "properties": {
+          "value": {
+            "type": "string",
+            "maxLength": 200,
+            "minLength": 1,
+            "title": "Value"
+          },
+          "count": {
+            "type": "integer",
+            "minimum": 1.0,
+            "title": "Count",
+            "description": "Distinct retained observations reporting this value."
+          }
+        },
+        "type": "object",
+        "required": [
+          "value",
+          "count"
+        ],
+        "title": "ObservedReferenceCount"
+      },
+      "ObservedReferencePage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ObservedReferenceCount"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total",
+            "description": "Distinct ranked values before pagination."
+          },
+          "observations_with_value": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Observations With Value",
+            "description": "Distinct observations with at least one ranked value in this category."
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "observations_with_value",
+          "limit",
+          "offset"
+        ],
+        "title": "ObservedReferencePage"
+      },
+      "ObservedReferenceSummary": {
+        "properties": {
+          "revision": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Revision",
+            "description": "Opaque workspace revision shared by both rankings."
+          },
+          "observation_count": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Observation Count",
+            "description": "Distinct observations examined, including observations without a ranked value."
+          },
+          "coverage_complete": {
+            "type": "boolean",
+            "title": "Coverage Complete",
+            "description": "Whether the counts cover all retained observations and labels."
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "cves": {
+            "$ref": "#/components/schemas/ObservedReferencePage"
+          },
+          "products": {
+            "$ref": "#/components/schemas/ObservedReferencePage"
+          }
+        },
+        "type": "object",
+        "required": [
+          "revision",
+          "observation_count",
+          "coverage_complete",
+          "warnings",
+          "cves",
+          "products"
+        ],
+        "title": "ObservedReferenceSummary"
+      },
+      "OpenKevChange": {
+        "properties": {
+          "case_id": {
+            "type": "string",
+            "title": "Case Id"
+          },
+          "case_title": {
+            "type": "string",
+            "title": "Case Title"
+          },
+          "cve_id": {
+            "type": "string",
+            "title": "Cve Id"
+          },
+          "previous": {
+            "type": "boolean",
+            "title": "Previous"
+          },
+          "listed": {
+            "type": "boolean",
+            "title": "Listed"
+          },
+          "pinned_at": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Pinned At"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "case_id",
+          "case_title",
+          "cve_id",
+          "previous",
+          "listed",
+          "pinned_at",
+          "url"
+        ],
+        "title": "OpenKevChange"
+      },
+      "OpenKevChanges": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/OpenKevChange"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          },
+          "offset": {
+            "type": "integer",
+            "title": "Offset"
+          },
+          "limit": {
+            "type": "integer",
+            "title": "Limit"
+          },
+          "comparable": {
+            "type": "integer",
+            "title": "Comparable"
+          },
+          "unknown": {
+            "type": "integer",
+            "title": "Unknown"
+          },
+          "unreadable_cases": {
+            "type": "integer",
+            "title": "Unreadable Cases"
+          },
+          "source": {
+            "anyOf": [
+              {
+                "additionalProperties": true,
+                "type": "object"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source"
+          },
+          "notice": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Notice"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "total",
+          "offset",
+          "limit",
+          "comparable",
+          "unknown",
+          "unreadable_cases",
+          "source",
+          "notice"
+        ],
+        "title": "OpenKevChanges"
       },
       "OutreachPolicyValues": {
         "properties": {
@@ -10923,6 +11471,15 @@
       },
       "ProfileValues": {
         "properties": {
+          "regions": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "minItems": 1,
+            "title": "Regions"
+          },
           "analyst_name": {
             "type": "string",
             "maxLength": 300,
@@ -10945,7 +11502,7 @@
             "type": "string",
             "maxLength": 500,
             "title": "Department",
-            "default": ""
+            "default": "U.S. Department of Homeland Security"
           },
           "office": {
             "type": "string",
@@ -10955,33 +11512,30 @@
           },
           "email": {
             "type": "string",
-            "maxLength": 500,
+            "maxLength": 254,
             "title": "Email",
             "default": ""
-          },
-          "regions": {
-            "items": {
-              "type": "string"
-            },
-            "type": "array",
-            "maxItems": 100,
-            "minItems": 1,
-            "title": "Regions"
           },
           "display_timezone": {
             "type": "string",
             "maxLength": 100,
             "title": "Display Timezone",
             "default": "America/New_York"
+          },
+          "targeted_reason": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Targeted Reason",
+            "default": ""
           }
         },
         "additionalProperties": false,
         "type": "object",
         "required": [
+          "regions",
           "analyst_name",
           "agency",
-          "office",
-          "regions"
+          "office"
         ],
         "title": "ProfileValues"
       },
@@ -11075,7 +11629,8 @@
               "cves",
               "fields",
               "changes",
-              "dark-matter"
+              "dark-matter",
+              "reported"
             ],
             "title": "View",
             "default": "products"
@@ -11159,6 +11714,80 @@
         "additionalProperties": false,
         "type": "object",
         "title": "ResearchSelection"
+      },
+      "ReviewedGuide": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "kind": {
+            "type": "string",
+            "enum": [
+              "report",
+              "finding",
+              "context"
+            ],
+            "title": "Kind"
+          },
+          "title": {
+            "type": "string",
+            "title": "Title"
+          },
+          "sources": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Sources"
+          },
+          "revision": {
+            "type": "string",
+            "title": "Revision"
+          },
+          "report_types": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Report Types"
+          },
+          "body": {
+            "type": "string",
+            "title": "Body"
+          },
+          "intro": {
+            "type": "string",
+            "title": "Intro"
+          },
+          "limitations": {
+            "type": "string",
+            "title": "Limitations"
+          },
+          "review": {
+            "type": "string",
+            "title": "Review"
+          },
+          "match_rules": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "type": "array",
+            "title": "Match Rules"
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "sources"
+        ],
+        "title": "ReviewedGuide",
+        "description": "Common fields plus the complete original report, finding or context wording."
       },
       "SavedViewImport": {
         "properties": {
@@ -11352,12 +11981,6 @@
             "minItems": 1,
             "title": "Regions"
           },
-          "sheet": {
-            "type": "string",
-            "maxLength": 100,
-            "title": "Sheet",
-            "default": ""
-          },
           "analyst_name": {
             "type": "string",
             "maxLength": 300,
@@ -11390,8 +12013,26 @@
           },
           "email": {
             "type": "string",
-            "maxLength": 500,
+            "maxLength": 254,
             "title": "Email",
+            "default": ""
+          },
+          "display_timezone": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Display Timezone",
+            "default": "America/New_York"
+          },
+          "targeted_reason": {
+            "type": "string",
+            "maxLength": 2000,
+            "title": "Targeted Reason",
+            "default": ""
+          },
+          "sheet": {
+            "type": "string",
+            "maxLength": 100,
+            "title": "Sheet",
             "default": ""
           },
           "timeout": {
@@ -11451,12 +12092,6 @@
             ],
             "title": "Appearance"
           },
-          "display_timezone": {
-            "type": "string",
-            "maxLength": 100,
-            "title": "Display Timezone",
-            "default": "America/New_York"
-          },
           "critical_only": {
             "type": "boolean",
             "title": "Critical Only",
@@ -11470,12 +12105,6 @@
             ],
             "title": "Outreach Mode",
             "default": "critical"
-          },
-          "targeted_reason": {
-            "type": "string",
-            "maxLength": 2000,
-            "title": "Targeted Reason",
-            "default": ""
           },
           "report_type": {
             "type": "string",
@@ -11571,6 +12200,340 @@
           "type"
         ],
         "title": "ValidationError"
+      },
+      "VendorAcquisitionAttempt": {
+        "properties": {
+          "outcome": {
+            "type": "string",
+            "enum": [
+              "success",
+              "rate_limited",
+              "not_found",
+              "unavailable",
+              "invalid_response"
+            ],
+            "title": "Outcome"
+          },
+          "attempted_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Attempted At"
+          },
+          "completed_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Completed At"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          },
+          "http_status": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Http Status"
+          },
+          "retry_after": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 128
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retry After"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "outcome",
+          "attempted_at",
+          "completed_at",
+          "error",
+          "http_status",
+          "retry_after"
+        ],
+        "title": "VendorAcquisitionAttempt"
+      },
+      "VendorProductStatement": {
+        "properties": {
+          "product": {
+            "type": "string",
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Product"
+          },
+          "package": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4096,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Package"
+          },
+          "cpe": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4096,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cpe"
+          },
+          "status": {
+            "type": "string",
+            "maxLength": 4096,
+            "minLength": 1,
+            "title": "Status",
+            "description": "Publisher fix state, or Fixed for a released erratum."
+          },
+          "advisory": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4096,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Advisory"
+          },
+          "release_date": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4096,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Release Date"
+          },
+          "source_pointer": {
+            "type": "string",
+            "pattern": "^/(package_state|affected_release)/[0-9]+$",
+            "title": "Source Pointer"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "product",
+          "package",
+          "cpe",
+          "status",
+          "advisory",
+          "release_date",
+          "source_pointer"
+        ],
+        "title": "VendorProductStatement"
+      },
+      "VendorStatementResponse": {
+        "properties": {
+          "cve_id": {
+            "type": "string",
+            "maxLength": 80,
+            "pattern": "^CVE-[0-9]{4}-[0-9]{4,}$",
+            "title": "Cve Id"
+          },
+          "publisher": {
+            "type": "string",
+            "const": "Red Hat Product Security",
+            "title": "Publisher"
+          },
+          "source_url": {
+            "type": "string",
+            "format": "uri",
+            "title": "Source Url"
+          },
+          "public_url": {
+            "type": "string",
+            "format": "uri",
+            "title": "Public Url"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "available",
+              "not_retrieved",
+              "unavailable"
+            ],
+            "title": "Status"
+          },
+          "retrieved_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Retrieved At"
+          },
+          "revision_id": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-f0-9]{32}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Revision Id",
+            "description": "Local immutable capture identifier."
+          },
+          "sha256": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^[a-f0-9]{64}$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Sha256"
+          },
+          "published_at": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 4096,
+                "minLength": 1
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Published At",
+            "description": "Red Hat public_date for the vulnerability."
+          },
+          "stale": {
+            "anyOf": [
+              {
+                "type": "boolean"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Stale",
+            "description": "Null when there is no verified response."
+          },
+          "last_attempt": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/VendorAcquisitionAttempt"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "publisher_statement": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 65536
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Publisher Statement",
+            "description": "Exact Red Hat statement text when supplied."
+          },
+          "statements": {
+            "items": {
+              "$ref": "#/components/schemas/VendorProductStatement"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Statements"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total"
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "maximum": 500000.0,
+            "minimum": 0.0,
+            "title": "Offset"
+          },
+          "error": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Error"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": [
+          "cve_id",
+          "publisher",
+          "source_url",
+          "public_url",
+          "status",
+          "retrieved_at",
+          "revision_id",
+          "sha256",
+          "published_at",
+          "stale",
+          "last_attempt",
+          "publisher_statement",
+          "statements",
+          "total",
+          "limit",
+          "offset",
+          "error"
+        ],
+        "title": "VendorStatementResponse"
       },
       "VerificationRequest": {
         "properties": {

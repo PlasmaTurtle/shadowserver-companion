@@ -48,6 +48,7 @@ from modules.library.components.routes import intelligence as intelligence_route
 from modules.library.components.routes import content as content_routes
 from modules.library.components.routes import research as research_routes
 from modules.library.components.routes import reference_changes as reference_change_routes
+from modules.library.components.routes import vendor_statements as vendor_statement_routes
 from .routes import workspace as workspace_routes
 from modules.attribution.components.routes import assets as asset_routes
 from modules.entities.components.routes import contacts as contact_routes
@@ -281,6 +282,7 @@ def create_app(
     content_routes.register(app, store=store)
     research_routes.register(app, store=store, catalog=catalog_manager)
     reference_change_routes.register(app, store=store, catalog=catalog_manager)
+    vendor_statement_routes.register(app, store=store)
     settings_routes.register(app, store=store)
     onboarding_routes.register(app, setup=setup)
     software_update_routes.register(app, updates=software_updates)

@@ -4,8 +4,9 @@ Observatory owns read projections, analytical indexes, map/scene interaction,
 geographic reference assets, and visualization of retained observations. This
 guide covers the maintenance boundaries behind those views.
 
-[Module issues](ISSUES.md) · [Architecture](../../../docs/ARCHITECTURE.md) ·
-[Maintenance workflow](../../../docs/DEVELOPMENT.md#maintenance-workflow)
+[Module issues](ISSUES.md) · [Changelog](CHANGELOG.md) · [Architecture](../../../docs/ARCHITECTURE.md) ·
+[Maintenance workflow](../../../docs/DEVELOPMENT.md#maintenance-workflow) ·
+[Library selection](../../../docs/DEVELOPMENT.md#library-selection)
 
 ## Start here
 

@@ -42,7 +42,7 @@ assets, verification and release requirements are maintained below.
 
 Use this sequence before the next refactor and for subsequent maintenance. The
 [documentation hub](README.md#module-documentation-and-tracking) links each
-module's guide and tracker.
+module's guide, issue tracker and changelog.
 
 1. **Choose the issue and owner.** Read the owning module's guide and tracker.
    Record a reproducible problem or a concrete refactor goal, affected callers,
@@ -55,16 +55,15 @@ module's guide and tracker.
    reference using [established implementations](#established-implementations-and-reference-behavior).
    Use synthetic cases for reproducible faults and actual outputs for integration,
    rendering or network behavior. Identify the expected result and verification
-   command before editing; preserve the original failing examples.
+   command before editing; preserve the original failing examples. Apply the
+   [library selection rule](#library-selection) before writing non-domain logic
+   over 50 lines or implementing a standard protocol, parser, or security primitive.
 3. **Bound the change.** Identify public interfaces, transaction ownership,
    evidence/resource bytes and compatibility paths that must survive. A move,
    policy change and data migration are distinct changes; do not silently combine
    them. Cross-module work names a primary owner and the affected interfaces.
-   Prefer the established implementation with thin application-specific integration.
-   Document the demonstrated gap before replacing its behavior with custom code.
-   A smaller diff is not a reason to retain a defective approach. Record material
-   tradeoffs in the owning issue or interface guide, including speed, resource
-   lifetime, security and maintenance costs.
+   Keep application-specific integration with the owner and reuse the selected
+   implementation through its supported interface.
 4. **Implement one reviewable responsibility.** Keep source, module tests and
    resources with their owner. Update the owning guide when a contract or command
    changes. Link common instructions instead of copying them into each module.
@@ -84,8 +83,12 @@ module's guide and tracker.
    status and retain the completion date, change reference, demonstrated module
    benefit, commands/results and remaining limits. Passing checks alone does not
    establish the improvement. Identify verification-only repairs as supporting
-   work without claiming a module enhancement. Update the project issue index
-   when ownership changes.
+   work without claiming a module enhancement. For a change to module behavior,
+   interfaces or maintenance, add a short bullet under `## Unreleased` in the
+   owning module's `docs/CHANGELOG.md` in the same commit. Say what changed and
+   why it matters. Link an issue when the reader needs its evidence. Record a
+   shared change with its owner. Add a caller entry only if its own behavior changed.
+   Update the project issue index when ownership changes.
    Release acceptance remains a separate step.
 
 | Change scope | Verification to retain |
@@ -122,8 +125,8 @@ permissions and safety controls. Track useful outcomes and resource use, not ret
 Prefer native platform capabilities or maintained libraries for common tasks,
 with thin application integration. Before replacing a transport, scheduler,
 parser, retry system or other general mechanism, demonstrate the requirement the
-established implementation cannot meet. Record a material exception in its owning
-guide or issue; routine choices need no separate design document or approval.
+established implementation cannot meet. Record the basis for a custom replacement
+in the owning issue. Follow the [library selection rule](#library-selection).
 
 Compare the existing failure with an independent working reference: official
 documentation, a working example or an explicit domain rule. Use representative
@@ -143,6 +146,35 @@ Establish working end-to-end behavior with normal platform defaults first, then
 assess security, data and performance improvements against concrete needs and
 ordinary functionality. Do not invent controls that defeat the feature's purpose.
 
+### Library selection
+
+Before writing more than 50 lines of non-domain logic, research the established
+open-source library for the job. For any code implementing a standard protocol,
+parser, or security primitive, do this before the first line, even inside domain
+code. Calling a library's supported API does not itself implement the primitive.
+
+Non-domain logic is code that could serve another application, such as browser
+automation, retries or file handling. Lead qualification and notification counting
+are domain rules. Count new or rewritten non-domain lines for one capability
+across files, contributors and commits, including delegated work. Plan the
+comparison up front when the size is predictable. If scope grows, stop before
+the 51st non-domain line.
+
+Record a dated decision in the owning module's issue, or the project issue for
+shared work. Link it in the pull request. Reuse a prior decision if its evidence
+still applies.
+
+- Name the established library and version, including an applicable standard
+  library. Link official documentation or upstream source for the capability.
+- State the requirement and use the supported API when it satisfies it. If a
+  limitation is uncertain, exercise the library on a representative input and
+  record the command, environment and observed result. If the execution
+  environment blocks the library, stop and [report the error](#how-failures-are-handled).
+- Before choosing custom code, including a replacement for a library already
+  in use, show why configuration or a thin adapter cannot meet the requirement.
+  Identify exactly which part must be custom. Passing tests for the custom code
+  alone cannot establish a limitation in the library.
+
 ### Where work runs
 
 - Do capable work locally first; hosted CI is not the initial debugging environment.
@@ -156,6 +188,12 @@ ordinary functionality. Do not invent controls that defeat the feature's purpose
   documentation-only CI skips where appropriate.
 
 ### How failures are handled
+
+If a tool, binary or network limitation in the execution environment causes the
+established library to fail, stop the affected work. Report the
+command or API call, tool version, exact error and exit code if available.
+Redact credentials from diagnostics. Never build a custom fallback or wrapper
+to bypass that limitation. This rule applies at any code size.
 
 Classify failures before editing: infrastructure or runner access, test harness,
 application defect, or an approach that fails where the established reference
@@ -441,8 +479,20 @@ Group related commits in one release. The updater compares the three numeric
 version components and the release channel. Two candidates at the same version
 appear identical to it.
 
-Update `VERSION`, `RELEASE.json` and the release's `CHANGELOG.md` entry
-together. Build the source archive and installer from the same committed inputs.
+Review the [module changelogs](README.md#module-documentation-and-tracking)
+alongside any project-wide changes. From the repository root, compare the
+working tree with the previous release tag to see the module entries together.
+
+```text
+git diff <previous-release-tag> -- ":(glob)modules/*/docs/CHANGELOG.md"
+```
+
+In each affected module, move the entries included in this release from
+`## Unreleased` to `## X.Y.Z`. Keep pending entries under `Unreleased` and
+keep that heading ready for the next change. Use the shipped entries to write
+the user-facing highlights in the root `CHANGELOG.md`, which feeds What's New.
+Update those notes, `VERSION` and `RELEASE.json` together. Build the source
+archive and installer from the same committed inputs.
 Record the Git commit and each artifact's SHA-256 with the handoff. When
 publishing a release, tag that commit. A diagnostic retry with unchanged inputs
 can keep its version and record a separate build receipt.

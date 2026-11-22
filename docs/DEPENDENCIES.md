@@ -27,13 +27,26 @@ versions and artifact hashes. `wheelhouse` contains its complete dependency set 
 wheels. The dependency checker derives filenames from those artifacts, verifies
 their SHA-256 before opening the wheel ZIP, and requires exactly one matching
 name/version per locked package. Artifact filenames must agree with their metadata
-identity and expanded compatibility tags in `WHEEL`; pip owns platform compatibility
-and installation. See the [wheel filename specification](https://packaging.python.org/en/latest/specifications/binary-distribution-format/#file-name-convention).
+identity; pip owns platform compatibility and installation using the filename tags.
+Do not duplicate pip's tag validation by requiring internal `WHEEL` tags to match:
+[Playwright's upstream wheel build](https://github.com/microsoft/playwright-python/blob/v1.65.2/setup.py)
+adds a platform-specific Node driver to a pure Python base wheel. Its published
+Windows wheel retains `py3-none-any` internally. The unchanged published artifact
+is verified by hash and installed for the explicit Windows x64 CPython target.
+See the [wheel filename specification](https://packaging.python.org/en/latest/specifications/binary-distribution-format/#file-name-convention).
 The installer checks its staged directory through the same implementation. There
 is no separate root wheel-hash manifest to update.
 
 Package licenses and notices are retained inside each wheel's metadata. The
 application's bundled PDF fonts have their license in `modules/ui/fonts/LICENSE.txt`.
+
+Website capture uses the maintained Python `playwright` package and its bundled
+Node driver. The same hash lock includes its `greenlet` dependency. Installed
+Edge/Chrome channels provide the browser, so setup does not download Chromium or
+require a separate Node installation. Upstream driver licenses and third-party
+notices remain in the wheel and installed payload. The installation self-test
+starts and stops the driver without visiting a website; native screenshot checks
+verify the browser separately.
 
 Library uses the maintained `semver` package for provider records explicitly
 declaring Semantic Versioning. Its native parser/comparator handles prerelease

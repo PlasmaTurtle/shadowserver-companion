@@ -3,6 +3,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
+const catalog = require('./support/profile_catalog.cjs');
 const clone = (value) => JSON.parse(JSON.stringify(value));
 class Data {
   constructor(form = {}) {
@@ -22,7 +23,7 @@ const profile = {
   analyst_name: 'Synthetic Analyst',
   analyst_title: '',
   agency: 'United States Secret Service',
-  department: 'DHS',
+  department: catalog.agencies[0].department,
   office: 'Charlotte',
   email: '',
   regions: ['North Carolina'],
@@ -56,12 +57,7 @@ async function fixture({
     step: 'connections',
     steps,
     profile: clone(profile),
-    regions: ['North Carolina', 'South Carolina'],
-    agencies: [
-      { id: 'usss', short_name: 'USSS', name: profile.agency, department: 'DHS' },
-      { id: 'fbi', short_name: 'FBI', name: 'Federal Bureau of Investigation', department: 'DOJ' },
-      { id: 'custom', name: 'Other agency' },
-    ],
+    ...clone(catalog),
   };
   const shadow = {
     connected,
@@ -106,9 +102,13 @@ async function fixture({
     fs.readFileSync(path.join(__dirname, '../static/onboarding.js'), 'utf8'),
     { context },
   );
-  await mod.link(() => {
-    throw new Error('Unexpected dependency');
-  });
+  await mod.link(
+    (specifier) =>
+      new vm.SourceTextModule(
+        fs.readFileSync(path.resolve(__dirname, '../static', specifier), 'utf8'),
+        { context },
+      ),
+  );
   await mod.evaluate();
   const ctx = {
     state: {
@@ -183,6 +183,7 @@ async function fixture({
   mod.namespace.install(ctx);
   return {
     ctx,
+    handlers: mod.namespace.createHandlers(ctx),
     status,
     shadow,
     nvd,
@@ -201,6 +202,136 @@ async function fixture({
   };
 }
 (async () => {
+  {
+    const f = await fixture({ completed: true });
+    await f.ctx.actions.openSetup('profile');
+    let reasonError = '',
+      regionError = '';
+    const reason = {
+      value: '   ',
+      setCustomValidity: (value) => {
+        reasonError = value;
+      },
+    };
+    const region = {
+      checked: false,
+      setCustomValidity: (value) => {
+        regionError = value;
+      },
+    };
+    const form = {
+      querySelectorAll: (selector) =>
+        selector === '[data-profile-trim-required]'
+          ? [reason]
+          : selector.includes('[name="regions"]')
+            ? [region]
+            : [],
+      querySelector: () => null,
+    };
+    f.nodes.set('#setup-profile-form', form);
+    const target = { closest: (selector) => (selector === '#setup-wizard' ? form : null) };
+    const calls = f.calls.length,
+      renders = f.renders.length;
+    f.handlers.input({ target });
+    assert.match(reasonError, /Blank spaces/);
+    assert.match(regionError, /at least one/);
+    reason.value = 'Specific mission connection';
+    f.handlers.input({ target });
+    assert.equal(reasonError, '', 'Corrected setup rationale clears its custom error immediately');
+    region.checked = true;
+    await f.handlers.change.find((handler) => handler.matches(target)).run(target);
+    assert.equal(
+      regionError,
+      '',
+      'Corrected setup jurisdiction clears its custom error immediately',
+    );
+    assert.equal(f.calls.length, calls);
+    assert.equal(f.renders.length, renders);
+    assert.equal(f.ctx.actions.hasUnsavedSetup(), true);
+  }
+
+  {
+    const f = await fixture({ completed: true });
+    f.status.profile.outreach_mode = 'targeted';
+    f.status.profile.targeted_reason = 'Previously reviewed mission rationale';
+    await f.ctx.actions.openSetup('profile');
+    assert.match(f.renders.at(-1), /id="setup-agency-authority"/);
+    assert.match(f.renders.at(-1), /USSS synthetic citation/);
+    assert.match(f.renders.at(-1), /name="targeted_reason"[^>]+required/);
+    assert.doesNotMatch(f.renders.at(-1), /name="outreach_mode"/);
+    const reason = { value: f.status.profile.targeted_reason, required: true };
+    const department = { value: profile.department };
+    const authority = { innerHTML: '' };
+    const form = {
+      querySelector: (key) =>
+        ({
+          '[name="department"]': department,
+          '[name="targeted_reason"]': reason,
+          '#setup-agency-authority': authority,
+        })[key],
+    };
+    f.ctx.actions.applyAgencyPreset({ value: catalog.agencies[1].name, closest: () => form });
+    assert.equal(reason.value, '');
+    assert.match(authority.innerHTML, /FBI synthetic citation/);
+    let reported = false;
+    const invalid = {
+      checkValidity: () => false,
+      reportValidity: () => {
+        reported = true;
+      },
+    };
+    const before = f.calls.length;
+    await f.ctx.actions.saveSetupProfile(invalid, profile, new Data());
+    assert(reported);
+    assert.equal(f.calls.length, before, 'Invalid profile sends no writes');
+    const nextProfile = {
+      ...profile,
+      agency: catalog.agencies[1].name,
+      department: catalog.agencies[1].department,
+      targeted_reason: 'Specific synthetic mission connection',
+    };
+    await f.ctx.actions.saveSetupProfile(
+      {},
+      nextProfile,
+      new Data({ entries: [['regions', 'North Carolina']] }),
+    );
+    const saved = f.calls.find((call) => call.url === '/api/setup/profile').options.body;
+    assert.equal(saved.targeted_reason, nextProfile.targeted_reason);
+    assert(!Object.hasOwn(saved, 'outreach_mode'));
+  }
+  {
+    const f = await fixture({ completed: true });
+    Object.assign(f.status.profile, {
+      agency: 'Legacy unknown agency',
+      department: 'Legacy department',
+      display_timezone: 'Europe/London',
+      regions: ['North Carolina', 'Legacy region'],
+    });
+    await f.ctx.actions.openSetup('profile');
+    const values = {
+      ...f.status.profile,
+      agency: '',
+      display_timezone: '',
+      office: 'Retained new office',
+    };
+    f.nodes.set('#setup-profile-form', {
+      entries: [
+        ...Object.entries(values).filter(([key]) => key !== 'regions'),
+        ...values.regions.map((region) => ['regions', region]),
+      ],
+    });
+    f.ctx.actions.setupMarkDirty();
+    await f.ctx.actions.changeSetupStep('connections');
+    await f.ctx.actions.changeSetupStep('profile');
+    const html = f.renders.at(-1);
+    assert.match(html, /Legacy unknown agency/);
+    assert.match(html, /Legacy department/);
+    assert.match(html, /Review saved timezone: Europe\/London/);
+    assert.match(html, /type="hidden" name="regions" value="Legacy region"/);
+    assert.match(html, /Remove unsupported saved jurisdictions/);
+    assert.match(html, /Retained new office/);
+  }
+
   for (const [configured, nvdConfigured] of [
     [false, false],
     [true, false],
@@ -385,15 +516,31 @@ async function fixture({
     f.setConfirm(true);
     await a.setupConnectionsNext(true);
     assert.match(f.renders.at(-1), /setup-profile-form/);
+    assert.match(f.renders.at(-1), /<select id="setup-agency-preset" name="agency" required/);
+    assert.doesNotMatch(
+      f.renders.at(-1),
+      /name="(?:other_regions|agency)"[^>]*type="text"|id="setup-other-regions"/,
+    );
+    assert.match(f.renders.at(-1), /id="setup-department"[^>]+readonly/);
+    assert.match(
+      f.renders.at(-1),
+      /<select id="setup-display_timezone" name="display_timezone" required/,
+    );
+    assert.doesNotMatch(f.renders.at(-1), /setup-targeted_reason/);
     assert.equal(f.status.steps.connections.mode, 'manual');
-    const name = { value: '' },
-      department = { value: '' },
+    const department = { value: '' },
       region = { checked: true };
-    f.nodes.set('#setup-agency', name);
     f.nodes.set('#setup-department', department);
     f.nodes.set('#region-nc', region);
-    a.applyAgencyPreset({ id: 'setup-agency-preset', value: 'fbi' });
-    assert.equal(name.value, 'Federal Bureau of Investigation');
+    const agencyForm = {
+      querySelector: (selector) => (selector === '[name="department"]' ? department : null),
+    };
+    a.applyAgencyPreset({
+      id: 'setup-agency-preset',
+      value: catalog.agencies[1].name,
+      closest: () => agencyForm,
+    });
+    assert.equal(department.value, catalog.agencies[1].department);
     assert.equal(region.checked, true);
     await a.saveSetupProfile({}, profile, new Data({ entries: [['regions', 'North Carolina']] }));
     assert.match(f.renders.at(-1), /setup-schedule-form/);

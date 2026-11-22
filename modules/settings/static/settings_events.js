@@ -12,11 +12,11 @@ export function createHandlers(ctx) {
     change: [
       {
         matches: (el, e) => el.id === 'outreach-mode',
-        run: async (el, e) => {
-          const reason = ctx.actions.$('#f-targeted_reason');
-          if (reason) reason.required = el.value === 'targeted';
-          ctx.actions.settingsChanged(el.closest?.('#settings-form'));
-        },
+        run: (el) => ctx.actions.settingsOutreachChanged(el),
+      },
+      {
+        matches: (el) => el.id === 'settings-agency-preset',
+        run: (el) => ctx.actions.applySettingsAgency(el),
       },
       {
         matches: (el) =>
@@ -30,6 +30,8 @@ export function createHandlers(ctx) {
     ],
     click: [],
     actions: {
+      'settings-remove-unsupported-regions': (el) =>
+        ctx.actions.removeSettingsUnsupportedRegions(el),
       'settings-section': (el) => ctx.actions.scrollSettingsSection(el.dataset.section),
       'remove-nvd-key': () => ctx.actions.removeNvdKey(),
       'clear-nvd-key': () => ctx.actions.clearNvdKey(),
@@ -97,10 +99,7 @@ export function createHandlers(ctx) {
         ctx.actions.settingsSaveStatus('Saving settings…', 'saving', form);
         const value = {
           ...obj,
-          regions: obj.regions
-            .split('\n')
-            .map((x) => x.trim())
-            .filter(Boolean),
+          regions: data.getAll('regions'),
           timeout: Number(obj.timeout),
           retries: Number(obj.retries),
           interval: Number(obj.interval),

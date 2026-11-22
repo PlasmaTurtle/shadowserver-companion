@@ -78,6 +78,9 @@ records its own verification and does not inherit that batch's completion claim.
 | ISS055 | [Website capture permitted file downloads](../modules/tools/docs/ISSUES.md#iss055-website-capture-permitted-file-downloads) | Tools |
 | ISS056 | [North Carolina business-registration import](../modules/attribution/docs/ISSUES.md#iss056-north-carolina-business-registration-import) | Attribution and Entities |
 | ISS057 | [Recognize configured keys in onboarding](../modules/settings/docs/ISSUES.md#iss057-recognize-configured-keys-in-onboarding) | Settings |
+| ISS058 | [Find open notifications affected by an explainer correction](../modules/library/docs/ISSUES.md#iss058-find-open-notifications-affected-by-an-explainer-correction) | Library and Investigations |
+| ISS059 | [Report guidance and changes affecting open notifications](../modules/library/docs/ISSUES.md#iss059-report-guidance-and-changes-affecting-open-notifications) | Library, with Investigations and Accretion interfaces |
+| ISS060 | [Validated profiles and agency authority](../modules/settings/docs/ISSUES.md#iss060-validated-profiles-and-agency-authority) | Settings; Accretion |
 
 ## Project work status
 
@@ -367,6 +370,12 @@ On November 22 a complete Windows run passed all 3,769 executed backend tests
 in one interpreter process, including certification and recovery. Neither
 November 21 symptom recurred in that run. Their original causes remain open.
 [November 22 validation](history/validation/intake-review-2026-11-22.md)
+
+Later on November 22, during Library verification against `fb66267` plus local
+Library changes, Windows Python 3.14.10 reported an access violation during
+garbage collection in the app fixture for `tests/test_api_structure_071.py`.
+The stack included `Eclipse.__init__` reading the bundled places JSON. An
+isolated run of the same file passed all three tests. The cause remains open.
 
 **Next evidence needed:** a reproducible triggering sequence or native crash dump
 with matching symbols and resource context. The original WER temporary dump was

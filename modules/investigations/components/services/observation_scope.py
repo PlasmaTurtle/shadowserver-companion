@@ -28,13 +28,16 @@ def _scoped_draft(lead, draft, settings):
     from ..report_explainers import select_report_explainers
     from ..finding_explainers import select_finding_explainers
 
-    for field, select in (
-        ("report_explainer_snapshots", select_report_explainers),
-        ("finding_explainer_snapshots", select_finding_explainers),
+    for field, selected in (
+        ("report_explainer_snapshots", select_report_explainers(lead)),
+        (
+            "finding_explainer_snapshots",
+            select_finding_explainers(lead, draft["finding_explainer_revision"]),
+        ),
     ):
         saved = archive.setdefault(field, {})
         saved.update({item["id"]: deepcopy(item) for item in draft.get(field, [])})
-        draft[field] = [deepcopy(saved.get(item["id"], item)) for item in select(lead)]
+        draft[field] = [deepcopy(saved.get(item["id"], item)) for item in selected]
     values = archive.setdefault("narrative_values", {})
     values.update(deepcopy(draft.get("narrative_values", {})))
     keys = {group["key"] for group in narrative_groups(lead, draft)}

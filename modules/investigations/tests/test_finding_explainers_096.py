@@ -8,8 +8,12 @@ import pytest
 
 from modules.workspace.components import compact_json
 from modules.investigations.components.exhibit_models import build_exhibits
-from modules.library.resources.finding_explainer_data import BANK
-from modules.investigations.components.finding_explainers import REVISION, select_finding_explainers
+from modules.library.resources.finding_explainer_data import BANK, LIFECYCLE_EDITION
+from modules.investigations.components.finding_explainers import (
+    REVISION,
+    select_finding_explainers,
+    selection_is_current,
+)
 from modules.investigations.components.notification_narrative_v4 import REVISION as V4
 from modules.investigations.components.report_composition import Citations
 from modules.ui.components.exhibit_rendering import prepared_pages
@@ -35,7 +39,7 @@ def entry(source, tag, ip="192.0.2.1", version="5.6.29"):
 def findings(entries, *, revision=REVISION, cves=(), excluded=()):
     draft = {
         "finding_explainer_revision": revision,
-        "finding_explainer_snapshots": select_finding_explainers({"entries": entries}),
+        "finding_explainer_snapshots": select_finding_explainers({"entries": entries}, revision),
         "narrative_revision": V4,
     }
     data = {
@@ -67,6 +71,22 @@ def findings(entries, *, revision=REVISION, cves=(), excluded=()):
         ("scan_http_vulnerable", "not-eol-php", None),
         ("scan_http_vulnerable", "eos-unknown", None),
         ("scan_http_vulnerable", "CVE-2099-10001", None),
+        ("scan_http_vulnerable", "http;BASIC-AUTH", "http_basic_auth"),
+        ("scan6_http_vulnerable", "git-config-file", "http_git_config"),
+        ("scan_http_vulnerable", "git-config-file.", "http_git_config"),
+        ("scan_http_vulnerable", "potential-megarac", "http_megarac_management"),
+        ("scan6_http_vulnerable", "megarac", "http_megarac_management"),
+        ("scan_http_vulnerable", "cve-2024-38812;vcenter-dcerpc-exposed", "vcenter_dcerpc_exposed"),
+        ("scan_msrpc", "vcenter-dcerpc-exposed", None),
+        ("scan_mongodb", "mongodb;mongodb-noauth", "mongodb_noauth"),
+        ("scan6_smtp_vulnerable", "smtp;21nails", "smtp_exim_21nails"),
+        ("scan6_isakmp", "vulnerable-isakmp;softether", "isakmp_softether"),
+        ("population_isakmp", "softether", None),
+        ("scan_http", "basic-auth", None),
+        ("scan_http_vulnerable", "no-basic-auth", None),
+        ("scan_http_vulnerable", "basic-auth-required", None),
+        ("scan_mongodb", "mongodb", None),
+        ("scan_http_vulnerable", "mongodb-noauth", None),
     ],
 )
 def test_matching_uses_exact_report_family_and_documented_tag(source, tag, expected):
@@ -131,9 +151,95 @@ def test_historical_revision_does_not_gain_content_or_citations():
 
 
 @pytest.mark.parametrize(
-    "source,tag", [("scan_http_vulnerable", "eol-php"), ("scan_exchange", "eol")]
+    "family,tag,name,value,other,expected",
+    [
+        (
+            "badsecrets",
+            "badsecret",
+            "badsecret_type",
+            "SecretFound",
+            "IdentifyOnly",
+            "badsecrets_secret_found",
+        ),
+        ("rdp", "rdp", "rdp_protocol", "RDP", "RDP_negotiation_ignored", "rdp_native_security"),
+    ],
 )
-def test_eol_only_case_freezes_and_exports_source_backed_technical_text(client, app, source, tag):
+def test_field_qualified_conditions_only_enrich_the_matching_observation(
+    family, tag, name, value, other, expected
+):
+    matching = entry("scan6_" + family, tag)
+    matching["source"]["fields"][name] = value
+    wrong = entry("scan6_" + family, tag, "192.0.2.2")
+    wrong["source"]["fields"][name] = other
+    missing = entry("scan6_" + family, tag, "192.0.2.3")
+    _, model, _, _ = findings([wrong, matching, missing])
+    reviewed = [item for item in model["items"] if "technical_explanation" in item]
+    assert [item["technical_explanation"]["id"] for item in reviewed] == [expected]
+    assert len(reviewed[0]["observation_ids"]) == 1
+    assert len(model["items"]) == 2
+    assert all(item["finding_type"] == "observation" for item in model["items"])
+    assert not select_finding_explainers({"entries": [wrong, missing]})
+
+
+def test_mixed_configuration_lifecycle_unknown_and_excluded_cve_keep_their_own_evidence():
+    cve = "CVE-2099-10001"
+    row = entry(
+        "scan_http_vulnerable",
+        f"http;{cve};basic-auth;BASIC-AUTH;eol-php;new-condition;git-config-file",
+    )
+    _, model, refs, appendix = findings(
+        [row], cves=[cve], excluded=[{"id": cve, "reason": "Inapplicable package."}]
+    )
+    assert {item["label"]: item["finding_type"] for item in model["items"]} == {
+        "basic-auth": "observation",
+        "eol-php": "eol",
+        "new-condition": "observation",
+        "git-config-file": "observation",
+    }
+    assert model["counts"][1]["value"] == 1
+    assert model["counts"][-1] == {"label": "Reviewed source conditions", "value": 2}
+    for item in model["items"]:
+        assert len(item["observation_ids"]) == 1
+        if item["label"] == "new-condition":
+            assert "technical_explanation" not in item
+            continue
+        assert item["technical_explanation"]["source_citations"] == item["citations"]
+        assert set(item["citations"]) <= {ref["number"] for ref in refs.items}
+        assert any(
+            a["id"] in item["appendix_entry_ids"] and a["partition"] == "C"
+            for a in appendix["entries"]
+        )
+        assert item["cvss_assessments"] == []
+
+
+def test_prior_bank_edition_stays_valid_without_gaining_new_conditions():
+    row = entry("scan_http_vulnerable", "basic-auth")
+    data, model, refs, _ = findings([row], revision=LIFECYCLE_EDITION)
+    assert selection_is_current({"entries": [row]}, data["draft"])
+    assert [item["label"] for item in model["items"]] == ["basic-auth"]
+    assert not model["items"][0].get("technical_explanation") and not refs.items
+    assert select_finding_explainers({"entries": [row]})[0]["revision"] == REVISION
+    assert BANK["http_eol_php"]["revision"] == LIFECYCLE_EDITION
+
+
+def test_scoped_case_uses_only_active_conditions():
+    from modules.accretion.components.intake.versions import project_conditions
+
+    row = entry("scan_http_vulnerable", "basic-auth;eol-php")
+    scoped = project_conditions(row, ["eol-php:5.6"])
+    _, model, _, _ = findings([scoped])
+    assert [item["label"] for item in model["items"]] == ["eol-php"]
+
+
+@pytest.mark.parametrize(
+    "source,tag",
+    [
+        ("scan_http_vulnerable", "eol-php"),
+        ("scan_exchange", "eol"),
+        ("scan_http_vulnerable", "basic-auth;http"),
+    ],
+)
+def test_case_freezes_and_exports_source_backed_technical_text(client, app, source, tag):
     rows = observations()
     for row in rows:
         row.update(report_type=source, tag=tag)
@@ -162,6 +268,9 @@ def test_eol_only_case_freezes_and_exports_source_backed_technical_text(client, 
     assert all(
         snippets[0][key] in " ".join(text.split()) for key in ("body", "limitations", "review")
     )
+    if tag.startswith("basic-auth"):
+        assert "Reported tag: basic-auth" in text
+        assert "Reported end-of-life condition." not in text
     for page in pages:
         assert all(
             segment.get("top", 0) + segment.get("height", 0) <= page.page.height

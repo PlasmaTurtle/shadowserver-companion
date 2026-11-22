@@ -1,124 +1,159 @@
-"""Browser startup and cancellation preserve owned process/profile lifetime."""
+"""Capture failures preserve caller control and owned browser cleanup."""
 
-from pathlib import Path
+from contextlib import asynccontextmanager
+import asyncio
 import threading
+import time
+from unittest.mock import AsyncMock, Mock
 
 import pytest
+from playwright.async_api import Error as PlaywrightError, TimeoutError as PlaywrightTimeout
 
-from modules.tools.components.website_capture import CaptureBrowserStartupError, browser
+from modules.tools.components.website_capture import (
+    CaptureBrowserStartupError,
+    WebsiteLoadError,
+    browser,
+)
 from modules.tools.components.website_capture.diagnostics import network_error
 
 
-def test_startup_failure_removes_temporary_profile(monkeypatch, tmp_path):
-    profile = tmp_path / "capture-profile"
+@pytest.fixture
+def session(monkeypatch):
+    page = Mock()
+    page.screenshot = AsyncMock(return_value=b"PNG")
+    context = Mock()
+    context.new_page = AsyncMock(return_value=page)
+    context.close = AsyncMock()
+    native = Mock(version="158")
+    native.new_context = AsyncMock(return_value=context)
+    native.close = AsyncMock()
+    events = Mock()
+    events.send = AsyncMock(return_value={"browserContextIds": ["isolated"]})
+    callbacks = {}
+    events.on.side_effect = lambda name, callback: callbacks.__setitem__(name, callback)
+    native.new_browser_cdp_session = AsyncMock(return_value=events)
+    driver = Mock()
+    driver.chromium.launch = AsyncMock(return_value=native)
+    stopped = []
 
-    def create(**kwargs):
-        profile.mkdir()
-        return str(profile)
+    @asynccontextmanager
+    async def runtime():
+        try:
+            yield driver
+        finally:
+            stopped.append(True)
 
-    def fail(*args, **kwargs):
-        raise PermissionError(13, "Synthetic private profile path")
-
-    monkeypatch.setattr(browser.tempfile, "mkdtemp", create)
-    monkeypatch.setattr(browser.subprocess, "Popen", fail)
-    with pytest.raises(CaptureBrowserStartupError, match="OS error 13") as failure:
-        browser.capture_website("http://localhost/", executable="synthetic-browser")
-    assert str(failure.value) == network_error(failure.value)
-    assert "private" not in str(failure.value)
-    assert not profile.exists()
+    monkeypatch.setattr(browser, "async_playwright", runtime)
+    monkeypatch.setattr(browser, "browser_options", lambda executable: {"channel": "msedge"})
+    return driver, native, context, page, callbacks, stopped
 
 
 def test_pre_cancelled_capture_does_not_start_browser(monkeypatch):
     cancel = threading.Event()
     cancel.set()
-
-    def forbidden(*args, **kwargs):
-        pytest.fail("Cancelled capture started a browser")
-
-    monkeypatch.setattr(browser.subprocess, "Popen", forbidden)
+    start = Mock(side_effect=AssertionError("Cancelled capture started a browser"))
+    monkeypatch.setattr(browser, "async_playwright", start)
     with pytest.raises(ValueError, match="cancelled") as failure:
         browser.capture_website("https://example.com/", cancel_event=cancel)
     assert not isinstance(failure.value, CaptureBrowserStartupError)
+    start.assert_not_called()
 
 
-def test_early_browser_exit_closes_owned_guard_and_profile(monkeypatch, tmp_path):
-    profile = tmp_path / "capture-profile"
-    closed = []
-
-    def create(**kwargs):
-        profile.mkdir()
-        return str(profile)
-
-    class Process:
-        def poll(self):
-            return 1
-
-        def wait(self, **kwargs):
-            return 1
-
-    class Guard:
-        def __init__(self, process):
-            pass
-
-        def close(self):
-            closed.append(True)
-
-    monkeypatch.setattr(browser.tempfile, "mkdtemp", create)
-    monkeypatch.setattr(browser.subprocess, "Popen", lambda *a, **k: Process())
-    monkeypatch.setattr(browser, "BrowserProcessGuard", Guard)
-    with pytest.raises(CaptureBrowserStartupError, match=r"exit code 1\)") as failure:
-        browser.capture_website("http://localhost/", executable="synthetic-browser")
-    assert network_error(failure.value) == str(failure.value)
-    assert closed == [True] and not profile.exists()
-
-
-@pytest.mark.parametrize(
-    ("failed_method", "error", "diagnostic"),
-    [
-        ("Page.enable", ConnectionResetError(10054, "A private local path"), "OS error 10054"),
-        (
-            "Browser.setDownloadBehavior",
-            ValueError("Capture browser could not complete Browser.setDownloadBehavior"),
-            "could not complete Browser.setDownloadBehavior",
-        ),
-    ],
-)
-def test_browser_setup_failure_prevents_navigation(
-    monkeypatch, tmp_path, failed_method, error, diagnostic
-):
-    from unittest.mock import Mock
-
-    profile = tmp_path / "profile"
-    profile.mkdir()
-    (profile / "DevToolsActivePort").write_text("1234\n/devtools/browser/test\n", encoding="ascii")
-    client = Mock()
-
-    def call(method, *args, **kwargs):
-        if method == failed_method:
-            raise error
-        return {
-            "Browser.getVersion": {"product": "Edge"},
-            "Target.createTarget": {"targetId": "target"},
-            "Target.attachToTarget": {"sessionId": "session"},
-        }.get(method, {})
-
-    client.call.side_effect = call
-    monkeypatch.setattr(browser.tempfile, "mkdtemp", lambda **kwargs: str(profile))
-    monkeypatch.setattr(browser.subprocess, "Popen", Mock())
-    monkeypatch.setattr(browser, "BrowserProcessGuard", Mock())
-    monkeypatch.setattr(browser, "CDP", Mock(return_value=client))
-    with pytest.raises(CaptureBrowserStartupError, match=diagnostic):
-        browser.capture_website("http://localhost/", executable="synthetic-browser")
-    calls = client.call.call_args_list
-    methods = [entry.args[0] for entry in calls]
-    policy = calls[methods.index("Browser.setDownloadBehavior")]
-    assert policy.args == (
-        "Browser.setDownloadBehavior",
-        {"behavior": "deny", "eventsEnabled": True},
+def test_startup_failure_retains_exit_code_without_command_line(session):
+    driver, native, context, page, callbacks, stopped = session
+    driver.chromium.launch.side_effect = PlaywrightError(
+        "BrowserType.launch: private profile and token URL <process did exit: exitCode=0, signal=null>"
     )
-    assert policy.kwargs == {"browser": True}
-    assert "Page.navigate" not in methods
-    if failed_method == "Browser.setDownloadBehavior":
-        assert "Target.createTarget" not in methods
-    client.close.assert_called_once()
-    assert not profile.exists()
+    with pytest.raises(CaptureBrowserStartupError, match="exit code 0") as failure:
+        browser.capture_website("https://example.com/")
+    assert network_error(failure.value) == str(failure.value)
+    assert "private" not in str(failure.value)
+    context.new_page.assert_not_called()
+    assert stopped == [True]
+
+
+def test_failed_context_setup_never_visits_website_and_closes_browser(session):
+    driver, native, context, page, callbacks, stopped = session
+    native.new_context.side_effect = PlaywrightError("context setup failed with private path")
+    with pytest.raises(CaptureBrowserStartupError):
+        browser.capture_website("https://example.com/")
+    assert native.new_context.call_args.kwargs["accept_downloads"] is False
+    context.new_page.assert_not_called()
+    native.close.assert_awaited_once()
+    assert stopped == [True]
+
+
+@pytest.mark.parametrize("result", ["screenshot", "load_failure", "connection_lost"])
+def test_capture_preserves_download_observations_and_closes_resources(session, monkeypatch, result):
+    driver, native, context, page, callbacks, stopped = session
+
+    async def load(url, *, metadata, **kwargs):
+        metadata["browser_stage"] = "navigation"
+        callbacks["Browser.downloadWillBegin"]({"frameId": "sub", "guid": "fixture"})
+        if result == "connection_lost":
+            raise PlaywrightError("browser disconnected with private URL")
+        callbacks["Browser.downloadProgress"]({"guid": "fixture", "state": "canceled"})
+        if result == "load_failure":
+            raise WebsiteLoadError("No rendered page", metadata)
+        return page
+
+    monkeypatch.setattr(browser, "load_page", load)
+    if result == "screenshot":
+        png, metadata = browser.capture_website("https://localhost/")
+        assert png == b"PNG"
+    else:
+        expected = WebsiteLoadError if result == "load_failure" else browser.CaptureOperationError
+        with pytest.raises(expected) as failure:
+            browser.capture_website("https://localhost/")
+        metadata = failure.value.metadata
+    assert [row["outcome"] for row in metadata["download_activity"]["attempts"]] == [
+        "unconfirmed" if result == "connection_lost" else "canceled"
+    ]
+    context.close.assert_awaited_once()
+    native.close.assert_awaited_once()
+    assert stopped == [True]
+
+
+def test_already_expired_deadline_does_not_launch(session):
+    driver, *_ = session
+    with pytest.raises(TimeoutError, match="budget"):
+        browser.capture_website("https://example.com/", deadline=time.monotonic() - 1)
+    driver.chromium.launch.assert_not_called()
+
+
+def test_launch_timeout_always_stops_the_batch_as_a_startup_failure(session, monkeypatch):
+    driver, *_ = session
+
+    async def fail(**kwargs):
+        await asyncio.sleep(0.08)
+        raise PlaywrightTimeout("Timed out launching with private profile")
+
+    driver.chromium.launch.side_effect = fail
+    monkeypatch.setattr(browser, "STARTUP_SECONDS", 0.01)
+    with pytest.raises(CaptureBrowserStartupError, match="did not become ready"):
+        browser.capture_website("https://example.com/")
+
+
+def test_disconnected_cleanup_preserves_the_original_capture_failure(session, monkeypatch):
+    driver, native, context, page, callbacks, stopped = session
+    context.close.side_effect = PlaywrightError("Target page, context or browser has been closed")
+    native.close.side_effect = PlaywrightError("Target page, context or browser has been closed")
+
+    async def fail(url, *, metadata, **kwargs):
+        metadata["browser_stage"] = "navigation"
+        raise WebsiteLoadError("Website could not be loaded: DNS resolution failed", metadata)
+
+    monkeypatch.setattr(browser, "load_page", fail)
+    with pytest.raises(WebsiteLoadError, match="DNS resolution failed"):
+        browser.capture_website("https://example.com/")
+    native.close.assert_awaited_once()
+    assert stopped == [True]
+
+
+def test_first_page_failure_is_local_startup_failure(session):
+    driver, native, context, page, callbacks, stopped = session
+    context.new_page.side_effect = PlaywrightError("Browser closed before first tab")
+    with pytest.raises(CaptureBrowserStartupError):
+        browser.capture_website("https://example.com/")
+    page.screenshot.assert_not_called()
+    native.close.assert_awaited_once()

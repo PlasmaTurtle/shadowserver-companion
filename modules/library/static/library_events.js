@@ -57,7 +57,12 @@ export function createHandlers(ctx) {
       },
       {
         matches: (el) => el.dataset.catalogFieldValue !== undefined,
-        run: (el) => ctx.actions.selectCatalogFieldValue(el.dataset.catalogFieldValue),
+        run: (el) =>
+          ctx.actions.selectCatalogFieldValue(
+            el.dataset.catalogFieldValue,
+            0,
+            el.dataset.catalogField,
+          ),
       },
       {
         matches: (el) => Boolean(el.dataset.catalogCve),
@@ -80,6 +85,15 @@ export function createHandlers(ctx) {
       },
     ],
     actions: {
+      'library-open-kev-page': (el) => ctx.actions.loadOpenKev(Number(el.dataset.offset) || 0),
+      'library-vendor-page': (el) =>
+        ctx.actions.loadVendorGuidance(false, Number(el.dataset.offset) || 0),
+      'library-vendor-refresh': () => ctx.actions.loadVendorGuidance(true),
+      'library-reported-page': (el) =>
+        ctx.actions.loadReported(
+          Number(el.dataset.cveOffset) || 0,
+          Number(el.dataset.productOffset) || 0,
+        ),
       'catalog-review-impact': (el) => ctx.actions.loadCatalogImpact(el.dataset.cveId),
       'catalog-impact-page': (el) =>
         ctx.actions.loadCatalogImpact(undefined, Number(el.dataset.offset) || 0),
@@ -102,6 +116,7 @@ export function createHandlers(ctx) {
       'catalog-update-view': () => ctx.actions.updateCatalogView(),
       'catalog-retry-views': () => ctx.actions.loadCatalogViews(),
       'library-retry-explainers': () => ctx.actions.loadLibraryExplainers(),
+      'library-retry-guides': () => ctx.actions.loadReviewedGuides(),
       'catalog-remove-view': () =>
         ctx.actions.removeCatalogView(ctx.actions.$('#catalog-saved-view')?.value),
       'catalog-index': () => ctx.actions.catalogCommand('index'),
@@ -122,6 +137,7 @@ export function createHandlers(ctx) {
           ? ctx.actions.selectCatalogFieldValue(
               ctx.state.resources.catalog.library.fieldSelection.value,
               Number(el.dataset.offset) || 0,
+              ctx.state.resources.catalog.library.fieldSelection.field,
             )
           : ctx.actions.searchCatalog(
               ctx.state.resources.catalog.query,

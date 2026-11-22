@@ -20,6 +20,37 @@ class CatalogSettings(BaseModel):
     enabled: StrictBool
 
 
+class ObservedReferenceCount(BaseModel):
+    value: str = Field(min_length=1, max_length=200)
+    count: int = Field(ge=1, description="Distinct retained observations reporting this value.")
+
+
+class ObservedReferencePage(BaseModel):
+    items: list[ObservedReferenceCount] = Field(max_length=100)
+    total: int = Field(ge=0, description="Distinct ranked values before pagination.")
+    observations_with_value: int = Field(
+        ge=0, description="Distinct observations with at least one ranked value in this category."
+    )
+    limit: int = Field(ge=1, le=100)
+    offset: int = Field(ge=0)
+
+
+class ObservedReferenceSummary(BaseModel):
+    revision: str = Field(
+        min_length=1, description="Opaque workspace revision shared by both rankings."
+    )
+    observation_count: int = Field(
+        ge=0,
+        description="Distinct observations examined, including observations without a ranked value.",
+    )
+    coverage_complete: bool = Field(
+        description="Whether the counts cover all retained observations and labels."
+    )
+    warnings: list[str]
+    cves: ObservedReferencePage
+    products: ObservedReferencePage
+
+
 class CatalogAccess:
     """Keep optional reference-data failures outside the core startup boundary."""
 
@@ -254,6 +285,24 @@ def register(app, *, manager, outreach=None, workspace_root=None):
         return manager.cancel_risk()
 
     if outreach is not None:
+
+        @app.get("/api/library/observed-references", response_model=ObservedReferenceSummary)
+        def observed_references(
+            limit: int = Query(10, ge=1, le=100),
+            cve_offset: int = Query(0, ge=0),
+            product_offset: int = Query(0, ge=0),
+        ):
+            try:
+                return outreach.eclipse.observed_references(
+                    limit=limit, cve_offset=cve_offset, product_offset=product_offset
+                )
+            except (OSError, sqlite3.Error, ValueError, KeyError) as error:
+                logging.getLogger(__name__).warning(
+                    "Workspace reference counts unavailable: %s", type(error).__name__
+                )
+                raise HTTPException(
+                    503, "Workspace observation counts are unavailable. Try again."
+                ) from error
 
         @app.get("/api/cve-catalog/records/{cve_id}/observations")
         def record_observations(

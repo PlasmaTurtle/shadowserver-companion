@@ -16,9 +16,10 @@ file publication. Settings retains export, schedule and update workflow decision
 | ISS030 | [Preserve settings changes across saves](#iss030-preserve-settings-changes-across-saves) | Resolved | Settings; Workspace persistence and setup callers |
 | ISS039 | [Settings interaction reliability](#iss039-settings-interaction-reliability) | Resolved | Settings; UI and Workspace |
 | ISS040 | [Reviewed software update identity](#iss040-reviewed-software-update-identity) | Resolved | Settings |
-| ISS041 | [Supported display timezones](#iss041-supported-display-timezones) | Deferred | Settings; UI and release tooling |
+| ISS041 | [Supported display timezones](#iss041-supported-display-timezones) | Resolved | Settings; UI and release tooling |
 | ISS042 | [Setup completion review consistency](#iss042-setup-completion-review-consistency) | Deferred | Settings; Accretion |
 | ISS057 | [Recognize configured keys in onboarding](#iss057-recognize-configured-keys-in-onboarding) | Resolved | Settings; Accretion and Library credential interfaces |
+| ISS060 | [Validated profiles and agency authority](#iss060-validated-profiles-and-agency-authority) | Resolved | Settings; Accretion intake policy |
 
 
 Shared checks for this completed batch are recorded in the [November 21 validation](../../../docs/history/validation/maintenance-2026-11-21.md).
@@ -264,19 +265,19 @@ installation remains part of ISS014.
 
 ## ISS041 Supported display timezones
 
-**Deferred 2026-11-21.** Settings offers a free-text IANA timezone, but a Windows
+**Originally deferred 2026-11-21.** Settings offered a free-text IANA timezone, but a Windows
 runtime without an IANA database accepts only the seven documented fallback
 zones. A valid `Europe/London` selection is rejected in that environment. Guided
 setup already offers the fallback choices; the free-text Settings control does
 not explain the platform difference.
 
-Choose a shared advertised supported-zone contract before expanding this UI.
-Either expose the server's actual supported choices and preserve existing saved
-zones, or deliberately package maintained timezone data and validate its release
-and upgrade behavior. Avoid an unrelated dependency-lock change in the current
-interaction repair. **Done when:** both settings views offer choices the installed
-runtime accepts and invalid choices provide actionable feedback, including tests
-with and without system timezone data. Stored event instants remain UTC.
+**Resolved 2026-11-22 under ISS060.** Both forms now consume the same seven-zone
+catalog and the server validates against that catalog without consulting a system
+IANA database. Unsupported saved zones remain visible for explicit review; reads
+and unrelated preference saves preserve them. All advertised choices pass the
+contract checks and the browser uses a required select. This intentionally offers
+a supported subset; expanding timezone coverage remains a separate capability.
+Stored event instants remain UTC. Verification is recorded with ISS060 below.
 
 ## ISS042 Setup completion review consistency
 
@@ -325,6 +326,50 @@ the setup browser group, scoped Prettier, frontend syntax and the regenerated
 program-map check. Desktop and 390-pixel browser captures show the completed
 cards; browser checks recorded no page errors or external requests. Credential
 status was synthetic; this is not native credential-manager acceptance.
+
+## ISS060 Validated profiles and agency authority
+
+Settings accepted arbitrary agency, jurisdiction and report-profile strings,
+malformed email addresses, and outreach rationale without an attached agency
+reference. Guided setup had a separate advisory catalog and custom free-text
+escape paths. The user requested structured choices and a supported CISA, FBI,
+USSS baseline with targeted outreach linked to applicable authority.
+
+**Done when:** Settings and onboarding share authoritative choices for the 50
+states, DC and five territories, supported agencies and display timezones;
+direct API writes enforce the same constraints. Department follows the selected
+agency. Targeted outreach requires a specific rationale tied to a server-owned,
+versioned authority reference. Agency changes require a fresh rationale review.
+Unrelated partial updates preserve legacy values without rewriting historical
+profiles, imports or reports. Unsupported saved selections remain visible until
+explicit correction. Intake retains the reviewed reference beside its reason.
+
+Evidence and source baselines are retained in `validation/settings-validation-authority`
+under the local Codex task workspace. Concurrent Library and project-documentation
+changes are outside this Settings issue.
+
+**Resolved 2026-11-22.** Shared catalog controls and atomic API validation now
+enforce the same profile choices. Agency references were verified against
+official statutes, regulations and policy; the catalog distinguishes coordination
+from investigation and bounds the descriptions to the cited provisions. Targeted
+authority is derived from the selected agency, copied with a revision into saved
+policy, and retained with intake decisions. Changing agencies clears an inherited
+rationale even when switching through critical mode. Earlier imports and sender
+snapshots remain unchanged. Startup theme persistence now sends only appearance.
+
+The retained baseline accepted invalid jurisdiction, agency, email, boolean-as-
+number, blank-name and blank-office inputs; the new validators reject all six.
+Final verification passed 327 backend/integration tests, the complete portable
+frontend suite, scoped Ruff/Prettier, frontend syntax, dependency/release checks
+and the regenerated program map. The accepted setup browser run passed in 24.9
+seconds with no page errors or external requests. Desktop/mobile captures verify
+readable citations, controlled selections and immediate validation recovery.
+Contract capture changes only ProfileValues and SettingsUpdate; routes are
+unchanged. The registry explicitly permits the models' pure catalog dependency
+while preserving the network/storage/service boundary.
+
+This is source-level and synthetic workflow verification. No installer was built
+and no native account, credential store or Task Scheduler acceptance was run.
 
 ## Full module review
 
