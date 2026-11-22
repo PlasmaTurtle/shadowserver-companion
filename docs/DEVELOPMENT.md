@@ -168,7 +168,8 @@ still applies.
   library. Link official documentation or upstream source for the capability.
 - State the requirement and use the supported API when it satisfies it. If a
   limitation is uncertain, exercise the library on a representative input and
-  record the command, environment and observed result.
+  record the command, environment and observed result. If the execution
+  environment blocks the library, stop and [report the error](#how-failures-are-handled).
 - Before choosing custom code, including a replacement for a library already
   in use, show why configuration or a thin adapter cannot meet the requirement.
   Identify exactly which part must be custom. Passing tests for the custom code
@@ -187,6 +188,12 @@ still applies.
   documentation-only CI skips where appropriate.
 
 ### How failures are handled
+
+If a tool, binary or network limitation in the execution environment causes the
+established library to fail, stop the affected work. Report the
+command or API call, tool version, exact error and exit code if available.
+Redact credentials from diagnostics. Never build a custom fallback or wrapper
+to bypass that limitation. This rule applies at any code size.
 
 Classify failures before editing: infrastructure or runner access, test harness,
 application defect, or an approach that fails where the established reference

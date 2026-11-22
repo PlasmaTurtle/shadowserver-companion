@@ -7,13 +7,15 @@ These rules apply to all modules, shared code and tools.
 Record the decision in the owning issue and link the upstream evidence.
 [Library selection](docs/DEVELOPMENT.md#library-selection)
 
+> Never engineer a custom fallback or wrapper to work around a tool, binary, or network limitation in your execution environment. If the established library fails, stop and report the exact error—do not invent a substitute.
+
 - Work in the user's designated repository. Sync and verify changes made in another checkout.
   Preserve unrelated edits. If sync is blocked, provide a patch checked against the target.
 - Read the module guide and issue before editing. Keep code, tests and assets with their
   owner. Put reusable runtime tools in `modules/tools/` and developer commands in root or module `tools/`.
   [Module ownership](docs/ARCHITECTURE.md#module-ownership-and-source-layout)
-- Compare the real output with a working reference. If the reference succeeds and the
-  implementation fails, revisit the approach before adding a workaround.
+- Compare real output with a working reference. If only the application fails,
+  revisit its implementation.
 - Run focused checks first. Show the improvement to the module. Batch compatible build
   checks and skip builds for prose-only changes. [Maintenance workflow](docs/DEVELOPMENT.md#maintenance-workflow)
 - Work locally and use Windows for native checks. The paid GitHub Actions budget is zero.
