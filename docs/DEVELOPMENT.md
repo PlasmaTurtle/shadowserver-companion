@@ -434,9 +434,25 @@ its synthetic application checks do not replace installer acceptance.
 
 ## Building a release
 
-```text
-python tools/build_release.py shadowserver-eclipse-0.12.0-guided-setup-rc-windows.zip
-python tools/windows_installer/build.py --build-dir PATH_TO_BUILD_CACHE --output ShadowserverEclipse-0.12.0-guided-setup-rc-Setup-x64.exe
+Before handing off a changed installer or source release, choose a version
+greater than the last one handed off. Use a patch increment for fixes, a minor
+increment for compatible features, and a major increment for breaking changes.
+Group related commits in one release. The updater compares the three numeric
+version components and the release channel. Two candidates at the same version
+appear identical to it.
+
+Update `VERSION`, `RELEASE.json` and the release's `CHANGELOG.md` entry
+together. Build the source archive and installer from the same committed inputs.
+Record the Git commit and each artifact's SHA-256 with the handoff. When
+publishing a release, tag that commit. A diagnostic retry with unchanged inputs
+can keep its version and record a separate build receipt.
+
+These PowerShell commands build the Guided Setup candidate.
+
+```powershell
+$version = (Get-Content -Raw VERSION).Trim()
+python tools/build_release.py "shadowserver-eclipse-$version-guided-setup-rc-windows.zip"
+python tools/windows_installer/build.py --build-dir PATH_TO_BUILD_CACHE
 ```
 
 The installer build requires NSIS and the runtime in its pinned lock. Both source

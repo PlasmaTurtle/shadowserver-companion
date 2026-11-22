@@ -21,9 +21,9 @@ Run from the repository root:
 python tools/windows_installer/build.py
 ```
 
-The output name follows [VERSION](../../VERSION) and
-[RELEASE.json](../../RELEASE.json). The current candidate is
-`ShadowserverEclipse-0.12.0-guided-setup-rc-Setup-x64.exe`.
+The builder derives the output name from [VERSION](../../VERSION) and
+[RELEASE.json](../../RELEASE.json). Choose the version before packaging a
+changed installer. See the [release workflow](../../docs/DEVELOPMENT.md#building-a-release).
 
 Useful build options:
 

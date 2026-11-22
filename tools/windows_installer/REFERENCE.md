@@ -26,10 +26,10 @@ From the source checkout:
 python tools/windows_installer/build.py
 ```
 
-The default artifact name follows the current release metadata. This release
-produces `ShadowserverEclipse-0.12.0-guided-setup-rc-Setup-x64.exe`. Supply
-`--output PATH` only when a specific destination is needed; its filename must
-match the version, variant and channel rules checked by `tools/check_release.py`.
+The default artifact name follows the current release metadata. When supplying
+`--output PATH`, use the same application version, product and channel in the
+filename. The [release workflow](../../docs/DEVELOPMENT.md#building-a-release)
+covers version selection and handoff.
 Use `--makensis PATH` if NSIS is not on PATH and `--build-dir PATH` to keep
 intermediates outside the checkout. A locally extracted Linux NSIS toolchain
 may require `NSISDIR` to identify its `share/nsis` directory.

@@ -49,6 +49,10 @@ final integration/build run, and avoid builds for prose-only changes. Retain act
 results and limits under the [validation policy](docs/DEVELOPMENT.md#what-counts-as-validation)
 and [verification matrix](docs/DEVELOPMENT.md#maintenance-workflow).
 
+Before handing off an installer or source release with changed contents, advance
+the application version and commit the release inputs. Follow the
+[release versioning workflow](docs/DEVELOPMENT.md#building-a-release).
+
 ## Source ownership
 
 Follow [module ownership](docs/ARCHITECTURE.md#module-ownership-and-source-layout).
