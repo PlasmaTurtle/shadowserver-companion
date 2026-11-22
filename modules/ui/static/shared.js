@@ -35,6 +35,29 @@ export function install(ctx) {
       ? `<time datetime="${ctx.actions.esc(v)}">${ctx.actions.esc(ctx.actions.stamp(v))}</time>`
       : 'Not recorded';
 
+  function downloadActivityMarkup(activity) {
+    if (!Array.isArray(activity?.attempts)) return '';
+    const outcomes = {
+      canceled: 'Browser reported cancellation',
+      completed: 'Browser reported completion',
+      unconfirmed: 'Outcome unconfirmed',
+    };
+    const rows = [];
+    for (const attempt of activity.attempts) {
+      if (
+        typeof attempt?.outcome !== 'string' ||
+        !Object.hasOwn(outcomes, attempt.outcome) ||
+        typeof attempt.observed_at !== 'string'
+      )
+        continue;
+      const observed = new Date(attempt.observed_at);
+      if (Number.isNaN(observed.getTime())) continue;
+      rows.push(`<li>${timeMarkup(observed.toISOString())} · ${outcomes[attempt.outcome]}</li>`);
+    }
+    if (!rows.length) return '';
+    return `<details><summary>Website download attempts (${rows.length}${activity.truncated === true ? '+' : ''})</summary><ol>${rows.join('')}</ol>${activity.truncated === true ? '<p>Additional attempts were observed.</p>' : ''}</details>`;
+  }
+
   ctx.constants.titles = {
     workspace: 'Workspace',
     investigations: 'Investigations',
@@ -299,6 +322,7 @@ export function install(ctx) {
     date,
     stamp,
     timeMarkup,
+    downloadActivityMarkup,
     icon,
     statusBadge,
     safeHref,

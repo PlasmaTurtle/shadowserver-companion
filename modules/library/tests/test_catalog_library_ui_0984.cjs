@@ -120,6 +120,14 @@ const { loadApplication } = require('../../../tests/frontend_harness.cjs');
   assert(calls.some((url) => url.includes('/products?') && url.includes('scope=critical')));
   assert(!calls.some((url) => url.includes('/search?')), 'Inactive CVE search is lazy');
 
+  const products = ctx.state.resources.catalog.library.products;
+  const readyIndex = products.index;
+  products.index = { ready: false, indexed: 0, total: 0 };
+  assert.doesNotMatch(ctx.actions.catalogLibraryMarkup(''), /catalog-index-note/);
+  products.index = { ready: false, indexed: 1, total: 4 };
+  assert.match(ctx.actions.catalogLibraryMarkup(''), /Product index covers 1 of 4 CVEs/);
+  products.index = readyIndex;
+
   const region = () => ({ innerHTML: '', hidden: false, setAttribute() {}, removeAttribute() {} });
   for (const id of [
     'catalog-library',

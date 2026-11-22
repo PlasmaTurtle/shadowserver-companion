@@ -213,18 +213,24 @@ def test_unsupported_socks_proxy_is_rejected_without_exposing_credentials(monkey
     assert "proxy.example.invalid" not in str(failure.value)
 
 
-def test_tls_failure_stays_nonretryable_and_redacted(monkeypatch):
+@pytest.mark.parametrize("verification", [True, False])
+def test_tls_failure_stays_nonretryable_and_redacted(monkeypatch, verification):
     calls = []
 
     def fail(*args, **kwargs):
         calls.append(True)
         try:
-            raise ssl.SSLCertVerificationError("inert private host detail")
+            if verification:
+                error = ssl.SSLCertVerificationError("inert private host detail")
+                error.verify_code = 20
+                raise error
+            raise ssl.SSLError("inert private TLS detail")
         except ssl.SSLCertVerificationError as cause:
             raise httpx.ConnectError("inert private URL detail") from cause
 
     monkeypatch.setattr(feed_http, "_stream_response", fail)
-    with pytest.raises(transport.CatalogDeferred, match="TLS verification") as failure:
+    expected = "certificate code 20" if verification else "secure connection to NVD failed"
+    with pytest.raises(transport.CatalogDeferred, match=expected) as failure:
         transport.NVDTransport().bytes(transport.FEED_BASE + "nvdcve-2.0-2026.meta", limit=100)
     assert not isinstance(failure.value, transport.CatalogTransient)
     assert calls == [True]

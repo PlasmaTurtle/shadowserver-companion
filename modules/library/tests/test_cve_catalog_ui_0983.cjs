@@ -122,6 +122,25 @@ const { loadApplication } = require('../../../tests/frontend_harness.cjs');
   assert.match(html, /1 of 2 yearly feeds saved/);
   assert.match(html, /enabled closed-app schedule; catches up when reopened/);
 
+  const cached = {
+    ...initial,
+    total: 123,
+    bootstrap_complete: true,
+    enabled: true,
+    last_success_at: '2026-11-19T10:00:00Z',
+    last_attempt_at: '2026-11-20T10:00:00Z',
+    last_error: 'NVD TLS verification failed.',
+    next_check_at: '2026-11-20T11:00:00Z',
+  };
+  const failedSync = ctx.actions.catalogStatusMarkup(cached);
+  assert.match(failedSync, /Last update failed/);
+  assert.match(failedSync, /123<\/strong><span>CVEs stored locally/);
+  assert.match(failedSync, /Last successful sync 2026-11-19/);
+  assert.match(failedSync, /Last attempt 2026-11-20.*NVD TLS verification failed/);
+  assert.match(failedSync, /Next check 2026-11-20T11/);
+  assert.match(ctx.actions.catalogStatusMarkup({ ...cached, running: true }), />Updating</);
+  assert.match(ctx.actions.catalogStatusMarkup({ ...cached, last_error: null }), />Ready</);
+
   const pausedBeforeFirstYear = ctx.actions.catalogStatusMarkup({ ...initial, enabled: true });
   assert.doesNotMatch(
     pausedBeforeFirstYear.match(/<input id="catalog-enabled"[^>]*>/)[0],

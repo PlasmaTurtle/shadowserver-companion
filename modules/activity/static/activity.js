@@ -1,11 +1,24 @@
 /** Search saved chronology without changing records or inferring historical authors. */
 export function install(ctx) {
+  function failedCaptureActivity(event) {
+    if (event.action !== 'website_capture_failed') return '';
+    let metadata = event.metadata;
+    if (typeof metadata === 'string') {
+      try {
+        metadata = JSON.parse(metadata);
+      } catch {
+        return '';
+      }
+    }
+    return ctx.actions.downloadActivityMarkup(metadata?.download_activity);
+  }
+
   function activities(items) {
     return items.length
       ? items
           .map(
             (e) =>
-              `<div class="activity-row"><span class="activity-mark">${ctx.actions.icon(e.action === 'completed' ? 'check' : e.action === 'evidence_added' ? 'image' : 'clock')}</span><div>${e.lead_id ? `<a href="#${e.case_id ? 'workspace/notifications/' + e.case_id : 'entity/' + e.lead_id}">${ctx.actions.esc(e.detail)}</a>` : ctx.actions.esc(e.detail)}<small>${ctx.actions.stamp(e.created_at)}</small></div></div>`,
+              `<div class="activity-row"><span class="activity-mark">${ctx.actions.icon(e.action === 'completed' ? 'check' : e.action === 'evidence_added' ? 'image' : 'clock')}</span><div>${e.lead_id ? `<a href="#${e.case_id ? 'workspace/notifications/' + e.case_id : 'entity/' + e.lead_id}">${ctx.actions.esc(e.detail)}</a>` : ctx.actions.esc(e.detail)}<small>${ctx.actions.stamp(e.created_at)}</small>${failedCaptureActivity(e)}</div></div>`,
           )
           .join('')
       : '<p class="section-note">Activity appears as you work through notifications.</p>';
@@ -29,7 +42,10 @@ export function install(ctx) {
           : item.lead_id
             ? '#entity/' + encodeURIComponent(item.lead_id)
             : '';
-        return `<article class="dm-event"><div class="dm-event-time"><span>${ctx.actions.stamp(item.created_at)}</span><small>${ctx.actions.esc(item.actor || 'Operator not recorded')}</small></div><div class="dm-event-body"><h2>${ctx.actions.esc(item.action.replaceAll('_', ' '))}</h2><p>${ctx.actions.esc(item.detail)}</p>${Object.keys(item.metadata).length ? `<details><summary>Recorded context</summary><pre>${ctx.actions.esc(JSON.stringify(item.metadata, null, 2))}</pre></details>` : ''}</div>${target ? `<a class="text-link" href="${target}" aria-label="Open record for ${ctx.actions.esc(item.action.replaceAll('_', ' '))}">Open ${ctx.actions.icon('arrow')}</a>` : ''}</article>`;
+        const context = { ...item.metadata };
+        const downloads = failedCaptureActivity(item);
+        if (item.action === 'website_capture_failed') delete context.download_activity;
+        return `<article class="dm-event"><div class="dm-event-time"><span>${ctx.actions.stamp(item.created_at)}</span><small>${ctx.actions.esc(item.actor || 'Operator not recorded')}</small></div><div class="dm-event-body"><h2>${ctx.actions.esc(item.action.replaceAll('_', ' '))}</h2><p>${ctx.actions.esc(item.detail)}</p>${downloads}${Object.keys(context).length ? `<details><summary>Recorded context</summary><pre>${ctx.actions.esc(JSON.stringify(context, null, 2))}</pre></details>` : ''}</div>${target ? `<a class="text-link" href="${target}" aria-label="Open record for ${ctx.actions.esc(item.action.replaceAll('_', ' '))}">Open ${ctx.actions.icon('arrow')}</a>` : ''}</article>`;
       })
       .join('');
     const empty = ctx.actions.empty(

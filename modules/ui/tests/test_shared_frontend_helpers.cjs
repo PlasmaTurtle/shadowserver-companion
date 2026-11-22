@@ -151,6 +151,7 @@ const vm = require('node:vm');
   // Native HTTP response/body and AbortController behavior, without mocking Fetch.
   const server = http.createServer((req, res) => {
     if (req.url === '/stall') return;
+    if (req.url.startsWith('/disconnect')) return req.socket.destroy();
     if (req.url === '/conflict') {
       res.writeHead(409, { 'Content-Type': 'application/json' });
       return res.end(JSON.stringify({ detail: { code: 'field_revision_changed' } }));
@@ -167,6 +168,19 @@ const vm = require('node:vm');
   const base = 'http://127.0.0.1:' + server.address().port;
   try {
     assert.deepEqual(await requestJSON(base + '/ok'), { ready: true });
+    await assert.rejects(
+      requestJSON(base + '/disconnect?query=synthetic-private-value'),
+      (error) =>
+        error.name === 'ConnectionError' &&
+        /local app/.test(error.message) &&
+        !error.message.includes('synthetic-private-value') &&
+        error.status === undefined,
+    );
+    await assert.rejects(
+      requestJSON(base + '/disconnect', { method: 'POST' }),
+      (error) =>
+        error.name === 'ConnectionError' && /check the operation’s status/.test(error.message),
+    );
     await assert.rejects(
       requestJSON(base + '/conflict'),
       (error) =>

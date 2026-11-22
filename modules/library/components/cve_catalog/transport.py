@@ -4,6 +4,7 @@ from datetime import datetime, timezone
 import threading
 import time
 import math
+import ssl
 from urllib.parse import urlencode
 
 import requests
@@ -82,7 +83,16 @@ def explicit_retry_seconds(value):
 def _network_failure(error, *, downloading=False):
     """Translate transport errors without exposing URLs, headers or credentials."""
     if isinstance(error, requests.exceptions.SSLError):
-        return CatalogDeferred("NVD TLS verification failed. Existing records are retained.")
+        cause = error.__cause__
+        if isinstance(cause, ssl.SSLCertVerificationError):
+            code = getattr(cause, "verify_code", None)
+            detail = f" (certificate code {code})" if isinstance(code, int) else ""
+            return CatalogDeferred(
+                f"NVD TLS verification failed{detail}. Existing records are retained."
+            )
+        return CatalogDeferred(
+            "The secure connection to NVD failed. Existing records are retained."
+        )
     # Requests wraps streaming urllib3 read timeouts in ConnectionError.
     wrapped = error.args[0] if error.args else None
     if isinstance(error, requests.Timeout) or isinstance(wrapped, ReadTimeoutError):

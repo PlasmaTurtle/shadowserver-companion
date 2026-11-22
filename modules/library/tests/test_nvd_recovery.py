@@ -161,7 +161,7 @@ def test_rate_limit_without_deadline_is_reported_as_local_one_minute_pause(netwo
 @pytest.mark.parametrize(
     "failure,reason",
     [
-        (requests.exceptions.SSLError("private TLS details"), "TLS verification failed"),
+        (requests.exceptions.SSLError("private TLS details"), "secure connection to NVD failed"),
         (requests.exceptions.InvalidURL("private URL"), "request failed"),
         (requests.exceptions.ContentDecodingError("invalid content encoding"), "request failed"),
     ],

@@ -189,6 +189,8 @@ changes and follow the shared
 
 ## Source configuration
 
+Library shows the CVE count on disk alongside the outcome of the latest NVD update. After **Last update failed**, use the last successful sync to judge how current the records are. The failed attempt time and, when scheduled, the next check time appear in the same panel.
+
 A source deployment may supply `NVD_API_KEY` for catalog acquisition. Do not commit
 keys or copy them into examples. Initial catalog seeding uses public compressed
 annual NVD feeds without requiring a key; normal incremental API updates also

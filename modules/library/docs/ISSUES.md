@@ -26,6 +26,17 @@ they do not inherit that batch's completion claim.
 | ISS036 | [Provider access and version comparison](#iss036-provider-access-and-version-comparison) | Resolved | Library |
 | ISS037 | [Library ownership and interfaces](#iss037-library-ownership-and-interfaces) | Resolved | Library; Workspace and Investigations |
 | ISS038 | [Research and reference workflow improvements](#iss038-research-and-reference-workflow-improvements) | Resolved | Library; affected workflow owners |
+| ISS052 | [Catalog update status after a failed sync](#iss052-catalog-update-status-after-a-failed-sync) | Display corrected, installed TLS incident open | Library |
+
+## ISS052 Catalog update status after a failed sync
+
+A Windows catalog retained locally stored records and a recent successful update, then recorded a TLS failure on its next NVD request. A complete catalog could still display **Ready** above that error. The summary now shows the latest update outcome, the last successful sync and the failed attempt time when available. A new NVD failure distinguishes a certificate verification error from other TLS connection failures and includes the numeric verification code when available.
+
+A fresh Windows demo correctly showed **Not downloaded** but the Products panel
+claimed indexing was finishing with zero CVEs. Products now shows index coverage
+only when the catalog has records and its index is incomplete.
+
+Before module reorganization, NVD used Requests directly. The shared streaming implementation uses the Requests proxy and CA settings with HTTPX. A loopback HTTPS comparison retrieved identical bytes through both transports with a trusted fixture certificate. Both rejected the untrusted fixture. The installed incident predates detailed TLS classification. Its precise cause requires a failure from the affected workstation.
 
 ## ISS016 Bulk feed deadlines and cancellation
 

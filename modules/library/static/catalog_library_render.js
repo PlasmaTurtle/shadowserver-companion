@@ -51,8 +51,8 @@ export function createLibraryRender(ctx, state, darkMatter) {
     return `<span class="catalog-match" data-match="${esc(value)}">${esc(String(value || 'unresolved').replaceAll('_', ' '))}</span>${reason ? `<small>${esc(reason)}</small>` : ''}`;
   };
   const indexNotice = (index) =>
-    index && !index.ready
-      ? `<p class="catalog-index-note" role="status">Product index ${num(index.indexed)} of ${num(index.total)} CVEs. Results will expand as indexing finishes.</p>`
+    index && index.total > 0 && !index.ready
+      ? `<p class="catalog-index-note" role="status">Product index covers ${num(index.indexed)} of ${num(index.total)} CVEs.</p>`
       : '';
   const error = (message) =>
     message ? `<p class="catalog-error" role="status">${esc(message)}</p>` : '';

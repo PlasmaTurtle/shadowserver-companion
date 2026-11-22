@@ -77,6 +77,18 @@ async function request(url, options, readBody) {
     return value;
   } catch (error) {
     checkCancellation();
+    if (error.name === 'TypeError') {
+      const read = ['GET', 'HEAD'].includes((init.method || 'GET').toUpperCase());
+      const recovery = read
+        ? 'Check that Shadowserver Eclipse is running and try again.'
+        : 'Reopen Shadowserver Eclipse and check the operation’s status before submitting it again.';
+      throw Object.assign(
+        new Error('No complete response from the local app. ' + recovery, { cause: error }),
+        {
+          name: 'ConnectionError',
+        },
+      );
+    }
     throw error;
   } finally {
     if (timer !== null) clearTimeout(timer);

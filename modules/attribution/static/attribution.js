@@ -61,6 +61,23 @@ export function install(ctx) {
     );
   }
 
+  function lookupAttempt(attempt) {
+    if (attempt.method === 'associate') {
+      const esc = ctx.actions.esc;
+      const scope = { domain: 'Whole domain', host: 'Exact hostname', entity: 'Entity' }[attempt.scope] || '';
+      return `<div class="notice"><div><strong>${attempt.action === 'exclude' ? 'Excluded by Associate' : 'Previous notification'}</strong><p>${esc(scope)} · ${esc(attempt.identifier)} · ${esc(attempt.reference)}</p><small>${esc(attempt.reason || (attempt.count + ' completed notifications'))}</small></div></div>`;
+    }
+    const website = attempt.method === 'website';
+    const title = [
+      website ? attempt.hostname : attempt.ip,
+      website ? 'Website capture' : attempt.method || 'RDAP',
+      attempt.status === 'previous_capture' ? 'Earlier capture' : attempt.status,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+    return `<div class="notice"><div><strong>${ctx.actions.esc(title)}</strong><p>${ctx.actions.esc(attempt.message || attempt.reason || attempt.error || '')}</p>${attempt.warnings?.length ? `<small>${attempt.warnings.map(ctx.actions.esc).join('; ')}</small>` : ''}${website ? ctx.actions.downloadActivityMarkup(attempt.download_activity) : ''}</div></div>`;
+  }
+
   async function showGroup(id) {
     const g = await ctx.actions.api('/api/groups/' + id),
       result = g.attribution_result,
@@ -74,7 +91,7 @@ export function install(ctx) {
       .join('');
     ctx.actions.modal(
       g.domain,
-      `<div class="inline-stats">${ctx.actions.statusBadge(g.status)}<span>${g.entries.length} retained rows</span></div>${canReview ? '<p>Review the highlighted name and its source. Accepting qualifies this hostname group using the selected original observation.</p>' : ''}${partials.length ? `<form id="attribution-review-form" data-group="${g.id}" data-result="${result.result_id}">${cards}${canReview ? `<div class="field"><label for="review-note">Decision note (optional)</label><textarea id="review-note" name="note" maxlength="2000" rows="2"></textarea></div><div class="modal-actions"><button class="button primary" type="submit" name="decision" value="accept">${ctx.actions.icon('check')}Accept attribution</button><button class="button" type="submit" name="decision" value="dismiss">Dismiss match</button></div>` : ''}</form>` : ''}${g.reviews.map((r) => `<div class="notice"><div><strong>${ctx.actions.esc(r.decision === 'accept' ? 'Accepted' : 'Dismissed')} by ${ctx.actions.esc(r.reviewer)}</strong><small>${ctx.actions.stamp(r.reviewed_at)} · lookup ${ctx.actions.esc(r.result_id.slice(0, 8))}</small><p>${ctx.actions.esc(r.note)}</p>${r.lead_id ? `<a class="text-link" href="#entity/${r.lead_id}" data-close-modal>Open entity</a>` : ''}</div></div>`).join('')}<details ${partials.length ? '' : 'open'}><summary>Lookup history</summary>${g.attempts.map((a) => `<div class="notice"><div><strong>${ctx.actions.esc(a.ip)} · ${ctx.actions.esc(a.method || 'RDAP')} · ${ctx.actions.esc(a.status)}</strong><p>${ctx.actions.esc(a.message || a.reason || a.error || '')}</p>${a.warnings?.length ? `<small>${a.warnings.map(ctx.actions.esc).join('; ')}</small>` : ''}</div></div>`).join('')}</details><div class="modal-actions">${result ? `<a class="button" href="/api/groups/${g.id}/attribution.zip">${ctx.actions.icon('download')}Download evidence</a>` : ''}${g.can_retry ? `<button class="button" data-retry-group="${g.id}" data-result="${ctx.actions.esc(result?.result_id || '')}">${ctx.actions.icon('refresh')}Retry lookups</button>` : ''}</div><details><summary>Original report fields</summary><pre>${ctx.actions.esc(JSON.stringify(g.entries, null, 2))}</pre></details>`,
+      `<div class="inline-stats">${ctx.actions.statusBadge(g.status)}<span>${g.entries.length} retained rows</span></div>${canReview ? '<p>Review the highlighted name and its source. Accepting qualifies this hostname group using the selected original observation.</p>' : ''}${partials.length ? `<form id="attribution-review-form" data-group="${g.id}" data-result="${result.result_id}">${cards}${canReview ? `<div class="field"><label for="review-note">Decision note (optional)</label><textarea id="review-note" name="note" maxlength="2000" rows="2"></textarea></div><div class="modal-actions"><button class="button primary" type="submit" name="decision" value="accept">${ctx.actions.icon('check')}Accept attribution</button><button class="button" type="submit" name="decision" value="dismiss">Dismiss match</button></div>` : ''}</form>` : ''}${g.reviews.map((r) => `<div class="notice"><div><strong>${ctx.actions.esc(r.decision === 'accept' ? 'Accepted' : 'Dismissed')} by ${ctx.actions.esc(r.reviewer)}</strong><small>${ctx.actions.stamp(r.reviewed_at)} · lookup ${ctx.actions.esc(r.result_id.slice(0, 8))}</small><p>${ctx.actions.esc(r.note)}</p>${r.lead_id ? `<a class="text-link" href="#entity/${r.lead_id}" data-close-modal>Open entity</a>` : ''}</div></div>`).join('')}<details ${partials.length ? '' : 'open'}><summary>Lookup history</summary>${g.attempts.map(lookupAttempt).join('')}</details><div class="modal-actions">${result ? `<a class="button" href="/api/groups/${g.id}/attribution.zip">${ctx.actions.icon('download')}Download evidence</a>` : ''}${g.can_retry ? `<button class="button" data-retry-group="${g.id}" data-result="${ctx.actions.esc(result?.result_id || '')}">${ctx.actions.icon('refresh')}Retry lookups</button>` : ''}</div><details><summary>Original report fields</summary><pre>${ctx.actions.esc(JSON.stringify(g.entries, null, 2))}</pre></details>`,
     );
   }
 

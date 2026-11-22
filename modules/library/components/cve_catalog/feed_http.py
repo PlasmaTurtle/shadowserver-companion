@@ -26,10 +26,10 @@ def _tls_error(problem):
     seen = set()
     while problem is not None and id(problem) not in seen:
         if isinstance(problem, ssl.SSLError):
-            return True
+            return problem
         seen.add(id(problem))
         problem = problem.__cause__ or problem.__context__
-    return False
+    return None
 
 
 @contextmanager
@@ -43,9 +43,10 @@ def _errors():
             "Catalog download exceeded its total time budget. Completed records are retained."
         ) from error
     except (ssl.SSLError, httpx.RequestError) as error:
-        if _tls_error(error):
-            translated = requests.exceptions.SSLError
-        elif isinstance(error, httpx.TimeoutException):
+        tls_error = _tls_error(error)
+        if tls_error is not None:
+            raise requests.exceptions.SSLError("Catalog TLS connection failed") from tls_error
+        if isinstance(error, httpx.TimeoutException):
             translated = requests.Timeout
         elif isinstance(error, httpx.ProxyError):
             translated = requests.exceptions.ProxyError
