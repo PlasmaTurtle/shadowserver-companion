@@ -6727,8 +6727,8 @@
       "path": "modules/investigations/components/repositories/cases.py",
       "module": "modules.investigations.components.repositories.cases",
       "owner": "investigations",
-      "lines": 500,
-      "sha256": "d60e4e96a3aeae28e6f5e176a8a70d5afde8c2129257b496b81697cd89b933ec",
+      "lines": 529,
+      "sha256": "5d451382fa7784983c2e02e01a74af07feb779066d36b8fbda3213685a69b4bb",
       "imports": [
         "modules.accretion.components.intake.versions",
         "modules.accretion.components.repositories.intake_scores",
@@ -7011,8 +7011,8 @@
       "path": "modules/investigations/components/services/case_queries.py",
       "module": "modules.investigations.components.services.case_queries",
       "owner": "investigations",
-      "lines": 83,
-      "sha256": "cb7611a2159ada5b62147f0a097689a09e73857be0cb4aa879ef8ccaac813f33",
+      "lines": 58,
+      "sha256": "6626f34410f49fab270138f29a2bcd63046db15d30b1be02225fa4c39c0cb7f7",
       "imports": [
         "modules.investigations.components.cases",
         "modules.investigations.components.repositories.cases",
@@ -7021,17 +7021,17 @@
       "symbols": [
         {
           "name": "completed_notifications",
-          "line": 13,
+          "line": 12,
           "kind": "function"
         },
         {
           "name": "notification_histories",
-          "line": 18,
+          "line": 17,
           "kind": "function"
         },
         {
           "name": "list_cases",
-          "line": 65,
+          "line": 40,
           "kind": "function"
         }
       ]

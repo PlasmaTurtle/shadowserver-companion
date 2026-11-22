@@ -22,6 +22,35 @@ class CaseRepository:
     def get(db, case_id):
         return db.execute("SELECT * FROM cases WHERE id=?", (case_id,)).fetchone()
 
+    @staticmethod
+    def notification_history_rows(db, entity_ids, *, include_cases):
+        """Read ranked case deliveries for the requested entities in the caller's snapshot."""
+        return db.execute(
+            """WITH owners AS (
+                SELECT id AS requested, COALESCE(merged_into,id) AS canonical FROM leads
+                WHERE id IN (SELECT value FROM json_each(?))
+            ), entity_cases AS (
+                SELECT id,entity_id,title,delivered_at FROM cases
+                WHERE entity_id IN (SELECT canonical FROM owners)
+            ), receipts AS (
+                SELECT id, delivered_at AS notified_at FROM entity_cases WHERE delivered_at > ''
+                UNION ALL
+                SELECT c.id, r.sent_at FROM entity_cases c
+                JOIN reports r ON r.case_id=c.id WHERE r.sent_at > ''
+            ), deliveries AS (
+                SELECT id, MIN(notified_at) AS notified_at FROM receipts GROUP BY id
+            ), ranked AS (
+                SELECT d.id,c.entity_id,c.title,d.notified_at,
+                  COUNT(*) OVER (PARTITION BY c.entity_id) AS total,
+                  ROW_NUMBER() OVER (PARTITION BY c.entity_id ORDER BY d.notified_at DESC,d.id) AS position
+                FROM deliveries d JOIN entity_cases c ON c.id=d.id
+            )
+            SELECT o.requested,r.* FROM owners o JOIN ranked r ON r.entity_id=o.canonical"""
+            + ("" if include_cases else " WHERE r.position=1")
+            + " ORDER BY o.requested, r.position",
+            (json.dumps(list(entity_ids)),),
+        )
+
     def default_id(self, entity_id, db=None):
         if db is None:
             with self.store.read_snapshot() as db:
