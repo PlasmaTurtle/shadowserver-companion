@@ -45,6 +45,11 @@ changes tested for the 0.12.0 candidate. It complements the
 - A whole-domain referral allowed its group through qualification and evaluation
   and published zero leads. A separate history fixture with two completed cases
   and one pending report displayed two notifications, including after entity merges.
+- A new end-of-life finding for a business with a do-not-contact case reused the
+  saved screenshot and registration. Qualify and Evaluate each recorded one
+  group. Associate recorded the case ID and hold reason, published zero leads
+  and archived the source rows. The closed case kept its version and finding
+  history. The earlier test had expected the hold to run before qualification.
 - The schema-23 source was exported from `c86a7cd`. The original upgrade harness
   assumed exactly three evidence records, while that version seeded four, including
   one for a draft case. The harness now requires website evidence for every
@@ -64,22 +69,29 @@ advisory check and npm lock audit reported zero known vulnerabilities at check
 time. The security and citation gate completed 479 tests and 78 subtests with
 ten skips. Its results overlap the main regression suite.
 
-The full application gate is `python tools/verify.py --check-timeout 4500
---report <evidence>/final-verification.json`. It runs the release and ownership
-checks, frontend contracts, browser workflows and the backend suite. The release
+The full application gate passed all 25 checks on Windows with
+`python tools/verify.py --check-timeout 4500 --report <evidence>/verified-candidate.json`.
+This included 17 Edge browser workflows and one uninterrupted backend and
+Attribution run. Of 3,791 tests, 3,769 passed and 22 skipped. All 196 subtests
+passed. The one warning was the existing Starlette test-client deprecation.
+The backend run took 37 minutes 8 seconds. Earlier checks exposed direct
+notification-history SQL in a service. The Investigations repository now
+owns that query and serves a page of entities in one database read. The release
 commands are `python tools/build_release.py <source-zip>` and
 `python tools/windows_installer/build.py --offline --build-dir <build-cache>
 --makensis <nsis> --output <installer>`.
 
 For this run, `dist/final-backlog-20261122/validation-status.json` records the
 application result and package inspection separately. The adjacent SHA-256
-file identifies the local artifacts. The independent inspection compares the
-frozen checkout, ZIP, staged payload and extracted installer. It also checks
-installed documentation and exercises the packaged runtime in a synthetic
-workspace. The detailed logs and evidence are under the task workspace's
+file identifies the local artifacts. Independent source inspection compares
+the ZIP inventory and contents with the frozen checkout and checks the
+manifest, documentation links and extracted application. The detailed logs
+and evidence are under the task workspace's
 `validation/final-backlog-20261122/`.
 
-The installed launcher investigation remains open under
+During the offline Windows build, real-time Defender detected the freshly
+compiled launcher at 01:07:25 Eastern and quarantined it at 01:07:29.
+The build stopped before hashing the launcher or assembling the installer.
+Installer inspection and installed-runtime acceptance remain pending. The
+event IDs and detection details are recorded in
 [ISS054](../../ISSUES.md#iss054-defender-quarantined-the-windows-launcher).
-Source checks and package inspection do not establish the cause of the
-quarantine or accept the installer for distribution.

@@ -313,6 +313,22 @@ The [Windows build script](../tools/windows_installer/build.py) compiles the [NS
 
 The last recorded server response preceded the first detection by 10 minutes 27 seconds. The supplied events identify the launcher. The running Python server's exit time and the cause of the earlier GUI outage remain unknown. [Workspace ISS053](../modules/workspace/docs/ISSUES.md#iss053-local-views-lost-their-connection-while-the-console-was-open) tracks that investigation.
 
+On November 22 the normal offline build reproduced the detection on a freshly
+compiled launcher, before it was executed or an installer was assembled.
+Defender event 1116 occurred at 01:07:25 Eastern and event 1117 recorded
+successful quarantine four seconds later. Both identified
+`Trojan:Win32/Bearfoos.A!ml` with intelligence `1.463.407.0`. The build
+failed while opening the compiler output for its first hash. The hash of this
+new launcher is therefore unknown. This observation occurred during packaging,
+independently of importing a report or visiting a website. The launcher and
+build scripts matched the previously synced revision. All 64 checked NSIS
+compiler, configuration, plugin and stub files matched the cached acquisition
+archive. Its SHA-256 matched the NSIS project's published digest,
+`ba63dffc4410ee89193e1cb5a41989991bd77c61068da17e3156d136b7b0b3d8`.
+Distribution stays on hold pending a determination for the launcher.
+[NSIS 3.13 archive checksum](https://sourceforge.net/projects/nsis/files/NSIS%203/3.13/nsis-3.13.zip/download)
+[Build record](history/validation/intake-review-2026-11-22.md)
+
 ## ISS048 Full-run runtime reliability
 
 **Status: Needs triage. Owner: Project**, with Investigations for rendered-resource
@@ -345,6 +361,11 @@ verified copies of the failed synthetic workspace, under Python's debug allocato
 Both completed without a crash; the rendering probe retained all integrity checks.
 These are diagnostic limits, not a runtime fix or clean full-suite acceptance.
 No GC control, dependency pin or integrity assertion was changed to force a pass.
+
+On November 22 a complete Windows run passed all 3,769 executed backend tests
+in one interpreter process, including certification and recovery. Neither
+November 21 symptom recurred in that run. Their original causes remain open.
+[November 22 validation](history/validation/intake-review-2026-11-22.md)
 
 **Next evidence needed:** a reproducible triggering sequence or native crash dump
 with matching symbols and resource context. The original WER temporary dump was
