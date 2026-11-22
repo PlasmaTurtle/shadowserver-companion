@@ -7,7 +7,7 @@ the engine retains its independent package documentation.
 
 [Module issues](ISSUES.md) · [Changelog](CHANGELOG.md) · [Architecture](../../../docs/ARCHITECTURE.md) ·
 [Project maintenance workflow](../../../docs/DEVELOPMENT.md#maintenance-workflow) ·
-[Framework decisions over 50 lines](../../../docs/DEVELOPMENT.md#framework-decisions-for-work-over-50-lines)
+[Library selection](../../../docs/DEVELOPMENT.md#library-selection)
 
 ## Boundary
 

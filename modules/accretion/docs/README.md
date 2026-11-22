@@ -16,7 +16,7 @@ contact work begin only at their owning later stages.
 | Operate imports, reviews, retries, acquisition and schedules | [Operations and recovery](OPERATIONS.md) |
 | Review unresolved work and dated implementation evidence | [Module issues](ISSUES.md) |
 | Review or record module changes | [Changelog](CHANGELOG.md) |
-| Choose a framework or justify custom code | [Framework decisions over 50 lines](../../../docs/DEVELOPMENT.md#framework-decisions-for-work-over-50-lines) |
+| Choose a framework or justify custom code | [Library selection](../../../docs/DEVELOPMENT.md#library-selection) |
 
 The guides describe current behavior. The issue register separates delivered work
 from open policy/performance questions and historical audit evidence. Shared

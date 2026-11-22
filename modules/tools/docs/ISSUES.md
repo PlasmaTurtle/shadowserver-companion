@@ -178,7 +178,7 @@ separately against that baseline under the shared decision rule.
 [Browser channels](https://playwright.dev/python/docs/browsers#google-chrome--microsoft-edge) ·
 [Navigation](https://playwright.dev/python/docs/api/class-page#page-goto) ·
 [Screenshots](https://playwright.dev/python/docs/screenshots) ·
-[Framework decision rule](../../../docs/DEVELOPMENT.md#framework-decisions-for-work-over-50-lines)
+[Library selection rule](../../../docs/DEVELOPMENT.md#library-selection)
 
 **Maintenance lesson:** the ordinary browser reference rendered the museum
 artwork/video and bookstore page that the custom broker left incomplete. Keeping

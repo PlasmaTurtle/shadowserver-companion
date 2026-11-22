@@ -2,9 +2,9 @@
 
 Describe the concrete problem and what changes for the user.
 
-For an implementation over 50 authored lines, link the decision recorded before
-implementation (or before line 51 if the scope grew). If custom code replaces an
-established option, point reviewers to the evidence for that choice.
+For more than 50 lines of non-domain logic, or any implementation of a standard
+protocol, parser, or security primitive, link the owning issue's library decision.
+It should name the library evaluated and justify any custom implementation.
 
 ## Validation
 

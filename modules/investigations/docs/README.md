@@ -6,7 +6,7 @@ retained report packages. This guide maps maintenance work to those contracts.
 
 [Architecture](../../../docs/ARCHITECTURE.md) · [Investigations issues](ISSUES.md) · [Changelog](CHANGELOG.md) ·
 [Analyst workflow](../../../docs/USER_GUIDE.md) ·
-[Framework decisions over 50 lines](../../../docs/DEVELOPMENT.md#framework-decisions-for-work-over-50-lines)
+[Library selection](../../../docs/DEVELOPMENT.md#library-selection)
 
 ## Completed notifications
 

@@ -55,9 +55,9 @@ module's guide, issue tracker and changelog.
    reference using [established implementations](#established-implementations-and-reference-behavior).
    Use synthetic cases for reproducible faults and actual outputs for integration,
    rendering or network behavior. Identify the expected result and verification
-   command before editing; preserve the original failing examples. For work expected
-   to exceed 50 authored lines, record the [framework decision](#framework-decisions-for-work-over-50-lines)
-   in the owning issue before implementation.
+   command before editing; preserve the original failing examples. Apply the
+   [library selection rule](#library-selection) before writing non-domain logic
+   over 50 lines or implementing a standard protocol, parser, or security primitive.
 3. **Bound the change.** Identify public interfaces, transaction ownership,
    evidence/resource bytes and compatibility paths that must survive. A move,
    policy change and data migration are distinct changes; do not silently combine
@@ -126,7 +126,7 @@ Prefer native platform capabilities or maintained libraries for common tasks,
 with thin application integration. Before replacing a transport, scheduler,
 parser, retry system or other general mechanism, demonstrate the requirement the
 established implementation cannot meet. Record the basis for a custom replacement
-in the owning issue. The size threshold below also applies when adopting a library.
+in the owning issue. Follow the [library selection rule](#library-selection).
 
 Compare the existing failure with an independent working reference: official
 documentation, a working example or an explicit domain rule. Use representative
@@ -146,37 +146,33 @@ Establish working end-to-end behavior with normal platform defaults first, then
 assess security, data and performance improvements against concrete needs and
 ordinary functionality. Do not invent controls that defeat the feature's purpose.
 
-### Framework decisions for work over 50 lines
+### Library selection
 
-Before starting an implementation expected to exceed 50 authored lines of code,
-research established options and record the decision. If an initially smaller
-change grows, pause before writing line 51. This applies to every module, shared
-infrastructure, tests, and build or maintenance tools. Count new and rewritten
-lines for one capability across files, commits, pull requests and contributors,
-including delegated or AI-written code. Deletions do not offset authored lines.
-Unmodified vendor code, generated output and formatting-only changes are excluded.
+Before writing more than 50 lines of non-domain logic, research the established
+open-source library for the job. For any code implementing a standard protocol,
+parser, or security primitive, do this before the first line, even inside domain
+code. Calling a library's supported API does not itself implement the primitive.
 
-Keep a short, dated entry in the owning module's issue register, or the project
-issue register for shared work. Link that entry in the pull request. A previous
-decision can be reused by linking it and confirming that its requirements,
-platform and evidence still apply. Record enough for a reviewer to reproduce the choice.
+Non-domain logic is code that could serve another application, such as browser
+automation, retries or file handling. Lead qualification and notification counting
+are domain rules. Count new or rewritten non-domain lines for one capability
+across files, contributors and commits, including delegated work. Plan the
+comparison up front when the size is predictable. If scope grows, stop before
+the 51st non-domain line.
 
-- **Need.** Identify the user-visible result, supported environment and the
-  requirement that determines whether an implementation fits.
-- **Alternatives and evidence.** Check what the project already uses and compare
-  it with the best applicable platform feature, maintained tool or framework.
-  Cite the version evaluated and official documentation or upstream source.
-  Where the documentation leaves a material question open, run the smallest
-  representative comparison and record its inputs, command and observed outcome.
-- **Decision.** Use the supported implementation directly or through a thin
-  adapter when it meets the need. To build or keep a custom implementation, or
-  to replace an established one, identify the precise gap or measured tradeoff,
-  explain why configuration or a thin adapter cannot resolve it, and bound the
-  custom part. Relevant evidence can include packaging size, security support,
-  runtime cost or maintenance effort. State when to revisit the decision.
+Record a dated decision in the owning module's issue, or the project issue for
+shared work. Link it in the pull request. Reuse a prior decision if its evidence
+still applies.
 
-A passing local test shows how the chosen code behaved. It cannot establish a
-limitation in a framework that the test never exercised.
+- Name the established library and version, including an applicable standard
+  library. Link official documentation or upstream source for the capability.
+- State the requirement and use the supported API when it satisfies it. If a
+  limitation is uncertain, exercise the library on a representative input and
+  record the command, environment and observed result.
+- Before choosing custom code, including a replacement for a library already
+  in use, show why configuration or a thin adapter cannot meet the requirement.
+  Identify exactly which part must be custom. Passing tests for the custom code
+  alone cannot establish a limitation in the library.
 
 ### Where work runs
 
