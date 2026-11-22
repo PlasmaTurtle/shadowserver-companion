@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Serve Library rankings and their entity lists from the same recorded ownership and reported values. Multiple observations and systems associated with one entity contribute one count.
+
 ## 0.12.1
 
 - Supplied Library with workspace counts for CVEs and product or service labels found in retained observations, including available archived source rows.

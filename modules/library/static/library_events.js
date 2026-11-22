@@ -85,7 +85,6 @@ export function createHandlers(ctx) {
       },
     ],
     actions: {
-      'library-open-kev-page': (el) => ctx.actions.loadOpenKev(Number(el.dataset.offset) || 0),
       'library-vendor-page': (el) =>
         ctx.actions.loadVendorGuidance(false, Number(el.dataset.offset) || 0),
       'library-vendor-refresh': () => ctx.actions.loadVendorGuidance(true),
@@ -94,6 +93,7 @@ export function createHandlers(ctx) {
           Number(el.dataset.cveOffset) || 0,
           Number(el.dataset.productOffset) || 0,
         ),
+      'library-reported-entities': (el) => ctx.actions.showReportedEntities(el),
       'catalog-review-impact': (el) => ctx.actions.loadCatalogImpact(el.dataset.cveId),
       'catalog-impact-page': (el) =>
         ctx.actions.loadCatalogImpact(undefined, Number(el.dataset.offset) || 0),

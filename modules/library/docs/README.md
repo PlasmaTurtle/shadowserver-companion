@@ -40,13 +40,13 @@ generic safety helpers remain shared.
 
 ## Analyst reference workflows
 
-**Most reported** ranks CVEs and reported product or service labels by the number of distinct retained observations containing each value. An observation can contribute to several values. Another sighting of the same endpoint can count again. Each list shows how many observations supplied that kind of value. Use the coverage message when reading counts. The Observatory projection supplies the data for `GET /api/library/observed-references`.
+**By entity count** ranks each reported CVE, product or service by distinct identified workspace entities. Repeated appearances across an entity’s systems or reports count once. Evidence without an entity association is excluded. Selecting a count opens the corresponding entity records. Observatory supplies both `GET /api/library/observed-references` and `GET /api/library/observed-references/entities?kind=cves&value=…` from the same membership. Product lookups use `kind=products`.
 
 **Reviewed explainers** contains the versioned report, finding and report-context bank. Search by title, report ID, finding tag or qualifying field. `GET /api/library/guides?q=…` returns matching wording, criteria and citations. `GET /api/library/guides/{guide_id}` resolves a specific entry. Investigations owns selection and pins the wording used in a case.
 
-**Red Hat guidance** on a CVE reads the last captured statement and the product and package rows supplied by Red Hat. Checking the publisher is an explicit action. Other modules can use `GET /api/library/vendor-statements/redhat/{cve_id}` offline and `POST /api/library/vendor-statements/redhat/{cve_id}/refresh` to acquire the record. The response distinguishes absent prose, an unavailable record and a failed update, and includes the capture revision, SHA-256, retrieval time and source URLs. [Red Hat CVE data](https://docs.redhat.com/en/documentation/red_hat_security_data_api/1.0/security_data_api-cve)
+**Red Hat’s assessment** on a CVE reads the last captured statement and the product and package rows supplied by Red Hat. Checking the publisher is an explicit action. Other modules can use `GET /api/library/vendor-statements/redhat/{cve_id}` offline and `POST /api/library/vendor-statements/redhat/{cve_id}/refresh` to acquire the record. The response distinguishes absent prose, an unavailable record and a failed update, and includes the capture revision, SHA-256, retrieval time and source URLs. [Red Hat CVE data](https://docs.redhat.com/en/documentation/red_hat_security_data_api/1.0/security_data_api-cve)
 
-**Changes** compares open notifications with the current, verified local CISA KEV feed as the view opens. `GET /api/library/changes/open-kev` returns a paged list of proven membership differences, a count of unknown comparisons and the source date. It accepts a historical negative only when the pinned selection recorded a complete catalog. Older drafts with insufficient evidence are summarized together. Investigations owns any decision to revise a case.
+**Changes** shows the catalog update journal. Investigations owns notification synchronization in the builder.
 
 ## Source ownership
 

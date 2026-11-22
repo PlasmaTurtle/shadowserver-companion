@@ -962,8 +962,12 @@ class Eclipse:
             limit=limit,
             cve_offset=cve_offset,
             product_offset=product_offset,
-            archive_limit=MAX_RECORDS,
         )
+
+    def reference_entities(self, *, kind, value, limit=25, offset=0):
+        from .observed_references import reference_entities
+
+        return reference_entities(self, kind=kind, value=value, limit=limit, offset=offset)
 
     def view(self, **filters):
         from .observatory_view import view

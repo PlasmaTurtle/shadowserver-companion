@@ -27,6 +27,18 @@ const { chromium } = require('playwright');
     sources: ['CPE', 'CNA'],
   };
   const observation = {
+    reported_entities: {
+      revision: 'ownership-example',
+      total: 2,
+      offset: 0,
+      limit: 25,
+      coverage_complete: true,
+      warnings: [],
+      items: [
+        { id: 'example', name: 'Example Organization' },
+        { id: 'second', name: 'Second Organization' },
+      ],
+    },
     counts: {
       observations: 4,
       endpoints: 2,
@@ -293,6 +305,12 @@ const { chromium } = require('playwright');
       .fill('Unsaved explainer survives product research');
     await page.locator('#catalog-product-detail [data-catalog-cve]').first().click();
     await page.locator('.catalog-record h3').waitFor();
+    const recordEntities = page.locator('#catalog-record-entities');
+    await recordEntities.getByText('2 entities', { exact: true }).click();
+    assert.equal(
+      await recordEntities.getByRole('link', { name: 'Second Organization' }).getAttribute('href'),
+      '#entity/second',
+    );
     assert.equal(await page.locator('.catalog-score strong').innerText(), '9.3');
     assert.match(await page.locator('.catalog-record-risk').innerText(), /25.00% probability/);
     assert.match(await page.locator('.catalog-record-risk').innerText(), /CISA KEV/);
@@ -429,27 +447,49 @@ const { chromium } = require('playwright');
     await another.reload();
     await openedGuide.locator('a[href*="rfc7617"]').waitFor();
     await another.locator('[data-catalog-view="reported"]').click();
-    await another.getByRole('heading', { name: 'Most reported CVEs' }).waitFor();
-    let observationRevision = 'A';
+    await another.getByRole('heading', { name: 'Ranked by entity count' }).waitFor();
+    let entityRevision = 'A';
     await another.route('**/api/library/observed-references?*', (route) => {
       const offset = Number(new URL(route.request().url()).searchParams.get('cve_offset'));
-      const group = { total: 11, offset, limit: 10, observations_with_value: 20 };
+      const group = { total: 11, offset, limit: 10 };
       return route.fulfill({
         json: {
-          revision: observationRevision,
-          observation_count: 23,
+          revision: entityRevision,
           coverage_complete: false,
-          warnings: ['Partial archive'],
+          warnings: ['Some source labels were unavailable.'],
           cves: {
             ...group,
-            items: [{ value: offset ? 'CVE-2026-1023' : 'CVE-2026-1001', count: offset ? 1 : 9 }],
+            items: [
+              { value: offset ? 'CVE-2026-1023' : 'CVE-2026-1001', entity_count: offset ? 1 : 26 },
+            ],
           },
           products: {
             ...group,
             total: 1,
             offset: 0,
-            items: [{ value: 'Example <em>router</em>', count: 15 }],
+            items: [{ value: 'Example <em>router</em>', entity_count: 1 }],
           },
+        },
+      });
+    });
+    await another.route('**/api/library/observed-references/entities?*', (route) => {
+      const query = new URL(route.request().url()).searchParams;
+      assert.equal(query.get('kind'), 'cves');
+      assert.equal(query.get('value'), 'CVE-2026-1001');
+      const offset = Number(query.get('offset'));
+      const all = Array.from({ length: 26 }, (_, i) => ({
+        id: 'entity-' + i,
+        name: 'Unit <em>' + i + '</em>',
+      }));
+      return route.fulfill({
+        json: {
+          revision: entityRevision,
+          items: all.slice(offset, offset + 25),
+          offset,
+          limit: 25,
+          total: 26,
+          coverage_complete: false,
+          warnings: [],
         },
       });
     });
@@ -458,16 +498,35 @@ const { chromium } = require('playwright');
     await ranking.getByRole('link', { name: 'CVE-2026-1001' }).waitFor();
     assert.match(await ranking.innerText(), /Coverage is partial/);
     assert.equal(await ranking.locator('td em').count(), 0);
+    const countButton = ranking
+      .locator('tr')
+      .filter({ has: another.getByRole('link', { name: 'CVE-2026-1001' }) })
+      .getByRole('button');
+    assert.equal(await countButton.innerText(), '26');
+    await countButton.click();
+    const entity = ranking.getByRole('link', { name: 'Unit <em>0</em>', exact: true });
+    assert.equal(await entity.getAttribute('href'), '#entity/entity-0');
+    assert.equal(await entity.locator('em').count(), 0);
+    await ranking.getByRole('button', { name: 'More entities' }).click();
+    await ranking.getByRole('link', { name: 'Unit <em>25</em>', exact: true }).waitFor();
+    await ranking.getByRole('button', { name: 'Previous entities' }).click();
+    await entity.waitFor();
+    await another.setViewportSize({ width: 390, height: 844 });
+    assert.equal(
+      await another.evaluate(() => document.documentElement.scrollWidth > innerWidth + 2),
+      false,
+    );
+    await countButton.click();
+    await entity.waitFor({ state: 'hidden' });
+    await another.setViewportSize({ width: 1440, height: 1000 });
     await ranking.getByRole('button', { name: 'Next' }).click();
     await ranking.getByRole('link', { name: 'CVE-2026-1023' }).waitFor();
     await ranking.getByRole('button', { name: 'Previous' }).click();
     await ranking.getByRole('link', { name: 'CVE-2026-1001' }).waitFor();
-    observationRevision = 'B';
+    entityRevision = 'B';
     await ranking.getByRole('button', { name: 'Next' }).click();
     await ranking.getByText(/ranking changed/).waitFor();
     await ranking.getByRole('link', { name: 'CVE-2026-1001' }).waitFor();
-    await another.locator('[data-catalog-view="changes"]').click();
-    await another.locator('#library-open-kev p').first().waitFor();
     let vendorFetches = 0;
     await another.route('**/api/library/vendor-statements/redhat/*/refresh', async (route) => {
       vendorFetches++;
@@ -510,7 +569,7 @@ const { chromium } = require('playwright');
       'Field coverage and value drilldown, saved cohort restoration, shareable selection and semantic changes',
       'Named views persist across windows, rename with revision checks, and remove independently; typed search uses real local reference endpoints',
       'Changes review loads through the actual impact endpoint with completed-work toggle and explicit read-only guidance',
-      'Reviewed finding links survive reload, workspace frequency and open-case comparisons load, and vendor prose and capture receipts render safely',
+      'Reviewed finding links survive reload, workspace frequency loads, and vendor prose and capture receipts render safely',
     );
     await page.locator('#catalog-enabled').uncheck();
     await page.waitForFunction(() => !document.querySelector('#catalog-enabled')?.checked);

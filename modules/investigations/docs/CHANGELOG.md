@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Retired the open-case KEV query used solely by Library’s automatic comparison.
+- Updated the presentation of newly selected Library explanations to use factual descriptions of the evidence.
+
 ## 0.12.1
 
 - Select the new Library condition explanations using retained report identity, tags and qualifying fields. Render configuration and exposure guidance with its own wording and preserve previously selected editions.

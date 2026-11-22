@@ -11,12 +11,14 @@ from modules.library.resources.finding_explainer_data import (
     BANK,
     CURRENT_EDITION,
     LIFECYCLE_EDITION,
+    PREVIOUS_BANK,
+    PREVIOUS_EDITION,
 )
 from modules.accretion.components.intake.versions import entry_fields
 from .report_explainers import canonical_source_types
 
 REVISION = CURRENT_EDITION
-SUPPORTED_REVISIONS = {LIFECYCLE_EDITION, REVISION}
+SUPPORTED_REVISIONS = {LIFECYCLE_EDITION, PREVIOUS_EDITION, REVISION}
 
 
 def tags(entry):
@@ -51,8 +53,11 @@ def match_snippet(entry, tag, snippets):
 def select_finding_explainers(lead, revision=REVISION):
     if revision not in SUPPORTED_REVISIONS:
         return []
+    bank = BANK if revision == REVISION else PREVIOUS_BANK
     candidates = [
-        item for item in BANK.values() if revision == REVISION or item["revision"] == revision
+        item
+        for item in bank.values()
+        if revision != LIFECYCLE_EDITION or item["revision"] == LIFECYCLE_EDITION
     ]
     matched = set()
     for entry in lead.get("entries", []):
@@ -60,7 +65,7 @@ def select_finding_explainers(lead, revision=REVISION):
             snippet = match_snippet(entry, tag, candidates)
             if snippet:
                 matched.add(snippet["id"])
-    return [deepcopy(value) for key, value in BANK.items() if key in matched]
+    return [deepcopy(value) for key, value in bank.items() if key in matched]
 
 
 def selection_is_current(lead, draft):
@@ -88,6 +93,8 @@ def attach_explanation(item, snippet, refs, appendix):
         for key in ("id", "revision", "format", "title", "body", "limitations", "review")
     }
     item["technical_explanation"]["source_citations"] = citations
+    if "review_heading" in snippet:
+        item["technical_explanation"]["review_heading"] = snippet["review_heading"]
 
 
 def observation_conditions(entry, snippets):

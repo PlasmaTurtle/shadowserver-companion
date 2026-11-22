@@ -411,7 +411,7 @@ Drag to pan and use the zoom controls. **Fit jurisdiction** returns to the state
 
 ## 13 Use the Library for research and explanations
 
-Library brings together **Reviewed explainers**, editable workspace explainers and **Products & vulnerabilities**. The catalog tabs are **Products**, **CVEs**, **Most reported**, **Fields**, **Changes**, and **Dark Matter**. Library's **Fields** explores CVE data. Observatory's **Field** visualizes workspace evidence.
+Library brings together **Reviewed explainers**, editable workspace explainers and **Products & vulnerabilities**. The catalog tabs are **Products**, **CVEs**, **By entity count**, **Fields**, **Changes**, and **Dark Matter**. Library's **Fields** explores CVE data. Observatory's **Field** visualizes workspace evidence.
 
 ### Check reference freshness
 
@@ -423,9 +423,9 @@ Review **Local intelligence · CVSS, EPSS & KEV** separately. **Sync EPSS & KEV*
 
 Use Library search to find CVEs, products and explanations. Enter a report identifier such as `scan_rdp`, a tag such as `basic-auth`, or a field such as `rdp_protocol` to open a cited guide even before downloading the CVE catalog.
 
-Open **Most reported** to see which CVEs and products recur in retained workspace observations. Each observation counts once per value. The view shows how many observations supplied a CVE or product and flags incomplete coverage.
+Open **By entity count** to see which CVEs and products have been reported at the most distinct entities. An entity with several reported systems or repeated reports counts once. Select a count to see the entities and open their records.
 
-On a CVE, **Red Hat guidance** shows the saved publisher statement and applicable product or package rows. **Fetch from Red Hat** checks the publisher for that CVE. **Captured source** identifies the exact retrieved version. Open **Changes** to see where a current CISA known-exploitation listing differs from the evidence selected in an open notification.
+On a CVE, **Red Hat’s assessment** shows the vendor’s own wording and the Red Hat products or packages it names. **Fetch from Red Hat** checks the publisher for that CVE. **Captured source** identifies the exact retrieved version.
 
 In **CVEs**, use **Search CVEs** with an identifier, product, or description. Open a result to read CVSS assessments, known exploitation, EPSS probability and percentile, dates, references, and **Source record**. **Open NVD record** opens the public source; **See observed connections** connects the reference to locally retained observations.
 

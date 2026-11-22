@@ -116,6 +116,38 @@ def test_changed_report_types_require_deliberate_adoption():
     assert not selection_is_current(lead, draft)
 
 
+def test_information_pages_preserve_older_role_wording_and_cite_new_role_source_once():
+    page = deepcopy(BANK["compromised_iot"])
+    assert "eleven11bot" in str(page["examples"]) and "suspended" in str(page["examples"])
+    assert all(s["public_url"].startswith("https://") for s in page["sources"])
+    old = deepcopy(page)
+    old.pop("roles_heading")
+    old["sources"] = [
+        s
+        for s in old["sources"]
+        if s["publisher"] != "National Institute of Standards and Technology"
+    ]
+    old["revision"] = "report-explainers-2026-11-10-v1"
+    old["routes"][0][1] = "Historical case wording"
+    for record, title in (
+        (page, "Who may hold service records"),
+        (old, "Where to Start in Your Business"),
+    ):
+        model = build_information_pages(
+            {"draft": {"report_explainer_snapshots": [record]}}, Citations()
+        )
+        rendered = model["pages"][-1]
+        assert rendered["blocks"][-2]["title"] == title
+        assert rendered["blocks"][-1]["items"] == record["routes"]
+        assert (
+            sum(
+                r["publisher"] == "National Institute of Standards and Technology"
+                for r in rendered["references"]
+            )
+            == 1
+        )
+
+
 def test_case_pins_bank_and_rejects_forged_report_pages(client, app, monkeypatch):
     import_rows(client, app)
     entity_id = client.get("/api/leads").json()[0]["id"]

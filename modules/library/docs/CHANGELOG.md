@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Rank reported CVEs and products by distinct identified workspace entities. Each count opens the list of entities behind it.
+- Removed the automatic open-notification comparison from Library. Notification synchronization belongs to the builder.
+- Revised maintained explainer wording to attribute observations and describe evidence limits in neutral, factual terms. Labeled Red Hat statements and product coverage as the publisher’s assessment.
+
 ## 0.12.1
 
 - Added a workspace frequency view for reported CVEs and product or service labels. Library shows observation counts and coverage independently of catalog severity.

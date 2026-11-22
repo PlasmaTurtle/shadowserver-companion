@@ -22,33 +22,49 @@ class CatalogSettings(BaseModel):
 
 class ObservedReferenceCount(BaseModel):
     value: str = Field(min_length=1, max_length=200)
-    count: int = Field(ge=1, description="Distinct retained observations reporting this value.")
+    entity_count: int = Field(
+        ge=1, description="Distinct identified entities with this reported value."
+    )
 
 
 class ObservedReferencePage(BaseModel):
     items: list[ObservedReferenceCount] = Field(max_length=100)
     total: int = Field(ge=0, description="Distinct ranked values before pagination.")
-    observations_with_value: int = Field(
-        ge=0, description="Distinct observations with at least one ranked value in this category."
-    )
     limit: int = Field(ge=1, le=100)
     offset: int = Field(ge=0)
 
 
-class ObservedReferenceSummary(BaseModel):
+class EntityReferenceCoverage(BaseModel):
     revision: str = Field(
         min_length=1, description="Opaque workspace revision shared by both rankings."
     )
-    observation_count: int = Field(
-        ge=0,
-        description="Distinct observations examined, including observations without a ranked value.",
-    )
     coverage_complete: bool = Field(
-        description="Whether the counts cover all retained observations and labels."
+        description="Whether the retained reference labels of identified entities are complete."
     )
     warnings: list[str]
+
+
+class ObservedReferenceSummary(EntityReferenceCoverage):
     cves: ObservedReferencePage
     products: ObservedReferencePage
+
+
+class ReferenceEntity(BaseModel):
+    id: str
+    name: str
+
+
+class ReferenceEntities(EntityReferenceCoverage):
+    items: list[ReferenceEntity] = Field(max_length=100)
+    total: int = Field(ge=0, description="Distinct identified entities with this reported value.")
+    limit: int = Field(ge=1, le=100)
+    offset: int = Field(ge=0)
+
+
+class CveObservationEvidence(BaseModel, extra="allow"):
+    reported_entities: ReferenceEntities | None = Field(
+        description="First page of identified entities in the Library ranking. Null when the membership could not be read."
+    )
 
 
 class CatalogAccess:
@@ -286,25 +302,50 @@ def register(app, *, manager, outreach=None, workspace_root=None):
 
     if outreach is not None:
 
+        def reference_read(operation, *, optional=False, **params):
+            try:
+                return operation(**params)
+            except (OSError, sqlite3.Error, ValueError, KeyError) as error:
+                logging.getLogger(__name__).warning(
+                    "Entity reference counts unavailable: %s", type(error).__name__
+                )
+                if optional:
+                    return None
+                raise HTTPException(
+                    503, "Entity reference counts are unavailable. Try again."
+                ) from error
+
         @app.get("/api/library/observed-references", response_model=ObservedReferenceSummary)
         def observed_references(
             limit: int = Query(10, ge=1, le=100),
             cve_offset: int = Query(0, ge=0),
             product_offset: int = Query(0, ge=0),
         ):
-            try:
-                return outreach.eclipse.observed_references(
-                    limit=limit, cve_offset=cve_offset, product_offset=product_offset
-                )
-            except (OSError, sqlite3.Error, ValueError, KeyError) as error:
-                logging.getLogger(__name__).warning(
-                    "Workspace reference counts unavailable: %s", type(error).__name__
-                )
-                raise HTTPException(
-                    503, "Workspace observation counts are unavailable. Try again."
-                ) from error
+            return reference_read(
+                outreach.eclipse.observed_references,
+                limit=limit,
+                cve_offset=cve_offset,
+                product_offset=product_offset,
+            )
 
-        @app.get("/api/cve-catalog/records/{cve_id}/observations")
+        @app.get("/api/library/observed-references/entities", response_model=ReferenceEntities)
+        def reference_entities(
+            kind: Literal["cves", "products"],
+            value: str = Query(min_length=1, max_length=200),
+            limit: int = Query(25, ge=1, le=100),
+            offset: int = Query(0, ge=0),
+        ):
+            return reference_read(
+                outreach.eclipse.reference_entities,
+                kind=kind,
+                value=value,
+                limit=limit,
+                offset=offset,
+            )
+
+        @app.get(
+            "/api/cve-catalog/records/{cve_id}/observations", response_model=CveObservationEvidence
+        )
         def record_observations(
             cve_id: str,
             limit: int = Query(50, ge=1, le=100),
@@ -313,7 +354,16 @@ def register(app, *, manager, outreach=None, workspace_root=None):
             identifier = cve_id.upper()
             if not re.fullmatch(r"CVE-\d{4}-\d{4,}", identifier):
                 raise ValueError("Invalid CVE identifier")
-            return outreach.observations(cve_id=identifier, limit=limit, offset=offset)
+            evidence = outreach.observations(cve_id=identifier, limit=limit, offset=offset)
+            evidence["reported_entities"] = reference_read(
+                outreach.eclipse.reference_entities,
+                kind="cves",
+                value=identifier,
+                offset=0,
+                limit=25,
+                optional=True,
+            )
+            return evidence
 
         @app.get("/api/cve-catalog/products/{product_id}/observations")
         def product_observations(

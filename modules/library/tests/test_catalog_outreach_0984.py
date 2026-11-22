@@ -205,6 +205,7 @@ def test_readonly_outreach_api_preserves_casework_and_evidence(client, app, tmp_
     monkeypatch.setattr(socket, "getaddrinfo", forbidden)
     urls = [
         "/api/library/observed-references",
+        "/api/library/observed-references/entities?kind=cves&value=" + CRITICAL_KEV,
         "/api/eclipse",
         "/api/eclipse?product_id=" + PRODUCT,
         "/api/eclipse/intelligence?product_id=" + PRODUCT + "&intelligence=critical_kev",
