@@ -12,15 +12,15 @@ Library keeps local vulnerability and risk references.
 [Development and contributions](docs/DEVELOPMENT.md) ·
 [Support](docs/USER_GUIDE.md#support-and-troubleshooting)
 
-> **0.12.0 — Guided Setup · Release candidate**
+> **0.12.1 — Guided Setup · Release candidate**
 >
 > The installer is unsigned. Exact-version Windows installation, update and
-> desktop acceptance remain outstanding. See the [recorded candidate evidence](docs/history/validation/VALIDATION_0120.md)
+> desktop acceptance remain outstanding. See the [release notes](CHANGELOG.md)
 > and [Windows acceptance checklist](docs/WINDOWS_ACCEPTANCE.md).
 
 ## Get started on Windows
 
-1. Run `ShadowserverEclipse-0.12.0-guided-setup-rc-Setup-x64.exe`.
+1. Run `ShadowserverEclipse-0.12.1-guided-setup-rc-Setup-x64.exe`.
    The per-user installer includes Python and application dependencies;
    operating the app does not require a separate Python installation or Microsoft Word.
 2. Open **Shadowserver Eclipse** and complete guided setup: API connections,

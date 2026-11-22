@@ -230,7 +230,7 @@ under Python 3.14. A compiled installer and passing Linux tests do not establish
 native Windows behavior.
 
 Version 0.9.96 was reported working on the user's Windows workstation. That is
-a prior-version baseline, not an assertion that Guided Setup 0.12.0 has
+a prior-version baseline, not an assertion that the current Guided Setup candidate has
 completed its own native acceptance. The
 [November 14 candidate record](../../docs/history/validation/VALIDATION_0120.md)
 contains historical results for its identified build. Use

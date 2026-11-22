@@ -14,7 +14,7 @@ body:
     attributes:
       label: Application version
       description: Include the full release version or source commit.
-      placeholder: 0.12.0 release candidate
+      placeholder: 0.12.1 release candidate
     validations:
       required: true
   - type: input

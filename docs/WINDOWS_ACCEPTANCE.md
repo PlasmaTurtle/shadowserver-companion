@@ -1,6 +1,6 @@
 # Guided Setup Windows acceptance
 
-This checklist covers 0.12.0. The recorded earlier Windows baseline remains 0.9.96.
+This checklist covers 0.12.1. The recorded earlier Windows baseline remains 0.9.96.
 Automated Linux checks and cross-compilation do not confirm this release on Windows.
 
 This checklist owns the manual acceptance steps. Track completion in

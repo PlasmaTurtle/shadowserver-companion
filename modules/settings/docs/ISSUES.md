@@ -1,7 +1,7 @@
 # Settings issues and planned work
 
 This register owns Settings issues and their completion evidence. Last reviewed:
-**2026-11-21**. [Settings maintenance guide](README.md) describes current contracts;
+**2026-11-22**. [Settings maintenance guide](README.md) describes current contracts;
 the [project issue index](../../../docs/ISSUES.md) links shared work and other owners.
 Follow the [tracking rules](../../../docs/ISSUES.md#maintaining-this-register).
 
@@ -18,6 +18,7 @@ file publication. Settings retains export, schedule and update workflow decision
 | ISS040 | [Reviewed software update identity](#iss040-reviewed-software-update-identity) | Resolved | Settings |
 | ISS041 | [Supported display timezones](#iss041-supported-display-timezones) | Deferred | Settings; UI and release tooling |
 | ISS042 | [Setup completion review consistency](#iss042-setup-completion-review-consistency) | Deferred | Settings; Accretion |
+| ISS057 | [Recognize configured keys in onboarding](#iss057-recognize-configured-keys-in-onboarding) | Resolved | Settings; Accretion and Library credential interfaces |
 
 
 Shared checks for this completed batch are recorded in the [November 21 validation](../../../docs/history/validation/maintenance-2026-11-21.md).
@@ -292,6 +293,38 @@ contradictory setup record, and recovery preserves saved profile and schedule da
 Reopening an already-completed setup currently remains a review session; changing
 that resume policy is a separate product decision, not part of corrupted-record
 recovery in ISS039.
+
+## ISS057 Recognize configured keys in onboarding
+
+Onboarding showed blank, required credential forms even when Shadowserver and
+NVD reported available keys. This made configured services look unfinished.
+
+**Done when:** each detected key shows completed credential setup, only missing
+keys prompt for entry, and both detected keys complete a missing connections
+step. Live Shadowserver connection testing remains explicit; detection must not
+overwrite an existing manual choice or discard an unfinished key for the other
+service. Secret values remain outside application state and browser storage.
+
+The change consumes existing credential status APIs and the existing setup
+progress endpoint. No credential storage or backend schema changes are needed.
+The original failing regression and scoped verification are retained in
+`validation/onboarding-detected-keys` under the local Codex task workspace.
+
+**Resolved 2026-11-22.** Detected credentials now replace entry forms with
+completed cards. Missing connection progress is recorded when both APIs are
+configured during onboarding. Merely reviewing an established workspace does
+not start mandatory onboarding. Shadowserver retains Test connection and points
+to Data → API for credential management; NVD points to Settings.
+
+The original regression fails against the saved baseline and passes with this
+change. Coverage includes every key-presence combination, configured without a
+live connection, existing manual choices, optional review of established
+workspaces, and preserving the other provider's unsaved key. Final verification
+passed all portable frontend suites, 17 onboarding/backend integration tests,
+the setup browser group, scoped Prettier, frontend syntax and the regenerated
+program-map check. Desktop and 390-pixel browser captures show the completed
+cards; browser checks recorded no page errors or external requests. Credential
+status was synthetic; this is not native credential-manager acceptance.
 
 ## Full module review
 

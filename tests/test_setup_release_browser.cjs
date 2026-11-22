@@ -63,6 +63,10 @@ const { waitForJSON } = require('./browser_wait.cjs');
         fullPage: true,
       });
     const nextStep = (step) => page.locator(`.setup-steps [data-step="${step}"]`).click();
+    const serviceCard = (name) =>
+      page
+        .locator('#setup-wizard .setup-service')
+        .filter({ has: page.getByRole('heading', { name, exact: true }) });
     const assertNoOverflow = async () => {
       const overflow = await page
         .locator('#modal')
@@ -202,8 +206,16 @@ const { waitForJSON } = require('./browser_wait.cjs');
       .locator('#setup-wizard .badge')
       .filter({ hasText: /^Connected$/ })
       .waitFor();
-    assert.equal(await page.locator('#setup-shadow-key').inputValue(), '');
-    assert.equal(await page.locator('#setup-shadow-secret').inputValue(), '');
+    assert.equal(await page.locator('#setup-shadow-form').count(), 0);
+    assert.equal(await page.locator('#setup-shadow-key').count(), 0);
+    assert.equal(await page.locator('#setup-shadow-secret').count(), 0);
+    assert.match(await serviceCard('Shadowserver').textContent(), /\bcomplete\b/i);
+    assert.equal(
+      await serviceCard('Shadowserver').locator('[data-action="setup-connect"]').count(),
+      1,
+    );
+    assert.equal(await page.locator('#setup-nvd-form').count(), 1);
+    assert.equal(await page.locator('#setup-nvd-key').getAttribute('type'), 'password');
     const persisted = await page.evaluate(() =>
       JSON.stringify({ local: { ...localStorage }, session: { ...sessionStorage } }),
     );
@@ -245,7 +257,72 @@ const { waitForJSON } = require('./browser_wait.cjs');
     assert.equal(schedule.config.reference, false);
     assert.equal((await json('/api/setup')).steps.connections.mode, 'configured');
     checks.push(
-      'Synthetic connection clears secrets; jurisdiction filters setup choices and rejects stale requests; automatic schedule persists',
+      'Detected Shadowserver credentials replace their entry form while an unconfigured NVD key remains optional; jurisdiction and schedule safeguards persist',
+    );
+
+    // Detect an existing NVD key from status only; never write a native credential.
+    const configuredNvd = async (route) => {
+      if (route.request().method() !== 'GET') return route.continue();
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ configured: true, source: 'session', remember_supported: false }),
+      });
+    };
+    await page.route(base + '/api/nvd/credentials', configuredNvd);
+    const detectedConnectionWrites = [];
+    const recordDetectedConnectionWrite = (request) => {
+      const url = new URL(request.url());
+      if (
+        url.origin === base &&
+        request.method() !== 'GET' &&
+        [
+          '/api/shadowserver/credentials',
+          '/api/shadowserver/connection',
+          '/api/nvd/credentials',
+        ].includes(url.pathname)
+      )
+        detectedConnectionWrites.push(url.pathname);
+    };
+    page.on('request', recordDetectedConnectionWrite);
+    await page.locator('[data-action="open-setup"]').first().click();
+    await page.locator('#setup-wizard').waitFor();
+    assert.equal(await page.locator('#setup-step-heading').textContent(), 'API connections');
+    assert.equal(await page.locator('#setup-shadow-form, #setup-nvd-form').count(), 0);
+    assert.equal(await page.locator('#setup-wizard input[type="password"]').count(), 0);
+    assert.match(await serviceCard('Shadowserver').textContent(), /\bcomplete\b/i);
+    assert.match(await serviceCard('NVD').textContent(), /\bcomplete\b/i);
+    assert.equal(
+      await serviceCard('Shadowserver')
+        .locator('.badge')
+        .filter({ hasText: /^Connected$/ })
+        .count(),
+      1,
+    );
+    assert.equal(
+      await serviceCard('Shadowserver').locator('[data-action="setup-connect"]').count(),
+      1,
+    );
+    assert.equal(await page.locator('.setup-steps li.done [data-step="connections"]').count(), 1);
+    assert.equal((await json('/api/setup')).steps.connections.mode, 'configured');
+    const detectedKeyStorage = await page.evaluate(() =>
+      JSON.stringify({ local: { ...localStorage }, session: { ...sessionStorage } }),
+    );
+    for (const secret of [fixture.api_key, fixture.secret])
+      assert(!detectedKeyStorage.includes(secret));
+    await assertNoOverflow();
+    await snapshot('setup-detected-keys-desktop');
+    await page.setViewportSize({ width: 390, height: 844 });
+    await assertNoOverflow();
+    await snapshot('setup-detected-keys-mobile');
+    await page.setViewportSize({ width: 1440, height: 1000 });
+    await page.locator('[data-action="setup-later"]').click();
+    await page.locator('#modal').waitFor({ state: 'hidden' });
+    page.off('request', recordDetectedConnectionWrite);
+    assert.deepEqual(detectedConnectionWrites, []);
+    await page.unroute(base + '/api/nvd/credentials', configuredNvd);
+    checks.push(
+      'Reopening setup with both keys detected shows completed summaries without credential forms, stored browser secrets, or automatic connection requests',
     );
 
     await page.goto(base + '/#data?tab=api');

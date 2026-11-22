@@ -39,12 +39,20 @@ const config = {
   subscription: 'US-NC',
   report_types: ['scan_http_vulnerable'],
 };
-async function fixture({ completed = false, connected = true } = {}) {
+async function fixture({
+  completed = false,
+  connected = true,
+  configured = connected,
+  nvdConfigured = false,
+  connectionMode = null,
+  establishedProfile = false,
+} = {}) {
   const steps = completed ? { connections: {}, profile: {}, automation: {} } : {};
+  if (connectionMode) steps.connections = { mode: connectionMode };
   const status = {
-    required: !completed,
+    required: !completed && !establishedProfile,
     completed,
-    established_profile: false,
+    established_profile: establishedProfile,
     step: 'connections',
     steps,
     profile: clone(profile),
@@ -57,13 +65,14 @@ async function fixture({ completed = false, connected = true } = {}) {
   };
   const shadow = {
     connected,
-    configured: connected,
+    configured,
     can_remember: true,
     subscriptions: connected ? ['US-NC'] : [],
     types: connected ? [{ type: 'scan_http_vulnerable', description: 'Vulnerable HTTP' }] : [],
     schedule: { config: clone(config), background: { installed: false } },
     selection_defaults: { subscription: 'US-NC', report_types: ['scan_http_vulnerable'] },
   };
+  const nvd = { configured: nvdConfigured, source: 'session', remember_supported: true };
   const passwords = [],
     controls = [{ disabled: false }, { disabled: true }],
     nodes = new Map(),
@@ -146,7 +155,19 @@ async function fixture({ completed = false, connected = true } = {}) {
         }
         if (url === '/api/setup') return clone(status);
         if (url === '/api/shadowserver/status') return clone(shadow);
-        if (url === '/api/nvd/credentials') return { configured: false };
+        if (url === '/api/shadowserver/credentials') {
+          shadow.configured = true;
+          return clone(shadow);
+        }
+        if (url === '/api/shadowserver/connection') {
+          shadow.connected = true;
+          shadow.job = { status: 'completed' };
+          return clone(shadow.job);
+        }
+        if (url === '/api/nvd/credentials') {
+          if (options.method === 'PUT') nvd.configured = true;
+          return clone(nvd);
+        }
         if (url === '/api/schedule') {
           shadow.schedule.config = clone(options.body);
           return clone(shadow.schedule);
@@ -164,6 +185,7 @@ async function fixture({ completed = false, connected = true } = {}) {
     ctx,
     status,
     shadow,
+    nvd,
     passwords,
     controls,
     nodes,
@@ -179,6 +201,174 @@ async function fixture({ completed = false, connected = true } = {}) {
   };
 }
 (async () => {
+  for (const [configured, nvdConfigured] of [
+    [false, false],
+    [true, false],
+    [false, true],
+    [true, true],
+  ]) {
+    const f = await fixture({ connected: false, configured, nvdConfigured });
+    const a = f.ctx.actions;
+    await a.openSetup();
+    const html = f.renders.at(-1);
+    assert.match(html, /class="setup-connections"/);
+    assert.match(html, /data-action="setup-connections-next"/);
+    const shadowMarkup = html.split('<h3>Shadowserver</h3>')[1].split('</section>')[0];
+    const nvdMarkup = html.split('<h3>NVD</h3>')[1].split('</section>')[0];
+    if (configured) {
+      assert.doesNotMatch(shadowMarkup, /id="setup-shadow-(?:form|key|secret)"/);
+      assert.match(shadowMarkup, /complete|key detected/i);
+      assert.match(shadowMarkup, /data-action="setup-connect"/);
+      assert.match(shadowMarkup, /Test connection/);
+      assert.doesNotMatch(
+        shadowMarkup,
+        />Connected</,
+        'Detected credentials are not a live connection',
+      );
+    } else {
+      assert.match(shadowMarkup, /id="setup-shadow-form"/);
+      assert.match(shadowMarkup, /id="setup-shadow-key"[^>]*type="password"/);
+      assert.match(shadowMarkup, /id="setup-shadow-secret"[^>]*type="password"/);
+    }
+    if (nvdConfigured) {
+      assert.doesNotMatch(nvdMarkup, /id="setup-nvd-(?:form|key)"/);
+      assert.doesNotMatch(nvdMarkup, /request-an-api-key/);
+      assert.match(nvdMarkup, /complete|key detected/i);
+    } else {
+      assert.match(nvdMarkup, /id="setup-nvd-form"/);
+      assert.match(nvdMarkup, /request-an-api-key/);
+    }
+    const automaticWrites = f.calls.filter(
+      ({ options }) => options.method && options.method !== 'GET',
+    );
+    if (configured && nvdConfigured) {
+      assert.equal(automaticWrites.length, 1);
+      assert.equal(automaticWrites[0].url, '/api/setup/progress');
+      assert.equal(automaticWrites[0].options.body.step, 'connections');
+      assert.equal(automaticWrites[0].options.body.mode, 'configured');
+      assert.equal(f.status.steps.connections.mode, 'configured');
+      assert.match(html, /<li[^>]*class="done"[^>]*><button[^>]*data-step="connections"/);
+      assert.match(html, /aria-label="API connections, completed"/);
+    } else {
+      assert.deepEqual(automaticWrites, []);
+      assert.equal(f.status.steps.connections, undefined);
+    }
+    assert.equal(f.calls.filter(({ url }) => url === '/api/shadowserver/connection').length, 0);
+    assert.equal(f.shadow.connected, false);
+    assert.equal(a.hasUnsavedSetup(), false);
+    await a.setupConnectionsNext();
+    assert.match(f.renders.at(-1), /id="setup-profile-form"/);
+    assert.equal(
+      f.status.steps.connections.mode,
+      configured || nvdConfigured ? 'configured' : 'manual',
+    );
+    assert.equal(f.calls.filter(({ url }) => url === '/api/shadowserver/connection').length, 0);
+    a.disposeSetup();
+  }
+  {
+    const f = await fixture({
+      connected: false,
+      configured: true,
+      nvdConfigured: true,
+      establishedProfile: true,
+    });
+    const a = f.ctx.actions;
+    await a.openSetup();
+    assert.doesNotMatch(f.renders.at(-1), /id="setup-(?:nvd|shadow)-form"/);
+    assert.match(f.renders.at(-1), /Credential setup is complete/);
+    assert.equal(f.status.required, false);
+    assert.equal(f.status.steps.connections, undefined);
+    assert.equal(
+      f.calls.filter(({ options }) => options.method && options.method !== 'GET').length,
+      0,
+      'Reviewing detected keys must not start mandatory setup for an established workspace',
+    );
+    await a.setupConnectionsNext();
+    assert.equal(f.status.steps.connections.mode, 'configured');
+    assert.equal(f.calls.filter(({ url }) => url === '/api/setup/progress').length, 1);
+    assert.match(f.renders.at(-1), /id="setup-profile-form"/);
+    a.disposeSetup();
+  }
+  {
+    const f = await fixture({
+      completed: true,
+      connected: false,
+      configured: true,
+      nvdConfigured: true,
+      connectionMode: 'manual',
+    });
+    await f.ctx.actions.openSetup('connections');
+    assert.equal(
+      f.status.steps.connections.mode,
+      'manual',
+      'Detection preserves an existing manual choice',
+    );
+    assert.equal(f.calls.filter(({ url }) => url === '/api/setup/progress').length, 0);
+    assert.doesNotMatch(f.renders.at(-1), /id="setup-(?:nvd|shadow)-form"/);
+    f.ctx.actions.disposeSetup();
+  }
+  {
+    const f = await fixture({ connected: false, configured: true });
+    const a = f.ctx.actions;
+    await a.openSetup();
+    await a.saveSetupNvd({ reset() {} }, { api_key: 'synthetic-nvd-key' });
+    const html = f.renders.at(-1);
+    assert.doesNotMatch(html, /id="setup-(?:nvd|shadow)-form"/);
+    assert.doesNotMatch(html, /request-an-api-key|synthetic-nvd-key/);
+    assert.match(html, /complete|key detected/i);
+    assert.equal(f.calls.filter(({ url }) => url === '/api/shadowserver/connection').length, 0);
+    await a.setupConnectionsNext();
+    assert.equal(f.status.steps.connections.mode, 'configured');
+    assert.match(f.renders.at(-1), /id="setup-profile-form"/);
+    a.disposeSetup();
+  }
+  {
+    const f = await fixture({ connected: false });
+    const a = f.ctx.actions;
+    await a.openSetup();
+    const enteredShadowKey = { value: 'synthetic-unsubmitted-shadow-key' };
+    const enteredShadowSecret = { value: 'synthetic-unsubmitted-shadow-secret' };
+    f.passwords.push(enteredShadowKey, enteredShadowSecret);
+    const previousRenders = f.renders.length;
+    const nvdCard = { innerHTML: '' };
+    await a.saveSetupNvd(
+      { reset() {}, closest: (selector) => (selector === 'section' ? nvdCard : null) },
+      { api_key: 'synthetic-saved-nvd-key' },
+    );
+    assert.match(nvdCard.innerHTML, /Complete/);
+    assert.doesNotMatch(nvdCard.innerHTML, /id="setup-nvd-form"|request-an-api-key/);
+    assert.equal(f.renders.length, previousRenders, 'Do not replace the other service draft');
+    assert.equal(enteredShadowKey.value, 'synthetic-unsubmitted-shadow-key');
+    assert.equal(enteredShadowSecret.value, 'synthetic-unsubmitted-shadow-secret');
+    assert.equal(a.hasUnsavedSetup(), true);
+    assert.equal(f.shadow.configured, false);
+    assert.equal(f.calls.filter(({ url }) => url === '/api/shadowserver/credentials').length, 0);
+    assert.equal(f.calls.filter(({ url }) => url === '/api/shadowserver/connection').length, 0);
+    assert.equal(f.status.steps.connections, undefined);
+    a.disposeSetup();
+  }
+  {
+    const f = await fixture({ connected: false, nvdConfigured: true });
+    const a = f.ctx.actions;
+    await a.openSetup();
+    await a.saveSetupShadow(
+      { reset() {} },
+      { api_key: 'synthetic-shadow-key', secret: 'synthetic-shadow-secret' },
+    );
+    const html = f.renders.at(-1);
+    assert.doesNotMatch(html, /id="setup-(?:nvd|shadow)-form"/);
+    assert.doesNotMatch(html, /synthetic-shadow-key|synthetic-shadow-secret/);
+    assert.match(html, /complete|key detected/i);
+    assert.equal(
+      f.calls.filter(({ url }) => url === '/api/shadowserver/connection').length,
+      1,
+      'Save & connect remains an explicit connection action',
+    );
+    await a.setupConnectionsNext();
+    assert.equal(f.status.steps.connections.mode, 'configured');
+    assert.match(f.renders.at(-1), /id="setup-profile-form"/);
+    a.disposeSetup();
+  }
   {
     const f = await fixture();
     const a = f.ctx.actions;

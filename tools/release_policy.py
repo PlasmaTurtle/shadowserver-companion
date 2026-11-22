@@ -36,6 +36,7 @@ DOCS = {
     "DEPENDENCIES.md",
     "WINDOWS_ACCEPTANCE.md",
     "history/validation/VALIDATION_0120.md",
+    "history/validation/VALIDATION_0121.md",
     "history/releases/RELEASE_0985.md",
     "history/design/WORKSPACE_EVOLUTION_0110.md",
     "history/reviews/MAINTENANCE_AUDIT_0999.md",

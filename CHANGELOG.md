@@ -1,3 +1,8 @@
+# 0.12.1 — Guided Setup
+
+- Guided setup recognizes existing Shadowserver and NVD credentials when you open it. Only missing credentials prompt for entry. When both are present, the connections step is complete and you can continue to your profile.
+- Saving one service's key keeps any unfinished entry for the other service. A saved manual-import choice is preserved, and Test connection remains available to verify Shadowserver access.
+
 # 0.12.0 — Guided Setup
 
 - Review CVE and end-of-life findings in separate views of the same lead. Open the reported host or its root site, enlarge the saved screenshot and continue to the next lead after a decision.

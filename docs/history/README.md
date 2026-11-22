@@ -7,7 +7,7 @@ passed the same checks. A completed item or test result applies only to the
 version and environment recorded in that document.
 
 Start with the [current documentation](../README.md) for supported behavior and
-working guidance. Use [candidate build evidence](validation/VALIDATION_0120.md),
+working guidance. Use [candidate build evidence](validation/VALIDATION_0121.md),
 [the module-reorganization record](validation/module-reorganization-validation.md) and the
 [Windows acceptance checklist](../WINDOWS_ACCEPTANCE.md) to distinguish recorded
 checks from outstanding release acceptance.
@@ -60,6 +60,7 @@ Recorded checks, environments and limits for specific source states.
 - [Shadowserver Eclipse 0.10.1 Analyst Workflow validation](validation/VALIDATION_0101.md)
 - [Validation — 0.11.0 Workspace Evolution](validation/VALIDATION_0110.md)
 - [Validation — 0.12.0 Guided Setup, November 14 candidate](validation/VALIDATION_0120.md)
+- [Validation — 0.12.1 Guided Setup, November 22 candidate](validation/VALIDATION_0121.md)
 - [Module reorganization validation](validation/module-reorganization-validation.md)
 - [Maintenance validation — November 21, 2026](validation/maintenance-2026-11-21.md)
 - [Full build validation — November 21, 2026](validation/full-build-2026-11-21.md): candidate evidence and unresolved full-run validation findings.

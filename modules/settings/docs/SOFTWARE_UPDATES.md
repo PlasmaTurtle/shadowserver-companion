@@ -59,7 +59,7 @@ change repository visibility, or embed private GitHub credentials.
 2. Generate the manifest from the exact installer to be distributed:
 
    ```text
-   python tools/build_update_manifest.py dist/ShadowserverEclipse-0.12.0-guided-setup-rc-Setup-x64.exe dist/software-update-ShadowserverCompanionDarkMatter.json
+   python tools/build_update_manifest.py dist/ShadowserverEclipse-0.12.1-guided-setup-rc-Setup-x64.exe dist/software-update-ShadowserverCompanionDarkMatter.json
    ```
 
 3. Attach both files to the same draft GitHub release. The manifest filename is
@@ -67,7 +67,7 @@ change repository visibility, or embed private GitHub credentials.
    `ShadowserverCompanionDarkMatter` identity. The manifest contains the installer
    filename, byte count, SHA-256 digest, version, channel, edition, variant, and
    plain-text changes from the bundled changelog.
-4. Use a matching version tag, such as `v0.12.0`. Mark candidate and unstable
+4. Use a matching version tag, such as `v0.12.1-rc.1` for this candidate. Mark candidate and unstable
    releases as prereleases. Stable releases must not be prereleases.
 5. Confirm that GitHub reports each uploaded asset as `uploaded` with a SHA-256
    `digest` and correct `size`, then publish the release. Attach the complete

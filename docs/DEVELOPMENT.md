@@ -1,6 +1,6 @@
 # Development and verification
 
-**0.12.0 — Guided Setup.** Develop from a source checkout or the extracted
+**0.12.1 — Guided Setup.** Develop from a source checkout or the extracted
 source archive, not the installed directory. `RELEASE.json` separates version,
 release channel, review name, accepted Windows baseline and current-version
 acceptance. Tests and packaging never manufacture workstation confirmation.

@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "release": "0.12.0",
+  "release": "0.12.1",
   "release_channel": "candidate",
   "scope": "Application modules own their runtime code, tools, assets and tests. Explicit root paths own project-wide startup and release infrastructure. Fine-grained import rules define shared capability and workflow boundaries.",
   "components": [
@@ -10624,8 +10624,8 @@
       "path": "modules/settings/static/onboarding.js",
       "module": "modules/settings/static/onboarding.js",
       "owner": "settings",
-      "lines": 576,
-      "sha256": "35d5535b10ec57cf73051beecf6d71f7471bae020142bed0f743c2d9259e78ad",
+      "lines": 610,
+      "sha256": "c5d8df4a3eb2f3dc35c610e6507b391115d1a03f7a757ff53342cee5d4e174c6",
       "imports": [],
       "symbols": [
         {
@@ -10635,7 +10635,7 @@
         },
         {
           "name": "createHandlers",
-          "line": 542,
+          "line": 576,
           "kind": "export"
         }
       ]
@@ -13241,13 +13241,13 @@
       "path": "tools/release_policy.py",
       "module": "tools.release_policy",
       "owner": "project",
-      "lines": 275,
-      "sha256": "b40887cc8eafc0da23c5ed08e06dde9c6c32004b13fb7b96757f5df4351fd986",
+      "lines": 276,
+      "sha256": "c6f0145d61ec5f47e7b33380330be144fb77591609f4a3c0fcb46e9e8054d7b3",
       "imports": [],
       "symbols": [
         {
           "name": "distributable",
-          "line": 176,
+          "line": 177,
           "kind": "function"
         }
       ]

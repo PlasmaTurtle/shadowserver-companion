@@ -2,7 +2,7 @@
 
 From reported exposure to documented outreach
 
-Version 0.12.0 release candidate | November 14, 2026
+Version 0.12.1 release candidate | November 22, 2026
 
 Shadowserver Eclipse helps an analyst turn reported internet exposures into useful, traceable outreach. It brings source reports, organization research, vulnerability references, notification writing, delivery records, and case closure into one local Windows application.
 
@@ -72,7 +72,7 @@ For practice, open **Start → Shadowserver Eclipse → Shadowserver Eclipse Dem
 
 A new workspace opens **Set up your workspace**. Review its three steps:
 
-1. **API connections.** Enter your Shadowserver API key and secret, then choose **Save & connect**. Add an NVD key if you use the vulnerability catalog. On Windows, **Save in Windows Credential Manager** makes the selected key available after restarting. To begin without keys or a connection, choose **Use manual imports for now**. You can add connections later.
+1. **API connections.** Existing keys appear as completed credential setup, without asking you to enter them again. If both keys are detected, this step is marked complete; choose **Continue**. **Test connection** checks Shadowserver access and loads report choices when needed. For a missing Shadowserver connection, enter your API key and secret, then choose **Save & connect**. An NVD key is optional and allows faster API updates. On Windows, **Save in Windows Credential Manager** makes the selected key available after restarting. To begin without keys or a connection, choose **Use manual imports for now**. You can add connections later.
 2. **Identity & jurisdiction.** Choose your agency from the presets or select **Other agency or organization**. Enter your name and office or location, and select your report jurisdictions. A preset fills agency and department; it does not change your jurisdiction or grant subscription access. **Title** and **Contact email** are optional. Leave the title blank for a name-only sender. Choose **Save profile & continue**.
 3. **Retrieval schedule.** Leave **Enable retrieval schedule** off to skip this schedule, or enable it and select the services, time, subscription, and report types you need. Review the workspace summary, then choose **Save choices & finish setup**. Library has separate daily NVD catalog and EPSS/KEV update controls; turning this schedule off does not disable them. Review those controls in Library after setup.
 

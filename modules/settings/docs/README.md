@@ -39,6 +39,16 @@ retained draft; it preserves the entered schedule while the user returns to save
 Malformed saved setup flags or steps require review without changing the stored
 row during status reads. Valid older records may omit optional metadata.
 
+Guided setup reads each credential service's `configured` status and shows a
+completed credential card instead of asking for an existing key. When both
+Shadowserver and NVD are configured, opening setup records a missing connections
+step as configured; an existing reviewed choice is retained. Detection does not
+start mandatory onboarding for an established workspace; Continue explicitly
+records that review. Detection does not test the remote APIs. Shadowserver's
+separate `connected` status and explicit Test connection action describe live
+report access. Saving one provider's key
+updates its card without discarding an unfinished entry for the other provider.
+
 Settings uses native form validation, revealing closed sections containing invalid
 controls before requesting focus. NVD input remains only in the form: entering a
 key activates the shared unsaved-change guards, and an earlier save/removal cannot

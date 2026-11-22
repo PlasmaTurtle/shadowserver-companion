@@ -77,6 +77,7 @@ records its own verification and does not inherit that batch's completion claim.
 | ISS054 | [Defender quarantined the Windows launcher](#iss054-defender-quarantined-the-windows-launcher) | Project release tooling |
 | ISS055 | [Website capture permitted file downloads](../modules/tools/docs/ISSUES.md#iss055-website-capture-permitted-file-downloads) | Tools |
 | ISS056 | [North Carolina business-registration import](../modules/attribution/docs/ISSUES.md#iss056-north-carolina-business-registration-import) | Attribution and Entities |
+| ISS057 | [Recognize configured keys in onboarding](../modules/settings/docs/ISSUES.md#iss057-recognize-configured-keys-in-onboarding) | Settings |
 
 ## Project work status
 
@@ -278,7 +279,7 @@ stays deferred; this targeted repair does not justify moving unrelated queries.
 
 ## ISS014 Current version Windows acceptance
 
-`RELEASE.json` records 0.12.0 as a candidate with no current-version home
+`RELEASE.json` records 0.12.1 as a candidate with no current-version home
 confirmation. The recorded 0.9.96 Windows baseline does not accept this build.
 Portable tests and source packaging do not establish native installer, Word,
 display-scaling, Task Scheduler or workstation-security behavior.

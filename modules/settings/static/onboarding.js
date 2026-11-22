@@ -60,13 +60,43 @@ export function install(ctx) {
     }
   }
   function stepsMarkup() {
-    return `<ol class="setup-steps" aria-label="Setup progress">${STEPS.map((name, index) => `<li ${state.step === name ? 'aria-current="step"' : ''} class="${state.status?.steps?.[name] ? 'done' : ''}"><button type="button" data-action="setup-step" data-step="${name}" ><span>${index + 1}</span>${LABELS[index]}</button></li>`).join('')}</ol>`;
+    return `<ol class="setup-steps" aria-label="Setup progress">${STEPS.map((name, index) => {
+      const done = Boolean(state.status?.steps?.[name]);
+      return `<li ${state.step === name ? 'aria-current="step"' : ''} class="${done ? 'done' : ''}"><button type="button" data-action="setup-step" data-step="${name}" aria-label="${LABELS[index]}${done ? ', completed' : ''}"><span>${index + 1}</span>${LABELS[index]}</button></li>`;
+    }).join('')}</ol>`;
+  }
+  function shadowConnectionMarkup() {
+    const shadow = state.shadow || {};
+    const running = ['queued', 'running'].includes(shadow.job?.status);
+    const credentials = shadow.configured
+      ? `<p role="status">API key and secret detected. Credential setup is complete.</p><p>${shadow.connected ? 'Connected and ready to retrieve available reports.' : 'Test the connection to load available subscriptions and report types.'}</p><button type="button" class="button" data-action="setup-connect" ${running ? 'disabled' : ''}>${running ? 'Connecting…' : 'Test connection'}</button><p class="help">Manage these credentials in Data → API.</p>`
+      : `<form id="setup-shadow-form" class="form-grid" autocomplete="off"><div class="field"><label for="setup-shadow-key">API key</label><input id="setup-shadow-key" name="api_key" type="password" autocomplete="new-password" spellcheck="false" maxlength="1024" required></div><div class="field"><label for="setup-shadow-secret">API secret</label><input id="setup-shadow-secret" name="secret" type="password" autocomplete="new-password" spellcheck="false" maxlength="1024" required></div>${shadow.can_remember ? '<label class="checkbox full"><input type="checkbox" name="remember" checked><span>Save in Windows Credential Manager</span></label>' : '<p class="help full">Keys stay in this app session on this platform.</p>'}<div class="actions full"><button type="submit" class="button" ${running ? 'disabled' : ''}>Save &amp; connect</button></div></form>`;
+    return `<header><h3>Shadowserver</h3><span class="badge ${shadow.configured ? 'green' : 'gray'}">${shadow.connected ? 'Connected' : shadow.configured ? 'Complete' : 'Not configured'}</span></header><p>Retrieve reports available to your subscription.</p>${credentials}<p id="setup-connection-status" role="status">${esc(shadow.job?.message || '')}</p>`;
+  }
+  function nvdConnectionMarkup() {
+    const nvd = state.nvd || {};
+    const credentials = nvd.configured
+      ? '<p role="status">API key detected. Credential setup is complete.</p><p>You can manage this key in Settings.</p>'
+      : `<form id="setup-nvd-form" class="form-grid" autocomplete="off"><div class="field full"><label for="setup-nvd-key">NVD API key</label><input id="setup-nvd-key" name="api_key" type="password" autocomplete="new-password" spellcheck="false" maxlength="128" required></div>${nvd.remember_supported ? '<label class="checkbox full"><input type="checkbox" name="remember" checked><span>Save in Windows Credential Manager</span></label>' : '<p class="help full">Key stays in this app session on this platform.</p>'}<button type="submit" class="button">Save NVD key</button></form><a href="https://nvd.nist.gov/developers/request-an-api-key" target="_blank" rel="noopener noreferrer">Request an NVD key</a>`;
+    return `<header><h3>NVD</h3><span class="badge ${nvd.configured ? 'green' : 'gray'}">${nvd.configured ? 'Complete' : 'Optional'}</span></header><p>NVD downloads and updates work without a key. A key allows faster API updates. EPSS and KEV do not require separate keys.</p>${credentials}`;
   }
   function connectionsMarkup() {
-    const shadow = state.shadow || {},
-      nvd = state.nvd || {};
-    const running = ['queued', 'running'].includes(shadow.job?.status);
-    return `<p class="setup-intro">Connect the services you use. You can also import files manually and add keys later in Settings.</p><div class="setup-connections"><section class="setup-service"><header><h3>Shadowserver</h3><span class="badge ${shadow.connected ? 'green' : 'gray'}">${shadow.connected ? 'Connected' : shadow.configured ? 'Key saved' : 'Not configured'}</span></header><p>Retrieve reports available to your subscription.</p><form id="setup-shadow-form" class="form-grid" autocomplete="off"><div class="field"><label for="setup-shadow-key">API key</label><input id="setup-shadow-key" name="api_key" type="password" autocomplete="new-password" spellcheck="false" maxlength="1024" required></div><div class="field"><label for="setup-shadow-secret">API secret</label><input id="setup-shadow-secret" name="secret" type="password" autocomplete="new-password" spellcheck="false" maxlength="1024" required></div>${shadow.can_remember ? '<label class="checkbox full"><input type="checkbox" name="remember" checked><span>Save in Windows Credential Manager</span></label>' : '<p class="help full">Keys stay in this app session on this platform.</p>'}<div class="actions full"><button type="submit" class="button" ${running ? 'disabled' : ''}>Save &amp; connect</button>${shadow.configured ? `<button type="button" class="button" data-action="setup-connect" ${running ? 'disabled' : ''}>${running ? 'Connecting…' : 'Test connection'}</button>` : ''}</div></form><p id="setup-connection-status" role="status">${esc(shadow.job?.message || '')}</p></section><section class="setup-service"><header><h3>NVD</h3><span class="badge ${nvd.configured ? 'green' : 'gray'}">${nvd.configured ? 'Key saved' : 'Optional'}</span></header><p>NVD downloads and updates work without a key. Add a key for faster API updates. EPSS and KEV do not require separate keys.</p><form id="setup-nvd-form" class="form-grid" autocomplete="off"><div class="field full"><label for="setup-nvd-key">NVD API key</label><input id="setup-nvd-key" name="api_key" type="password" autocomplete="new-password" spellcheck="false" maxlength="128" required></div>${nvd.remember_supported ? '<label class="checkbox full"><input type="checkbox" name="remember" checked><span>Save in Windows Credential Manager</span></label>' : '<p class="help full">Key stays in this app session on this platform.</p>'}<button type="submit" class="button">Save NVD key</button></form><a href="https://nvd.nist.gov/developers/request-an-api-key" target="_blank" rel="noopener noreferrer">Request an NVD key</a></section></div><div class="setup-footer"><button type="button" class="button" data-action="setup-manual-connections" ${running ? 'disabled' : ''}>Use manual imports for now</button><button type="button" class="button primary" data-action="setup-connections-next" ${running ? 'disabled' : ''}>Continue</button></div>`;
+    const running = ['queued', 'running'].includes(state.shadow?.job?.status);
+    const complete = state.shadow?.configured && state.nvd?.configured;
+    return `<p class="setup-intro">${complete ? 'Both API keys were detected. Credential setup is complete; continue to identity and jurisdiction.' : 'Connect the services you use. You can also import files manually and add keys later in Settings.'}</p><div class="setup-connections"><section class="setup-service" id="setup-shadow-service">${shadowConnectionMarkup()}</section><section class="setup-service" id="setup-nvd-service">${nvdConnectionMarkup()}</section></div><div class="setup-footer"><button type="button" class="button" data-action="setup-manual-connections" ${running ? 'disabled' : ''}>Use manual imports for now</button><button type="button" class="button primary" data-action="setup-connections-next" ${running ? 'disabled' : ''}>Continue</button></div>`;
+  }
+  async function completeDetectedConnections() {
+    if (
+      state.status.established_profile ||
+      state.status.steps.connections ||
+      !state.shadow?.configured ||
+      !state.nvd?.configured
+    )
+      return;
+    state.status = await setupApi('/api/setup/progress', {
+      method: 'PUT',
+      body: { step: 'connections', mode: 'configured' },
+    });
   }
   function agencyOptions(profile) {
     return (state.status?.agencies || [])
@@ -154,6 +184,7 @@ export function install(ctx) {
     state.profileDraft = null;
     state.scheduleDraft = null;
     state.dirty = false;
+    await completeDetectedConnections();
     renderSetup();
     return true;
   }
@@ -327,6 +358,10 @@ export function install(ctx) {
       });
       form.reset();
       state.dirty = connectionDraft();
+      const card = form.closest?.('section');
+      if (card) card.innerHTML = shadowConnectionMarkup();
+      await completeDetectedConnections();
+      if (!connectionDraft()) renderSetup();
       await setupApi('/api/shadowserver/connection', { method: 'POST' });
       await pollConnection();
     });
@@ -345,11 +380,10 @@ export function install(ctx) {
       });
       form.reset();
       state.dirty = connectionDraft();
-      const heading = form.closest?.('section')?.querySelector?.('.badge');
-      if (heading) {
-        heading.textContent = 'Key saved';
-        heading.classList.add('green');
-      }
+      const card = form.closest?.('section');
+      if (card) card.innerHTML = nvdConnectionMarkup();
+      await completeDetectedConnections();
+      if (!connectionDraft()) renderSetup();
       ctx.actions.toast('NVD key saved.');
     });
   }
