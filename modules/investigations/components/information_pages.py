@@ -101,8 +101,13 @@ def build_information_pages(data, refs):
     ]
     for page in data["draft"].get("report_explainer_snapshots", []):
         sources = [_reference(refs, s) for s in page.get("sources", [])]
-        audience_source = _reference(refs, NIST_SOURCE)
-        citations = [s["number"] for s in sources]
+        audience_source = next(
+            (s for s in sources if s.get("public_url") == NIST_SOURCE["public_url"]), None
+        )
+        citations = [s["number"] for s in sources if s is not audience_source]
+        if audience_source is None:
+            audience_source = _reference(refs, NIST_SOURCE)
+            sources.append(audience_source)
         primary = citations[:1]
         page_blocks = [
             _paragraph(page["intro"], primary),
@@ -112,7 +117,7 @@ def build_information_pages(data, refs):
             _paragraph(page["why"], citations),
             {
                 "kind": "heading",
-                "title": "Where to Start in Your Business",
+                "title": page.get("roles_heading", "Where to Start in Your Business"),
                 "citations": [audience_source["number"]],
             },
             {"kind": "routes", "items": deepcopy(page["routes"])},
@@ -123,7 +128,7 @@ def build_information_pages(data, refs):
                 "format": "one_pager",
                 "title": page["title"],
                 "blocks": page_blocks,
-                "references": sources + [audience_source],
+                "references": sources,
                 "source_report_types": deepcopy(page.get("source_report_types", [])),
                 "source_revision": page["revision"],
             }

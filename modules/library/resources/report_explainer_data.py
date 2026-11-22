@@ -1,9 +1,24 @@
 """Versioned recipient information pages for supported Shadowserver report families."""
 
+CURRENT_EDITION = "report-explainers-2026-11-22-v1"
+
+ROLE_SOURCE = {
+    "publisher": "National Institute of Standards and Technology",
+    "title": "Building Your Small Business's Cybersecurity Team: From In-House to Outsourcing",
+    "public_url": "https://www.nist.gov/itl/smallbusinesscyber/guidance-topic/building-your-team",
+    "retrieved_at": "2026-11-22T00:00:00Z",
+    "revision_id": CURRENT_EDITION + "-business-team",
+    "partition": "D",
+    "referenced_by": ["EX-INFORMATION"],
+    "record": {
+        "summary": "NIST describes how small businesses organize technology support through internal staff, external providers, or a combination. The role examples are illustrative."
+    },
+}
+
 BANK = {
     "vulnerable_http": {
         "id": "vulnerable_http",
-        "revision": "report-explainers-2026-11-10-v1",
+        "revision": CURRENT_EDITION,
         "format": "one_pager",
         "title": "Understanding the Vulnerable HTTP Report",
         "report_types": ["scan_http_vulnerable", "scan6_http_vulnerable"],
@@ -34,27 +49,24 @@ BANK = {
                 "retrieve or intercept.",
             ],
         ],
-        "why_heading": "Why We Review This Report",
-        "why": "The report supplies the address, service, observation time, and flagged "
-        "concern. Those details let us focus outreach on a specific potential entry "
-        "point for cybercrime and help your technical contact locate it.",
+        "why_heading": "What the report establishes",
+        "why": "The report identifies the service address, observation time and finding tag. The "
+        "tag distinguishes a reported software version from a response that revealed "
+        "information or offered a particular sign-in method.",
         "routes": [
             [
                 "No internal IT",
-                "Start with whoever set up or maintains the named website, email service, "
-                "or equipment. Ask who can review the technical pages for that service.",
+                "The company that set up a website, mail service or device may hold its "
+                "hosting and maintenance records.",
             ],
             [
                 "Outside IT provider",
-                "Send the technical pages to your provider. Ask whether the service is "
-                "within their support, whether the concern applies, and what response they "
-                "recommend.",
+                "A hosting or support provider may know which part of the service it maintains.",
             ],
             [
                 "Internal IT team",
-                "Match the reported address, service, and observation time to your "
-                "inventory. Check the installed build, relevant vendor advisory, and any "
-                "existing protective measures.",
+                "An asset inventory and installed-package records can connect the reported "
+                "address to a particular application and build.",
             ],
         ],
         "sources": [
@@ -77,15 +89,15 @@ BANK = {
     },
     "badsecrets": {
         "id": "badsecrets",
-        "revision": "report-explainers-2026-11-10-v1",
+        "revision": CURRENT_EDITION,
         "format": "one_pager",
         "title": "Understanding the Badsecrets Report",
         "report_types": ["scan_badsecrets", "scan6_badsecrets"],
         "source_types": ["Badsecrets", "IPv6 Badsecrets"],
         "priority": "priority",
-        "intro": "Web applications use secret keys to help distinguish genuine application data from "
-        "altered data. This report identifies a known or weak key in use, based on "
-        "information the application already made public.",
+        "intro": "Shadowserver examines publicly returned web application data for signs of weak or "
+        "known secrets. The result type and detector name explain what matched. An "
+        "application may use a secret to sign data such as a session cookie.",
         "examples_heading": "What the Report Helps Identify",
         "examples": [
             [
@@ -107,26 +119,24 @@ BANK = {
                 "does not require entering a protected account.",
             ],
         ],
-        "why_heading": "Why We Review This Report",
-        "why": "A website can appear normal while relying on a key that outsiders know. This gives "
-        "us a specific concern to bring to the business and its application maintainer before "
-        "the weakness is used for unauthorized access or tampering.",
+        "why_heading": "What the report establishes",
+        "why": "The finding type and detector identify the level of evidence. A SecretFound result "
+        "records a match to a known secret. The purpose of the key depends on how the "
+        "application uses it.",
         "routes": [
             [
                 "No internal IT",
-                "Contact the company that built or maintains the application. Explain that the "
-                "notice concerns an application security key; changing your own sign-in password "
-                "may not address it.",
+                "The application developer or host may know which service generated the response.",
             ],
             [
                 "Outside IT provider",
-                "Ask your provider to involve the application developer, assess the affected "
-                "feature, and recommend a safe key replacement and review of possible misuse.",
+                "A support provider may have deployment records identifying the application "
+                "and its maintainer.",
             ],
             [
                 "Internal IT team",
-                "Confirm the detected module and deployed key, assess what that key protects, "
-                "and plan rotation with any session or token changes the application requires.",
+                "Application configuration records can identify the feature that uses a "
+                "key. Authentication records describe a separate question about its use.",
             ],
         ],
         "sources": [
@@ -163,16 +173,15 @@ BANK = {
     },
     "compromised_website": {
         "id": "compromised_website",
-        "revision": "report-explainers-2026-11-10-v1",
+        "revision": CURRENT_EDITION,
         "format": "one_pager",
         "title": "Understanding the Compromised Website Report",
         "report_types": ["compromised_website", "compromised_website6"],
         "source_types": ["Compromised Website", "IPv6 Compromised Website"],
         "priority": "incident",
-        "intro": "This report concerns signs that a website or web-accessible system has "
-        "already been altered or used without permission. Shadowserver and its "
-        "partners identify indicators such as malicious code, hidden access tools, "
-        "or other evidence described in the report.",
+        "intro": "Shadowserver and its partners report website indicators associated with "
+        "compromise. Examples include altered page content, webshells or other indicators "
+        "identified in the source record.",
         "examples_heading": "Examples This Report Can Identify",
         "examples": [
             [
@@ -194,28 +203,24 @@ BANK = {
                 "that the system is clean.",
             ],
         ],
-        "why_heading": "Why We Review This Report",
-        "why": "The business may be a victim while its infrastructure also puts customers "
-        "or other organizations at risk. Prompt review can help the responsible "
-        "technical team understand and contain the reported activity.",
+        "why_heading": "What the report establishes",
+        "why": "The tag, category, URL and observation time identify the indicator that "
+        "Shadowserver or its partner reported. They do not establish who was responsible, "
+        "the affected site's full history or the extent of any incident.",
         "routes": [
             [
                 "No internal IT",
-                "Contact your website host or maintainer and identify this as a "
-                "possible security incident. Ask who can investigate the server and "
-                "preserve useful records.",
+                "A website host or maintainer may hold the server logs for the time in the report.",
             ],
             [
                 "Outside IT provider",
-                "Ask the provider to involve its incident-response contact, review the "
-                "specific indicator, and assess whether other parts of the hosted "
-                "environment could be affected.",
+                "A hosting provider's records can identify which site or customer was using "
+                "a shared address.",
             ],
             [
                 "Internal IT team",
-                "Triage the source indicator in your incident process. Review "
-                "server-side evidence and related access, preserve relevant logs, and "
-                "assess containment and recovery.",
+                "Server and application records can add context about when content changed "
+                "and which services were involved.",
             ],
         ],
         "sources": [
@@ -239,7 +244,7 @@ BANK = {
     },
     "compromised_iot": {
         "id": "compromised_iot",
-        "revision": "report-explainers-2026-11-10-v1",
+        "revision": CURRENT_EDITION,
         "format": "one_pager",
         "title": "Understanding the Compromised IoT Device Report",
         "report_types": ["compromised_iot", "compromised_iot6"],
@@ -256,10 +261,10 @@ BANK = {
         "examples_heading": "What the Report Can Reveal",
         "examples": [
             [
-                "Signs of an intruder's access",
-                "Some checks identify known malicious remote-access keys or responses "
-                "associated with a botnet, a collection of devices controlled by "
-                "attackers.",
+                "An indicator with a known limitation",
+                "Shadowserver suspended its eleven11bot reporting after learning that normal "
+                "device software could produce the same response. A historical tag alone "
+                "cannot establish that the device was under botnet control.",
             ],
             [
                 "A device involved in attacks",
@@ -269,33 +274,28 @@ BANK = {
             ],
             [
                 "Where to begin tracing it",
-                "The report includes the address, time and available device details. "
-                "Behind a shared internet connection, the responsible device may be "
-                "different from the gateway shown by the public address.",
+                "The report includes the address, time and available device details. A "
+                "shared internet connection may serve several different devices.",
             ],
         ],
-        "why_heading": "Why We Review This Report",
-        "why": "An affected device can support attacks on others while remaining connected to "
-        "the business network. The observation gives the owner or technical provider a "
-        "concrete lead for incident review.",
+        "why_heading": "What the report establishes",
+        "why": "The source type distinguishes a detector response from activity observed against a "
+        "monitored system. A public address can represent several devices. The report alone "
+        "does not establish the identity of a person or the full scope of an incident.",
         "routes": [
             [
                 "No internal IT",
-                "Contact the company responsible for your router, cameras, storage or other "
-                "connected equipment. Share the reported address, time and device details "
-                "so they can identify the system.",
+                "A device installer or network provider may hold the equipment and service "
+                "records.",
             ],
             [
                 "Outside IT provider",
-                "Ask your provider to trace the public address to the equipment in use at "
-                "that time and involve the appropriate incident-response or device-support "
-                "team.",
+                "Provider records can describe which site held an address at the observation time.",
             ],
             [
                 "Internal IT team",
-                "Review source_type and the detection tag before drawing conclusions. "
-                "Correlate address assignments and network logs, identify the responsible "
-                "device, and assess related exposure.",
+                "Address assignments and network records can distinguish the public gateway "
+                "from equipment behind it.",
             ],
         ],
         "sources": [
@@ -303,22 +303,21 @@ BANK = {
                 "publisher": "The Shadowserver Foundation",
                 "title": "Compromised IoT Report",
                 "public_url": "https://www.shadowserver.org/what-we-do/network-reporting/compromised-iot-report/",
-                "retrieved_at": "2026-11-10T00:00:00Z",
-                "revision_id": "report-explainers-2026-11-10-v1-compromised_iot",
+                "retrieved_at": "2026-11-22T00:00:00Z",
+                "revision_id": CURRENT_EDITION + "-compromised_iot",
                 "partition": "D",
                 "referenced_by": ["EX-INFORMATION"],
                 "record": {
-                    "summary": "Non-HTTP compromise observations and correlations, "
-                    "with scan or honeypot source types. A shared public "
-                    "address can represent a different device behind a "
-                    "gateway."
+                    "summary": "The report distinguishes scan observations and honeypot "
+                    "activity. Shadowserver says it suspended eleven11bot reporting because "
+                    "normal HiSilicon software may produce the same response."
                 },
             }
         ],
     },
     "smtp_vulnerable": {
         "id": "smtp_vulnerable",
-        "revision": "report-explainers-2026-11-10-v1",
+        "revision": CURRENT_EDITION,
         "format": "one_pager",
         "title": "Understanding the Vulnerable SMTP Report",
         "report_types": ["scan_smtp_vulnerable", "scan6_smtp_vulnerable"],
@@ -347,26 +346,25 @@ BANK = {
                 "history matter.",
             ],
         ],
-        "why_heading": "Why We Review This Report",
-        "why": "These observations give us a specific mail service and security concern to "
-        "bring to the responsible business. Reviewing that service can help reduce the "
-        "risk of disruption or misuse of systems handling business communications.",
+        "why_heading": "What the report establishes",
+        "why": "The SMTP greeting describes the software identity advertised by the server. It may "
+        "omit distributor-specific security fixes. Installed package details are separate "
+        "evidence about the reported concern.",
         "routes": [
             [
                 "No internal IT",
-                "Send the technical pages to the company that provides your business email "
-                "or website hosting. Ask whether it operates the listed mail service.",
+                "A business email or hosting provider may operate the mail service named in "
+                "the report.",
             ],
             [
                 "Outside IT provider",
-                "Ask your provider to identify the responsible mail-server operator, check "
-                "the installed package and patches, and explain the recommended response.",
+                "Service records can identify which organization operates the mail server "
+                "and maintains its software.",
             ],
             [
                 "Internal IT team",
-                "Match the address, banner and observation time to the mail system. Compare "
-                "the installed vendor package and patch history with the reported "
-                "advisory.",
+                "An inventory of mail servers and their installed packages can connect a "
+                "banner to a particular deployment.",
             ],
         ],
         "sources": [
@@ -389,7 +387,7 @@ BANK = {
     },
     "exchange": {
         "id": "exchange",
-        "revision": "report-explainers-2026-11-10-v1",
+        "revision": CURRENT_EDITION,
         "format": "one_pager",
         "title": "Understanding the Vulnerable Exchange Server Report",
         "report_types": ["scan_exchange", "scan6_exchange"],
@@ -407,8 +405,8 @@ BANK = {
             ],
             [
                 "Older unsupported releases",
-                "An end-of-life tag identifies an older Exchange release. The responsible "
-                "administrator can check its current support and upgrade position.",
+                "An end-of-life tag identifies an older Exchange release. Installed updates "
+                "and support entitlements are information held by the operator or supplier.",
             ],
             [
                 "A concern with qualifications",
@@ -416,28 +414,25 @@ BANK = {
                 "cannot establish. That qualification remains part of the finding.",
             ],
         ],
-        "why_heading": "Why We Review This Report",
-        "why": "Business email supports daily communications and transactions. The report gives us a "
-        "particular server and concern to raise with its operator, helping direct review to "
-        "infrastructure whose misuse could affect the business.",
+        "why_heading": "What the report establishes",
+        "why": "A release label can identify a product family or build. A reported possible "
+        "vulnerability may depend on a configuration setting, security update or support "
+        "arrangement that is not visible to the scan.",
         "routes": [
             [
                 "No internal IT",
-                "Ask whoever manages your email to identify the listed server and who maintains "
-                "it. A familiar email application on your computer may connect to a separately "
-                "managed server.",
+                "A business email provider may operate the server used by staff email "
+                "applications.",
             ],
             [
                 "Outside IT provider",
-                "Send the technical pages to your email provider. Ask it to confirm "
-                "responsibility, the installed Exchange build, applicable updates and any relevant "
-                "protective settings.",
+                "Mail-service records can identify the operator and its responsibility for "
+                "updates.",
             ],
             [
                 "Internal IT team",
-                "Match the reported address, server name and time to your environment. Check the "
-                "exact build, security updates and advisory-specific controls, including Extended "
-                "Protection where relevant.",
+                "Exchange build and update records can give the installed version at a "
+                "particular time.",
             ],
         ],
         "sources": [
@@ -461,7 +456,7 @@ BANK = {
     },
     "isakmp_vulnerable": {
         "id": "isakmp_vulnerable",
-        "revision": "report-explainers-2026-11-10-v1",
+        "revision": CURRENT_EDITION,
         "format": "one_pager",
         "title": "Understanding the Vulnerable ISAKMP Report",
         "report_types": ["scan_isakmp", "scan6_isakmp"],
@@ -492,28 +487,25 @@ BANK = {
                 "review.",
             ],
         ],
-        "why_heading": "Why We Review This Report",
-        "why": "VPN equipment helps control connections to business networks. A specific "
-        "weakness in that equipment, or a service that can be misused for attack "
-        "traffic, is a practical reason to notify the responsible operator.",
+        "why_heading": "What the report establishes",
+        "why": "A vulnerability identifier refers to a published product issue. A reflection "
+        "finding describes an observed response pattern. The software build and the "
+        "protocol version are separate details.",
         "routes": [
             [
                 "No internal IT",
-                "Contact whoever installed or manages your firewall, router or "
-                "remote-work connection. Send the technical pages so they can identify "
-                "the equipment.",
+                "The company that set up remote access may know which gateway provides that "
+                "service.",
             ],
             [
                 "Outside IT provider",
-                "Ask the network provider to identify the gateway, check the reported "
-                "issue against its firmware and configuration, and recommend an "
-                "appropriate response.",
+                "A network provider may hold the gateway model, firmware and service "
+                "configuration.",
             ],
             [
                 "Internal IT team",
-                "Distinguish CVE findings from amplification findings. Check the actual "
-                "device firmware and vendor guidance; assess required VPN reachability "
-                "and applicable restrictions.",
+                "Gateway inventory and network records can connect an address and reported "
+                "response to the VPN installation.",
             ],
         ],
         "sources": [
@@ -551,7 +543,7 @@ BANK = {
     },
     "accessible_rdp": {
         "id": "accessible_rdp",
-        "revision": "report-explainers-2026-11-10-v1",
+        "revision": CURRENT_EDITION,
         "format": "one_pager",
         "title": "Understanding the Accessible RDP Report",
         "report_types": ["scan_rdp", "scan6_rdp"],
@@ -580,30 +572,29 @@ BANK = {
             ],
             [
                 "Clues to the responsible system",
-                "A hostname and certificate details can help technical staff match the "
-                "service to an asset. Names returned by a service still need to be checked "
-                "against the organization's records.",
+                "A hostname or certificate can help identify a responding service. Local "
+                "asset records provide additional evidence of its operator.",
             ],
         ],
-        "why_heading": "Why We Review This Report",
-        "why": "Poorly secured remote access can give criminals an initial foothold in a "
-        "business network. Reviewing who needs this access and how it is protected is a "
-        "practical opportunity to reduce that risk.",
+        "why_heading": "What the report establishes",
+        "why": "The report records that a remote desktop service answered from the internet. "
+        "Negotiation fields describe the security mode the service reported. The "
+        "observation alone does not identify who could sign in or establish that anyone "
+        "did.",
         "routes": [
             [
                 "No internal IT",
-                "Ask whoever supports your computers or remote working whether the listed "
-                "connection belongs to your business and who maintains it.",
+                "The person or company supporting remote access may hold records for the service.",
             ],
             [
                 "Outside IT provider",
-                "Ask your provider whether this public connection is intended, who can use "
-                "it, and whether a more restricted access arrangement is appropriate.",
+                "A provider may know whether a gateway or other access control formed part "
+                "of the connection.",
             ],
             [
                 "Internal IT team",
-                "Match the endpoint to inventory. Review business need, network access "
-                "restrictions, authentication, updates and remote sign-in logs.",
+                "Endpoint inventory and sign-in records can distinguish the responding "
+                "system from evidence of an actual session.",
             ],
         ],
         "sources": [
@@ -628,24 +619,23 @@ BANK = {
                 },
             },
             {
-                "publisher": "CISA, FBI, NSA and MS-ISAC",
-                "title": "#StopRansomware Guide",
-                "public_url": "https://www.cisa.gov/sites/default/files/2023-10/StopRansomware-Guide-508C-v3_1.pdf",
-                "retrieved_at": "2026-11-10T00:00:00Z",
-                "revision_id": "report-explainers-2026-11-10-v1-accessible_rdp-2",
+                "publisher": "Microsoft",
+                "title": "Enable Remote Desktop on your PC",
+                "public_url": "https://learn.microsoft.com/en-us/windows-server/remote/remote-desktop-services/remotepc/remote-desktop-allow-access",
+                "retrieved_at": "2026-11-22T00:00:00Z",
+                "revision_id": CURRENT_EDITION + "-accessible_rdp-2",
                 "partition": "D",
                 "referenced_by": ["EX-INFORMATION"],
                 "record": {
-                    "summary": "Defensive guidance recommends reviewing "
-                    "remote-access need, restrictions and protections as "
-                    "part of ransomware prevention."
+                    "summary": "Microsoft describes permitted users, network access and "
+                    "Network Level Authentication as separate parts of a Remote Desktop deployment."
                 },
             },
         ],
     },
     "open_mongodb": {
         "id": "open_mongodb",
-        "revision": "report-explainers-2026-11-10-v1",
+        "revision": CURRENT_EDITION,
         "format": "one_pager",
         "title": "Understanding the Open MongoDB Service Report",
         "report_types": ["scan_mongodb", "scan6_mongodb"],
@@ -671,33 +661,28 @@ BANK = {
             ],
             [
                 "A version-linked concern",
-                "A vulnerability tag can identify software associated with a published flaw. "
-                "Technical staff need to compare the installed build and any vendor fixes "
-                "with that specific finding.",
+                "A vulnerability tag can identify software associated with a published "
+                "flaw. The installed package and its supplier's security updates affect "
+                "whether that flaw applies.",
             ],
         ],
-        "why_heading": "Why We Review This Report",
-        "why": "The useful question is whether only intended systems and users can reach the "
-        "database and use its data. MongoDB recommends authentication, appropriate "
-        "permissions and restricted network exposure.",
+        "why_heading": "What the report establishes",
+        "why": "The tag distinguishes a reachable service, a listing of database names and a "
+        "possible version-related concern. MongoDB documents network access, authentication "
+        "and authorization separately.",
         "routes": [
             [
                 "No internal IT",
-                "Start with the company that built or hosts the affected application. Ask who "
-                "operates its database; that may be a different company from your website "
-                "designer.",
+                "The company hosting an application may know which service operates its database.",
             ],
             [
                 "Outside IT provider",
-                "Ask the application or hosting provider to review the reported tag and "
-                "database service, confirm responsibility, and explain the access controls in "
-                "place.",
+                "A database provider may hold account, deployment and network-access records.",
             ],
             [
                 "Internal IT team",
-                "Match the address to the database deployment. Check the specific tag, "
-                "authentication, user permissions, network rules and applicable vendor "
-                "updates.",
+                "Deployment configuration and audit records can add context about client "
+                "access to individual databases.",
             ],
         ],
         "sources": [
@@ -736,7 +721,7 @@ BANK = {
     },
     "accessible_msrpc": {
         "id": "accessible_msrpc",
-        "revision": "report-explainers-2026-11-10-v1",
+        "revision": CURRENT_EDITION,
         "format": "one_pager",
         "title": "Understanding the Accessible MS-RPC Service Report",
         "report_types": ["scan_msrpc", "scan6_msrpc"],
@@ -767,26 +752,25 @@ BANK = {
                 "finding about a particular Windows security update.",
             ],
         ],
-        "why_heading": "Why We Review This Report",
-        "why": "An unnecessarily public system service can expose information or provide an "
-        "opportunity for attack. Shadowserver recommends restricting these services "
-        "from the public internet.",
+        "why_heading": "What the report establishes",
+        "why": "The responding port and protocol fields identify the endpoint that answered. Those "
+        "details alone do not establish whether its public availability was intended, which "
+        "operations it permitted or whether a particular Windows update was installed.",
         "routes": [
             [
                 "No internal IT",
-                "Ask the person or company maintaining your network or Windows servers to "
-                "identify the listed address and service.",
+                "The network or Windows service provider may hold records for the "
+                "responding address.",
             ],
             [
                 "Outside IT provider",
-                "Ask your provider whether this public connection is intended and whether "
-                "access can be limited while preserving the functions your business uses.",
+                "A provider may have records of the public address, the service it fronts "
+                "and the applicable network rules.",
             ],
             [
                 "Internal IT team",
-                "Identify the service behind the reported port. Review the internet-facing "
-                "firewall, host firewall and any port-forwarding rules against the "
-                "required source systems.",
+                "Endpoint and firewall records can identify the Windows service behind the "
+                "reported port.",
             ],
         ],
         "sources": [
@@ -826,51 +810,50 @@ BANK = {
     },
 }
 
+# The Library browser and the recipient page share the source for organizational roles.
+for page in BANK.values():
+    page["sources"].append(ROLE_SOURCE)
+    page["roles_heading"] = "Who may hold service records"
+
 DEFERRED = {
     "scan_http": {
         "name": "Accessible HTTP",
-        "reason": "This is an inventory of web services reachable from the internet. It helps "
-        "identify and compare exposed assets, but the report itself does not establish a "
-        "vulnerability. Keep it for context; do not issue a preventive vulnerability "
-        "notification on this signal alone.",
+        "reason": "This inventory records web services that responded from the internet. A response "
+        "alone establishes reachability. It supplies no separate evidence of a "
+        "vulnerability.",
         "source_url": "https://www.shadowserver.org/what-we-do/network-reporting/accessible-http-report/",
     },
     "scan6_http": {
         "name": "IPv6 Accessible HTTP",
-        "reason": "This is an inventory of web services reachable from the internet. It helps "
-        "identify and compare exposed assets, but the report itself does not establish a "
-        "vulnerability. Keep it for context; do not issue a preventive vulnerability "
-        "notification on this signal alone.",
+        "reason": "This inventory records web services that responded from the internet. A response "
+        "alone establishes reachability. It supplies no separate evidence of a "
+        "vulnerability.",
         "source_url": "https://www.shadowserver.org/what-we-do/network-reporting/accessible-http-report/",
     },
     "population_isakmp": {
         "name": "Accessible ISAKMP",
-        "reason": "Routine VPN reachability alone is not a strong reason for government "
-        "outreach; use as inventory context or when a separate concern justifies "
-        "contact.",
+        "reason": "This inventory records VPN-related services that responded from the internet. The "
+        "response alone does not identify a specific weakness.",
         "source_url": "https://www.shadowserver.org/what-we-do/network-reporting/accessible-isakmp-report/",
     },
     "population6_isakmp": {
         "name": "IPv6 Accessible ISAKMP",
-        "reason": "Routine VPN reachability alone is not a strong reason for government "
-        "outreach; use as inventory context or when a separate concern justifies "
-        "contact.",
+        "reason": "This inventory records VPN-related services that responded from the internet. The "
+        "response alone does not identify a specific weakness.",
         "source_url": "https://www.shadowserver.org/what-we-do/network-reporting/accessible-isakmp-report/",
     },
     "scan_gtp": {
         "name": "Accessible GPRS Tunneling Protocol (GTP)",
-        "reason": "Keep out of the routine small-business queue. This is a specialist mobile-network "
-        "exposure that is better evaluated with the network operator or a relevant technical "
-        "partner. Revisit for a deliberate telecom-focused campaign or clearly attributable "
-        "unexpected exposure.",
+        "reason": "GTP is used in mobile networks. The report records an accessible service. The "
+        "network operator's configuration and intended connectivity determine how that "
+        "observation applies.",
         "source_url": "https://www.shadowserver.org/what-we-do/network-reporting/accessible-gprs-tunneling-protocol-gtp-report/",
     },
     "population_ntrip": {
         "name": "Accessible NTRIP",
-        "reason": "Not a routine vulnerability-notification candidate. Public availability "
-        "often serves the intended function of a positioning-correction service; "
-        "without a separate concern, law-enforcement outreach would add little "
-        "actionable information.",
+        "reason": "NTRIP distributes positioning-correction data. Public availability can be part of "
+        "the service's intended operation. Reachability alone does not identify a specific "
+        "vulnerability.",
         "source_url": "https://www.shadowserver.org/what-we-do/network-reporting/accessible-ntrip-report/",
     },
 }

@@ -571,6 +571,9 @@
   #cve-catalog .catalog-data-table {
     min-width: 560px;
   }
+  #catalog-reported-panel .catalog-data-table {
+    min-width: 0;
+  }
   #cve-catalog .catalog-product-search {
     grid-template-columns: minmax(0, 1fr);
   }

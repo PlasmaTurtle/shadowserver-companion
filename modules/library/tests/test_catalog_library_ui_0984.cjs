@@ -147,6 +147,8 @@ const { loadApplication } = require('../../../tests/frontend_harness.cjs');
   await ctx.actions.selectCatalogProduct('p1');
   html = nodes.get('#catalog-product-detail').innerHTML;
   assert.match(html, /Observed here/);
+  assert.match(html, /1 entity in this selection/);
+  assert.doesNotMatch(html, /3 observations|3 findings/);
   assert.match(html, />candidate</);
   assert.match(html, /&gt;= 1.0, &lt; 2.0/);
   assert.match(html, /&lt;script&gt;/);

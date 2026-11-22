@@ -67,7 +67,7 @@ export function createLibraryRender(ctx, state, darkMatter) {
       state.scope,
     )}</select></div>`;
 
-  function observedMarkup(observed, { product = false } = {}) {
+  function observedMarkup(observed, { product = false, cveId = '' } = {}) {
     if (!observed)
       return '<section class="catalog-observed"><h4>Observed here</h4><p class="muted">Local observations are unavailable.</p></section>';
     const counts = observed.counts || {},
@@ -78,9 +78,14 @@ export function createLibraryRender(ctx, state, darkMatter) {
       /^#(?:entity|entities|investigations|leads|workspace)(?:[/?]|$)/.test(String(url || ''))
         ? `<a href="${esc(url)}">${esc(text)}</a>`
         : esc(text);
-    return `<section class="catalog-observed"><div class="catalog-subheading"><h4>Observed here</h4><span>${count(counts.findings ?? counts.observations, 'findings')} · ${count(counts.observations, 'observations')} · ${count(counts.entities, 'entities')}</span></div>${product ? '<p class="catalog-basis">Product matches need confirmation against the reported version and configuration. They are separate from CVEs identified in the report.</p>' : ''}${
+    const entityList = !product
+      ? ctx.actions.recordMembership(cveId, observed.reported_entities)
+      : entities.length
+        ? `<details class="catalog-sources"><summary>Associated entities</summary><ul>${entities.map((entity) => `<li><a href="#entity/${encodeURIComponent(entity.id)}">${esc(entity.name || entity.domain || entity.id)}</a></li>`).join('')}</ul></details>`
+        : '';
+    return `<section class="catalog-observed"><div class="catalog-subheading"><h4>Observed here</h4>${product ? `<span>${count(counts.entities, 'entities')} in this selection</span>` : ''}</div>${product ? '<p class="catalog-basis">The selected catalog scope includes reported CVEs associated with the product and reported product names. Product applicability depends on the installed version and configuration.</p>' : ''}${entityList}${
       items.length
-        ? `<div class="catalog-local-counts">${product && ('reported' in counts || 'product_candidates' in counts) ? `<span><strong>${num(counts.reported)}</strong> reported CVE observations</span><span><strong>${num(counts.product_candidates)}</strong> product candidates</span>` : ''}<span><strong>${num(counts.endpoints)}</strong> ${unit(counts.endpoints, 'endpoints')}</span><span><strong>${num(counts.pending_entities)}</strong> ${unit(counts.pending_entities, 'entities')} with pending work</span><span><strong>${num(counts.notified_entities)}</strong> ${unit(counts.notified_entities, 'entities')} notified</span>${counts.dark_matter ? `<span><strong>${num(counts.dark_matter)}</strong> Dark Matter observations</span>` : ''}${counts.unassociated ? `<span><strong>${num(counts.unassociated)}</strong> unassociated observations</span>` : ''}</div>${product && versions.length ? `<div class="catalog-version-chips" aria-label="Reported versions">${versions.map((v) => `<button class="button" data-catalog-observed-version="${esc(v.version || '')}" ${v.version ? '' : 'disabled'}>${esc(v.version || 'Version not reported')} <small>${num(v.count)}</small></button>`).join('')}</div>` : ''}<details class="catalog-sources catalog-observation-details"><summary>Findings · ${num(counts.findings ?? counts.observations)}</summary><div class="catalog-table-wrap"><table class="catalog-data-table"><thead><tr><th>Entity / endpoint</th><th>Reported version</th><th>Finding basis</th><th>Work</th></tr></thead><tbody>${items
+        ? `${product && versions.length ? `<div class="catalog-version-chips" aria-label="Reported versions">${versions.map((v) => `<button class="button" data-catalog-observed-version="${esc(v.version || '')}" ${v.version ? '' : 'disabled'}>${esc(v.version || 'Version not reported')}</button>`).join('')}</div>` : ''}<details class="catalog-sources catalog-observation-details"><summary>Supporting observations</summary><div class="catalog-table-wrap"><table class="catalog-data-table"><thead><tr><th>Entity / endpoint</th><th>Reported version</th><th>Finding basis</th><th>Work</th></tr></thead><tbody>${items
             .slice(0, 25)
             .map(
               (item) =>
@@ -88,7 +93,7 @@ export function createLibraryRender(ctx, state, darkMatter) {
             )
             .join(
               '',
-            )}</tbody></table></div>${Number(observed.total) > 25 ? `<p class="catalog-basis">Showing 25 of ${num(observed.total)} findings. Counts include all matches.</p>` : ''}</details>${entities.length ? `<details class="catalog-sources"><summary>Associated entities · ${num(entities.length)}</summary><ul>${entities.map((entity) => `<li><a href="#entity/${encodeURIComponent(entity.id)}">${esc(entity.name || entity.domain || entity.id)}</a> · ${count(entity.observations, 'observations')}</li>`).join('')}</ul></details>` : ''}`
+            )}</tbody></table></div>${Number(observed.total) > 25 ? `<p class="catalog-basis">Additional matching evidence is available in Observatory.</p>` : ''}</details>`
         : '<p class="catalog-empty">No matching observations in the imported reports.</p>'
     }${array(observed.warnings)
       .map((warning) => `<p class="catalog-basis">${esc(warning)}</p>`)
@@ -151,7 +156,7 @@ export function createLibraryRender(ctx, state, darkMatter) {
         : typeof v === 'string'
           ? v
           : JSON.stringify(v);
-    return `<div class="catalog-subheading"><div><h3>Catalog changes</h3><p>Changes in local reference data and their effect on open work.</p></div><button class="button" data-action="catalog-refresh-changes">Refresh</button></div><section id="library-open-kev"><h4>Known-exploitation changes affecting open notifications</h4></section>${error(state.error)}<section id="catalog-change-impact" class="catalog-change-impact">${impactMarkup()}</section><div class="catalog-changes">${
+    return `<div class="catalog-subheading"><div><h3>Catalog changes</h3><p>Changes recorded during local catalog updates.</p></div><button class="button" data-action="catalog-refresh-changes">Refresh</button></div>${error(state.error)}<section id="catalog-change-impact" class="catalog-change-impact">${impactMarkup()}</section><div class="catalog-changes">${
       array(result.items)
         .map(
           (item) =>

@@ -80,7 +80,10 @@ class DraftValues(BaseModel):
     report_explainer_snapshots: list[dict] = Field(default_factory=list, max_length=100)
     finding_explainer_snapshots: list[dict] = Field(default_factory=list, max_length=100)
     finding_explainer_revision: Literal[
-        "legacy", "finding-explainers-2026-11-10-v1", "finding-explainers-2026-11-22-v1"
+        "legacy",
+        "finding-explainers-2026-11-10-v1",
+        "finding-explainers-2026-11-22-v1",
+        "finding-explainers-2026-11-22-v2",
     ] = "legacy"
     explainer_overrides: dict[str, dict[str, str]] = Field(default_factory=dict, max_length=100)
     report_template: ReportTemplateValues = Field(default_factory=ReportTemplateValues)

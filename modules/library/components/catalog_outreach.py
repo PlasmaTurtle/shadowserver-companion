@@ -248,8 +248,8 @@ class CatalogOutreach:
         if scope not in SCOPES or not 1 <= limit <= 100 or not 0 <= offset <= 500000:
             raise ValueError("Invalid outreach selection")
         product_ids, product_names = set(), set()
-        catalog = self.manager.catalog
         if product_id:
+            catalog = self.manager.catalog
             if not re.fullmatch(r"product:[a-f0-9]{24}", product_id):
                 raise ValueError("Invalid catalog product")
             identity = catalog.product_identity(product_id)

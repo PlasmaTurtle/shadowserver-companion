@@ -32,6 +32,47 @@ def values(**changes):
     }
 
 
+def test_neutral_edition_updates_only_an_untouched_seed_and_retains_history(tmp_path, monkeypatch):
+    from modules.library.components import content_bank
+    from modules.library.components.repositories import content
+    from modules.library.resources.defaults import PREVIOUS_EXPLAINERS
+
+    with monkeypatch.context() as patch:
+        patch.setattr(content_bank, "EXPLAINERS", PREVIOUS_EXPLAINERS)
+        # Simulate a previous release that seeded the URL alone.
+        retain = content.retain
+
+        def historical_retain(db, block, **kwargs):
+            return retain(db, {**block, "source_metadata": []}, **kwargs)
+
+        patch.setattr(content, "retain", historical_retain)
+        store = Store(tmp_path / "work")
+    with store.transaction() as db:
+        old = content.current(db, "responsibility")
+        assert old["revision"] == 1 and not old["sources"]
+        local = content.current(db, "cve")
+        local.update(body="Locally reviewed case wording", revision=2)
+        content.publish(db, local, actor="analyst", action="updated")
+        db.execute("UPDATE explainer_state SET archived_at='2026-11-21' WHERE block_id='eol'")
+    store = Store(store.root)
+    with store.read_snapshot() as db:
+        current = content.current(db, "responsibility")
+        assert current["revision"] == 2 and current["origin"] == "bundled"
+        assert "nist.gov" in current["sources"] and "Please provide" not in current["body"]
+        assert current["source_metadata"][0]["url"] == current["sources"]
+        assert (
+            current["source_metadata"][0]["publisher"]
+            == "National Institute of Standards and Technology"
+        )
+        assert content.revision(db, "responsibility", 1)["body"] == old["body"]
+        assert content.current(db, "cve")["body"] == "Locally reviewed case wording"
+        assert content.current(db, "eol")["revision"] == 1
+        assert content.current(db, "eol")["archived_at"]
+    store = Store(store.root)
+    with store.read_snapshot() as db:
+        assert content.current(db, "responsibility")["revision"] == 2
+
+
 def create(client):
     response = client.post("/api/explainers", json=values())
     assert response.status_code == 200, response.text

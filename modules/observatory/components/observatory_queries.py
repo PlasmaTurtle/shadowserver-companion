@@ -15,7 +15,8 @@ def _ids(values):
     return json.dumps(list(dict.fromkeys(value for value in values if value is not None)))
 
 
-def load(db, detail_id=None, *, events=True):
+def observation_ownership(db):
+    """Resolve the recorded owner including merges, with the legacy asset association fallback."""
     owners = db.execute(
         "SELECT 1 FROM sqlite_master WHERE name='awareness_observation_owners'"
     ).fetchone()
@@ -31,8 +32,13 @@ def load(db, detail_id=None, *, events=True):
     owner = (
         f"COALESCE((SELECT merged_into FROM leads WHERE id=({recorded_owner})),({recorded_owner}))"
     )
-    columns = f"o.*,a.hostname,a.root_domain,{owner} entity_id,{recorded_owner} recorded_entity_id,a.entity_id current_entity_id,a.association_basis"
     base = f"FROM awareness_observations o JOIN awareness_assets a ON a.id=o.asset_id {owner_join}"
+    return base, owner, recorded_owner
+
+
+def load(db, detail_id=None, *, events=True):
+    base, owner, recorded_owner = observation_ownership(db)
+    columns = f"o.*,a.hostname,a.root_domain,{owner} entity_id,{recorded_owner} recorded_entity_id,a.entity_id current_entity_id,a.association_basis"
     findings = f"""SELECT {columns},f.id finding_id,f.condition,f.kind finding_kind,f.admitted finding_admitted,
        f.workflow,f.first_seen,f.last_seen,f.changed_at,f.handled_case_id,
        f.latest_source_key finding_source_key,f.reason finding_reason

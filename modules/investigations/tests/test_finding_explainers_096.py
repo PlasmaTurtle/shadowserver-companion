@@ -8,7 +8,11 @@ import pytest
 
 from modules.workspace.components import compact_json
 from modules.investigations.components.exhibit_models import build_exhibits
-from modules.library.resources.finding_explainer_data import BANK, LIFECYCLE_EDITION
+from modules.library.resources.finding_explainer_data import (
+    BANK,
+    LIFECYCLE_EDITION,
+    PREVIOUS_EDITION,
+)
 from modules.investigations.components.finding_explainers import (
     REVISION,
     select_finding_explainers,
@@ -219,7 +223,14 @@ def test_prior_bank_edition_stays_valid_without_gaining_new_conditions():
     assert [item["label"] for item in model["items"]] == ["basic-auth"]
     assert not model["items"][0].get("technical_explanation") and not refs.items
     assert select_finding_explainers({"entries": [row]})[0]["revision"] == REVISION
-    assert BANK["http_eol_php"]["revision"] == LIFECYCLE_EDITION
+    historic = select_finding_explainers(
+        {"entries": [entry("scan_http_vulnerable", "eol-php")]}, LIFECYCLE_EDITION
+    )[0]
+    assert historic["revision"] == LIFECYCLE_EDITION and historic["review"].startswith("Confirm")
+    legacy = select_finding_explainers({"entries": [row]}, PREVIOUS_EDITION)[0]
+    assert legacy["revision"] == PREVIOUS_EDITION and "Require HTTPS" in legacy["review"]
+    assert "review_heading" not in legacy
+    assert BANK["http_basic_auth"]["review_heading"] == "Source context"
 
 
 def test_scoped_case_uses_only_active_conditions():

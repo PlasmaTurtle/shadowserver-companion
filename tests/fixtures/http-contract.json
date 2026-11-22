@@ -6035,60 +6035,6 @@
         }
       }
     },
-    "/api/library/changes/open-kev": {
-      "get": {
-        "summary": "Open Kev Changes",
-        "operationId": "open_kev_changes_api_library_changes_open_kev_get",
-        "parameters": [
-          {
-            "name": "limit",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 100,
-              "minimum": 1,
-              "default": 25,
-              "title": "Limit"
-            }
-          },
-          {
-            "name": "offset",
-            "in": "query",
-            "required": false,
-            "schema": {
-              "type": "integer",
-              "maximum": 500000,
-              "minimum": 0,
-              "default": 0,
-              "title": "Offset"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "Successful Response",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/OpenKevChanges"
-                }
-              }
-            }
-          },
-          "422": {
-            "description": "Validation Error",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/HTTPValidationError"
-                }
-              }
-            }
-          }
-        }
-      }
-    },
     "/api/library/changes/{cve_id}/impact": {
       "get": {
         "summary": "Impact",
@@ -8739,6 +8685,83 @@
         }
       }
     },
+    "/api/library/observed-references/entities": {
+      "get": {
+        "summary": "Reference Entities",
+        "operationId": "reference_entities_api_library_observed_references_entities_get",
+        "parameters": [
+          {
+            "name": "kind",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "enum": [
+                "cves",
+                "products"
+              ],
+              "type": "string",
+              "title": "Kind"
+            }
+          },
+          {
+            "name": "value",
+            "in": "query",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200,
+              "title": "Value"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 25,
+              "title": "Limit"
+            }
+          },
+          {
+            "name": "offset",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 0,
+              "default": 0,
+              "title": "Offset"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ReferenceEntities"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/cve-catalog/records/{cve_id}/observations": {
       "get": {
         "summary": "Record Observations",
@@ -8783,7 +8806,9 @@
             "description": "Successful Response",
             "content": {
               "application/json": {
-                "schema": {}
+                "schema": {
+                  "$ref": "#/components/schemas/CveObservationEvidence"
+                }
               }
             }
           },
@@ -9941,6 +9966,27 @@
         ],
         "title": "CredentialsUpdate"
       },
+      "CveObservationEvidence": {
+        "properties": {
+          "reported_entities": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/ReferenceEntities"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "description": "First page of identified entities in the Library ranking. Null when the membership could not be read."
+          }
+        },
+        "additionalProperties": true,
+        "type": "object",
+        "required": [
+          "reported_entities"
+        ],
+        "title": "CveObservationEvidence"
+      },
       "DeconflictionValues": {
         "properties": {
           "scope": {
@@ -10221,7 +10267,8 @@
             "enum": [
               "legacy",
               "finding-explainers-2026-11-10-v1",
-              "finding-explainers-2026-11-22-v1"
+              "finding-explainers-2026-11-22-v1",
+              "finding-explainers-2026-11-22-v2"
             ],
             "title": "Finding Explainer Revision",
             "default": "legacy"
@@ -10955,17 +11002,17 @@
             "minLength": 1,
             "title": "Value"
           },
-          "count": {
+          "entity_count": {
             "type": "integer",
             "minimum": 1.0,
-            "title": "Count",
-            "description": "Distinct retained observations reporting this value."
+            "title": "Entity Count",
+            "description": "Distinct identified entities with this reported value."
           }
         },
         "type": "object",
         "required": [
           "value",
-          "count"
+          "entity_count"
         ],
         "title": "ObservedReferenceCount"
       },
@@ -10985,12 +11032,6 @@
             "title": "Total",
             "description": "Distinct ranked values before pagination."
           },
-          "observations_with_value": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Observations With Value",
-            "description": "Distinct observations with at least one ranked value in this category."
-          },
           "limit": {
             "type": "integer",
             "maximum": 100.0,
@@ -11007,7 +11048,6 @@
         "required": [
           "items",
           "total",
-          "observations_with_value",
           "limit",
           "offset"
         ],
@@ -11021,16 +11061,10 @@
             "title": "Revision",
             "description": "Opaque workspace revision shared by both rankings."
           },
-          "observation_count": {
-            "type": "integer",
-            "minimum": 0.0,
-            "title": "Observation Count",
-            "description": "Distinct observations examined, including observations without a ranked value."
-          },
           "coverage_complete": {
             "type": "boolean",
             "title": "Coverage Complete",
-            "description": "Whether the counts cover all retained observations and labels."
+            "description": "Whether the retained reference labels of identified entities are complete."
           },
           "warnings": {
             "items": {
@@ -11049,134 +11083,12 @@
         "type": "object",
         "required": [
           "revision",
-          "observation_count",
           "coverage_complete",
           "warnings",
           "cves",
           "products"
         ],
         "title": "ObservedReferenceSummary"
-      },
-      "OpenKevChange": {
-        "properties": {
-          "case_id": {
-            "type": "string",
-            "title": "Case Id"
-          },
-          "case_title": {
-            "type": "string",
-            "title": "Case Title"
-          },
-          "cve_id": {
-            "type": "string",
-            "title": "Cve Id"
-          },
-          "previous": {
-            "type": "boolean",
-            "title": "Previous"
-          },
-          "listed": {
-            "type": "boolean",
-            "title": "Listed"
-          },
-          "pinned_at": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Pinned At"
-          },
-          "url": {
-            "type": "string",
-            "title": "Url"
-          }
-        },
-        "type": "object",
-        "required": [
-          "case_id",
-          "case_title",
-          "cve_id",
-          "previous",
-          "listed",
-          "pinned_at",
-          "url"
-        ],
-        "title": "OpenKevChange"
-      },
-      "OpenKevChanges": {
-        "properties": {
-          "items": {
-            "items": {
-              "$ref": "#/components/schemas/OpenKevChange"
-            },
-            "type": "array",
-            "title": "Items"
-          },
-          "total": {
-            "type": "integer",
-            "title": "Total"
-          },
-          "offset": {
-            "type": "integer",
-            "title": "Offset"
-          },
-          "limit": {
-            "type": "integer",
-            "title": "Limit"
-          },
-          "comparable": {
-            "type": "integer",
-            "title": "Comparable"
-          },
-          "unknown": {
-            "type": "integer",
-            "title": "Unknown"
-          },
-          "unreadable_cases": {
-            "type": "integer",
-            "title": "Unreadable Cases"
-          },
-          "source": {
-            "anyOf": [
-              {
-                "additionalProperties": true,
-                "type": "object"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Source"
-          },
-          "notice": {
-            "anyOf": [
-              {
-                "type": "string"
-              },
-              {
-                "type": "null"
-              }
-            ],
-            "title": "Notice"
-          }
-        },
-        "type": "object",
-        "required": [
-          "items",
-          "total",
-          "offset",
-          "limit",
-          "comparable",
-          "unknown",
-          "unreadable_cases",
-          "source",
-          "notice"
-        ],
-        "title": "OpenKevChanges"
       },
       "OutreachPolicyValues": {
         "properties": {
@@ -11578,6 +11490,82 @@
           "confirmation"
         ],
         "title": "RebuildData"
+      },
+      "ReferenceEntities": {
+        "properties": {
+          "revision": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Revision",
+            "description": "Opaque workspace revision shared by both rankings."
+          },
+          "coverage_complete": {
+            "type": "boolean",
+            "title": "Coverage Complete",
+            "description": "Whether the retained reference labels of identified entities are complete."
+          },
+          "warnings": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Warnings"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ReferenceEntity"
+            },
+            "type": "array",
+            "maxItems": 100,
+            "title": "Items"
+          },
+          "total": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Total",
+            "description": "Distinct identified entities with this reported value."
+          },
+          "limit": {
+            "type": "integer",
+            "maximum": 100.0,
+            "minimum": 1.0,
+            "title": "Limit"
+          },
+          "offset": {
+            "type": "integer",
+            "minimum": 0.0,
+            "title": "Offset"
+          }
+        },
+        "type": "object",
+        "required": [
+          "revision",
+          "coverage_complete",
+          "warnings",
+          "items",
+          "total",
+          "limit",
+          "offset"
+        ],
+        "title": "ReferenceEntities"
+      },
+      "ReferenceEntity": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "name": {
+            "type": "string",
+            "title": "Name"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "name"
+        ],
+        "title": "ReferenceEntity"
       },
       "ReportTemplateValues": {
         "properties": {

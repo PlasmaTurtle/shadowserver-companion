@@ -2,7 +2,6 @@ import { createDarkMatterBrowser } from '../../observatory/static/dark_matter_br
 import { createLibraryRender } from './catalog_library_render.js';
 import { createCatalogSearch } from './catalog_search.js';
 import { createReportedView } from './reported_references.js';
-import { createOpenKevChanges } from './open_kev_changes.js';
 
 /** Shared selections for product research, CVEs, fields and material changes. */
 export function installLibrary(ctx) {
@@ -35,8 +34,7 @@ export function installLibrary(ctx) {
   });
   const darkMatter = createDarkMatterBrowser(ctx, { onChange: updateSelectionControls });
   const research = createCatalogSearch(ctx);
-  const loadReported = createReportedView(ctx);
-  const loadOpenKev = createOpenKevChanges(ctx);
+  const reported = createReportedView(ctx);
   state.darkMatterSelection = darkMatter.selection;
   const render = createLibraryRender(ctx, state, darkMatter),
     esc = (value) => ctx.actions.esc(value ?? ''),
@@ -113,7 +111,7 @@ export function installLibrary(ctx) {
     return `${research.markup()}<div id="catalog-library"><div class="catalog-library-nav"><nav class="catalog-tabs" aria-label="Library catalog views">${[
       ['products', 'Products'],
       ['cves', 'CVEs'],
-      ['reported', 'Most reported'],
+      ['reported', 'By entity count'],
       ['fields', 'Fields'],
       ['changes', 'Changes'],
       ['dark-matter', 'Dark Matter'],
@@ -124,7 +122,7 @@ export function installLibrary(ctx) {
       )
       .join(
         '',
-      )}</nav><a id="catalog-view-link" class="text-link" href="${esc(catalogSelectionURL())}">Link to this view</a></div><div id="catalog-saved-views">${savedMarkup()}</div><section id="catalog-products-panel" ${state.view === 'products' ? '' : 'hidden'}>${render.productsPanel()}</section><section id="catalog-cves-panel" ${state.view === 'cves' ? '' : 'hidden'}><div id="catalog-cve-context">${cveContext()}</div>${cveMarkup}</section><section id="catalog-fields-panel" ${state.view === 'fields' ? '' : 'hidden'}>${render.fieldsPanel()}</section><section id="catalog-changes-panel" ${state.view === 'changes' ? '' : 'hidden'}>${render.changesPanel()}</section><section id="catalog-reported-panel" ${state.view === 'reported' ? '' : 'hidden'}><h3>Most reported in this workspace</h3></section><section id="catalog-dark-matter-panel" ${state.view === 'dark-matter' ? '' : 'hidden'}>${render.darkMatterPanel()}</section></div>`;
+      )}</nav><a id="catalog-view-link" class="text-link" href="${esc(catalogSelectionURL())}">Link to this view</a></div><div id="catalog-saved-views">${savedMarkup()}</div><section id="catalog-products-panel" ${state.view === 'products' ? '' : 'hidden'}>${render.productsPanel()}</section><section id="catalog-cves-panel" ${state.view === 'cves' ? '' : 'hidden'}><div id="catalog-cve-context">${cveContext()}</div>${cveMarkup}</section><section id="catalog-fields-panel" ${state.view === 'fields' ? '' : 'hidden'}>${render.fieldsPanel()}</section><section id="catalog-changes-panel" ${state.view === 'changes' ? '' : 'hidden'}>${render.changesPanel()}</section><section id="catalog-reported-panel" ${state.view === 'reported' ? '' : 'hidden'}><h3>Ranked by entity count</h3></section><section id="catalog-dark-matter-panel" ${state.view === 'dark-matter' ? '' : 'hidden'}>${render.darkMatterPanel()}</section></div>`;
   }
 
   function cveContext() {
@@ -216,7 +214,7 @@ export function installLibrary(ctx) {
     if (view === 'changes') state.changeRequest++;
     state.error = '';
     if (view === 'reported') {
-      await loadReported();
+      await reported.load();
       return;
     }
     if (view === 'dark-matter') {
@@ -293,7 +291,6 @@ export function installLibrary(ctx) {
         else if (view === 'cves') renderCveData();
         else if (view === 'fields') renderFields(region, initialField);
         else region.innerHTML = render.changesPanel();
-        if (view === 'changes') void loadOpenKev();
         region.removeAttribute('aria-busy');
         updateSelectionControls();
       }
@@ -536,10 +533,7 @@ export function installLibrary(ctx) {
         region.innerHTML = render.changesPanel();
       }
     } finally {
-      if (request === state.changeRequest) {
-        region.removeAttribute('aria-busy');
-        if (ctx.actions.$('#catalog-changes-panel') === region) void loadOpenKev();
-      }
+      if (request === state.changeRequest) region.removeAttribute('aria-busy');
     }
   }
 
@@ -583,7 +577,7 @@ export function installLibrary(ctx) {
   }
 
   function selectionLabel() {
-    if (state.view === 'reported') return 'Most reported in this workspace';
+    if (state.view === 'reported') return 'Ranked by entity count';
     const catalog = ctx.state.resources.catalog;
     return (
       state.view === 'dark-matter'
@@ -802,8 +796,9 @@ export function installLibrary(ctx) {
 
   Object.assign(ctx.actions, {
     catalogLibraryMarkup,
-    loadReported,
-    loadOpenKev,
+    loadReported: reported.load,
+    showReportedEntities: reported.showEntities,
+    recordMembership: reported.recordMembership,
     searchLibrary: research.search,
     loadCatalogLibrary,
     restoreCatalogSelection: restoreSelection,

@@ -27,36 +27,22 @@ they do not inherit that batch's completion claim.
 | ISS037 | [Library ownership and interfaces](#iss037-library-ownership-and-interfaces) | Resolved | Library; Workspace and Investigations |
 | ISS038 | [Research and reference workflow improvements](#iss038-research-and-reference-workflow-improvements) | Resolved | Library; affected workflow owners |
 | ISS052 | [Catalog update status after a failed sync](#iss052-catalog-update-status-after-a-failed-sync) | Display corrected, installed TLS incident open | Library |
-| ISS058 | [Find open notifications affected by an explainer correction](#iss058-find-open-notifications-affected-by-an-explainer-correction) | Proposed | Library and Investigations |
-| ISS059 | [Report guidance and changes affecting open notifications](#iss059-report-guidance-and-changes-affecting-open-notifications) | Initial implementation in checkout, wider coverage open | Library, with Investigations, Observatory and Accretion interfaces |
+| ISS058 | [Find open notifications affected by an explainer correction](#iss058-find-open-notifications-affected-by-an-explainer-correction) | Closed, builder owns sync | Library and Investigations |
+| ISS059 | [Report guidance and changes affecting open notifications](#iss059-report-guidance-and-changes-affecting-open-notifications) | Implemented for entity-based research, editorial coverage ongoing | Library, with Investigations, Observatory and Accretion interfaces |
 
 ## ISS059 Report guidance and changes affecting open notifications
 
-**Implementation, 2026-11-22.** The Changes view automatically compares open case selections with the current local KEV feed. Library search and the Reviewed explainers bank cover ten report-family guides, thirteen finding guides and the six explicit context-only report identities. The first vendor adapter delivers exact Red Hat prose, package dispositions and captured-source provenance through an offline read and an explicit refresh. The Most reported view ranks local observations by reported CVE and product or service. The [maintainer guide](README.md#analyst-reference-workflows) lists the callable interfaces.
+**Current scope.** Library publishes reviewed explanations, attributable vendor statements, and distinct entity counts for reported CVEs and products. The ranking links to the entities behind each count. Repeated sightings at the same entity have equal weight to a single sighting. Open notification synchronization belongs to Investigations’ builder. [Maintainer guide](README.md#analyst-reference-workflows)
 
-Further editorial work should start with frequently reported family-and-tag combinations that lack a specific reviewed guide. Count those separately from editorial revisions, keep the original provider spelling, and use recurring sightings to prioritize source research. Additional publishers need their own tested acquisition and scope rules. Analyst time saved and notification outcomes have yet to be measured.
+Maintained explainer wording identifies the reporting source, what it observed, and the evidence limits. Professional references support the technical interpretation. Recipient wording describes facts and uncertainty and leaves decisions with the recipient.
 
 **Intake dependency.** Shadowserver publishes plain-HTTP Basic authentication examples with a finding tag and no software version. Accretion currently requires a version for a non-CVE Vulnerable HTTP row before admission. The Library guide is available offline. Whether these source rows should become notification work belongs to Accretion. A scoped acceptance case would use the documented HTTP report identity and exact finding tag while preserving version requirements for lifecycle claims. [Shadowserver report examples](https://www.shadowserver.org/what-we-do/network-reporting/vulnerable-http-report/) · [Intake validation](../../accretion/components/intake/validation.py)
 
-**Product research, 2026-11-22.** Give an analyst two starting points in Library. From an open notification, find evidence that changes what the recipient should be told. From a reported finding, find what the observation establishes and what the recipient can verify. Shadowserver describes public-serving organizations that still struggle to act after receiving a notification. A controlled USENIX study found that detailed direct notices improved remediation in its sample, although many recipients took no action. Both support testing the usefulness of the guidance. Neither measures outcomes for Eclipse. [Shadowserver community resilience project](https://www.shadowserver.org/news/shadowserver-critical-community-infrastructure-cyber-resilience-project/) · [Li and colleagues, USENIX Security](https://www.usenix.org/conference/usenixsecurity16/technical-sessions/presentation/li)
-
-### Find changes affecting open notifications first
-
-In a disposable workspace, two open cases cited the same CVE. One had retained evidence that the CVE was absent from an earlier complete CISA Known Exploited Vulnerabilities (KEV) catalog. The other had an unverified historical negative. Adding that CVE to a synthetic KEV feed while keeping its NVD record identical produced zero rows in Library's Changes list, the same as before the update. Given the exact CVE, the existing impact query correctly identified the changed case, left the legacy case unknown, and excluded a closed case by default. The workspace records and retained package snapshot were identical before and after review. [Catalog journal](../components/cve_catalog/analytics.py) · [Reference comparison](../components/reference_changes.py) · [CISA catalog](https://github.com/cisagov/kev-data)
-
-Add **Changes affecting open notifications**. Start from distinct CVEs actually pinned in open cases, through a paged Investigations-owned read interface. Compare them in batches against the local feed. Each result should show the case, old and current membership, source dates and a link to review. Keep incomplete evidence and stale feeds visible. Show each change once per affected case, even after a refresh. Investigations owns adoption and follow-up. The same view could later include explainer corrections. [Explainer correction proposal](#iss058-find-open-notifications-affected-by-an-explainer-correction) · [Investigations reference usage](../../investigations/components/repositories/reference_usage.py)
-
-**Pilot acceptance.** With the three cases above, the changed list contains exactly the one proven change. The analyst can reach it from Library without knowing the CVE. Refreshing twice yields one review item. An unrelated feed change yields none. Measure time to identify the affected case against the current per-CVE workflow.
-
-Require a change to a claim the case uses. NIST reported that its June 2026 schema expansion updated modification timestamps on roughly 95% of existing vulnerabilities. A timestamp-only rule would send analysts large volumes of work unrelated to their notifications. [NIST's June 17 deployment update](https://www.nist.gov/itl/nvd)
-
 ### Find guidance by report family, tag or field
 
-The pinned Accretion inventory describes 177 report IDs and 746 fields. Of its 26 IDs with admission adapters, 20 map to ten reviewed Library guides and six are explicitly deferred. Library also ships four condition-specific explanations. In a fresh workspace, both `scan_rdp` and `Accessible RDP` returned zero grouped search results, while the built-in editable explainer `Detected CVE` was found. The RDP guide was already present on disk. [Accretion inventory and adapter definitions](../../accretion/docs/REPORT_SCHEMAS.md) · [Library report guides](../resources/report_explainer_data.py) · [Current search](../components/research.py)
+The pinned Accretion inventory describes 177 report IDs and 746 fields. Of the 26 IDs with admission adapters, 20 map to ten report-family guides and six have context entries. Library also publishes 13 explanations of specific findings. All are available through offline search by title, report identity, finding tag, or qualifying field. A guide links to its publisher sources and records the evidence needed to interpret the observation. [Accretion inventory](../../accretion/docs/REPORT_SCHEMAS.md) · [Reviewed Library bank](../components/reviewed_guides.py)
 
-Expose the existing guides in offline search. Start with the IPv4 and IPv6 RDP aliases and the `rdp_protocol` field. When a row says `CredSSP_Enforced`, the guide should explain that the service responded and required Network Level Authentication. Successful login, organizational ownership and whether public access was intended each require separate evidence. For a second example, the Vulnerable HTTP family has a critical default, while its plain-HTTP `basic-auth` finding is documented at medium. Show which tag supports the interpretation and link to the applicable publisher guidance. Accretion continues to own admission. Investigations continues to own the selected wording in a notification. [Shadowserver RDP fields](https://www.shadowserver.org/what-we-do/network-reporting/accessible-rdp-report/) · [Shadowserver HTTP findings](https://www.shadowserver.org/what-we-do/network-reporting/vulnerable-http-report/) · [HTTP Basic authentication](https://www.rfc-editor.org/rfc/rfc7617#section-4)
-
-**Pilot acceptance.** Without a downloaded CVE catalog, either RDP ID opens the same cited guide and the HTTP tag opens its own interpretation. A deferred profile displays its review status. Time how long an analyst takes to produce a source-supported explanation and record any unsupported claim. A later publisher correction can be scoped by family and report date. Shadowserver's withdrawal of its May 22, 2014 DNS Open Resolver data supplies a real test case for that scope. [Historical publisher correction](https://www.shadowserver.org/news/a-bit-too-much-dns-data-in-open-resolver-report-from-2014-05-22/)
+For example, Shadowserver documents plain-HTTP Basic authentication as a medium-rated finding within its Vulnerable HTTP report. The guide describes the challenge and the implications if a client supplied credentials. It makes no claim that credentials were sent or intercepted. [Shadowserver HTTP findings](https://www.shadowserver.org/what-we-do/network-reporting/vulnerable-http-report/) · [RFC 7617](https://www.rfc-editor.org/rfc/rfc7617#section-4)
 
 ### Show which vendor fix applies
 
@@ -66,23 +52,7 @@ Measure analyst accuracy and time on the same synthetic cases before and after e
 
 ## ISS058 Find open notifications affected by an explainer correction
 
-**Proposed 2026-11-22.** After correcting shared wording or a citation, an
-analyst can open **Used by** to see each case's pinned revision. Finding the
-open notifications that need review currently requires comparing revisions by hand.
-
-Extend **Used by** with a filter for open notifications whose pinned wording or
-citations differ. Library owns the comparison of explainer revisions.
-Investigations should expose a paged, read-only query for the case link, pinned
-revision and presence of case-specific wording. Its existing
-[reference usage repository](../../investigations/components/repositories/reference_usage.py)
-already serves the CVE comparison. Today the
-[explainer usage query](../components/services/content.py) reads whole case drafts.
-
-**Acceptance example.** Correct a citation in revision 3. A notification pinned
-to revision 2 appears with a link to compare the change. A notification already
-using revision 3 and one with identical retained wording and citations stay out
-of the changed list. Missing history is shown as unknown. Case-specific wording
-stays visible. Reviewing the list preserves drafts and certified packages.
+**Closed by product decision.** Short-lived notifications already have a synchronization path in their builder. Library maintains reference revisions and citations. Investigations owns notification sync and any future automation of it.
 
 ## ISS052 Catalog update status after a failed sync
 

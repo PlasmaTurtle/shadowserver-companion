@@ -30,9 +30,9 @@ export function createReviewedGuides(ctx) {
       <p>${esc(row.intro || row.body)}</p>
       ${row.examples?.length ? `<h5>${esc(row.examples_heading)}</h5><dl>${paragraphs(row.examples)}</dl>` : ''}
       ${row.why ? `<h5>${esc(row.why_heading)}</h5><p>${esc(row.why)}</p>` : ''}
-      ${row.routes?.length ? `<h5>Who can help</h5><dl>${paragraphs(row.routes)}</dl>` : ''}
+      ${row.routes?.length ? `<h5>Organizational context</h5><dl>${paragraphs(row.routes)}</dl>` : ''}
       ${row.limitations ? `<h5>What the evidence establishes</h5><p>${esc(row.limitations)}</p>` : ''}
-      ${row.review ? `<h5>What to check</h5><p>${esc(row.review)}</p>` : ''}
+      ${row.review ? `<h5>Supporting evidence</h5><p>${esc(row.review)}</p>` : ''}
       ${rules ? `<h5>Report and finding criteria</h5><ul>${rules}</ul>` : ''}
       <h5>Sources</h5><ul>${sources}</ul>
       ${row.revision ? `<small>Wording revision · ${esc(row.revision)}</small>` : ''}</details>`;

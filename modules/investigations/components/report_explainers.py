@@ -7,15 +7,21 @@ port, or the presence of an IPv6 address. The bank is fully offline.
 from copy import deepcopy
 import re
 
-from modules.library.resources.report_explainer_data import BANK, DEFERRED
+from modules.library.resources.report_explainer_data import (
+    BANK,
+    CURRENT_EDITION,
+    DEFERRED,
+    ROLE_SOURCE,
+)
 
-REVISION = "report-explainers-2026-11-10-v1"
+REVISION = CURRENT_EDITION
+# Earlier case snapshots carried this role reference outside the selected page.
 NIST_SOURCE = {
     "publisher": "National Institute of Standards and Technology",
     "title": "Building Your Small Business's Cybersecurity Team: From In-House to Outsourcing",
     "public_url": "https://www.nist.gov/itl/smallbusinesscyber/guidance-topic/building-your-team",
     "retrieved_at": "2026-11-10T00:00:00Z",
-    "revision_id": REVISION + "-business-team",
+    "revision_id": "report-explainers-2026-11-10-v1-business-team",
     "partition": "D",
     "referenced_by": ["EX-INFORMATION"],
     "record": {
@@ -113,6 +119,9 @@ def selection_is_current(lead, draft):
 def pinned_sources(draft):
     pages = draft.get("report_explainer_snapshots", [])
     sources = [deepcopy(source) for page in pages for source in page.get("sources", [])]
-    if pages:
+    if any(
+        all(s.get("public_url") != ROLE_SOURCE["public_url"] for s in page.get("sources", []))
+        for page in pages
+    ):
         sources.append(deepcopy(NIST_SOURCE))
     return sources

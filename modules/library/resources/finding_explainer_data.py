@@ -341,10 +341,11 @@ BANK = {
 # These extracts describe public report definitions and operator guidance. A case pins
 # the selected text and sources together when it adopts this edition of the bank.
 LIFECYCLE_EDITION = "finding-explainers-2026-11-10-v1"
-CURRENT_EDITION = "finding-explainers-2026-11-22-v1"
+PREVIOUS_EDITION = "finding-explainers-2026-11-22-v1"
+CURRENT_EDITION = "finding-explainers-2026-11-22-v2"
 
 
-def _reference(publisher, title, url, summary):
+def _reference(publisher, title, url, summary, *, edition=PREVIOUS_EDITION):
     digest = sha256((url + "\n" + summary).encode("utf-8")).hexdigest()[:12]
     return {
         "publisher": publisher,
@@ -352,7 +353,7 @@ def _reference(publisher, title, url, summary):
         "public_url": url,
         "retrieved_at": "2026-11-22T00:00:00Z",
         "record": {"summary": summary},
-        "revision_id": f"{CURRENT_EDITION}-{digest}",
+        "revision_id": f"{edition}-{digest}",
         "partition": "C",
         "referenced_by": ["EX-VULNERABILITY"],
         "capture_method": "Reviewed technical reference extract; not the full source.",
@@ -386,7 +387,7 @@ def _condition(
         rule["fields"] = fields
     return {
         "id": identifier,
-        "revision": CURRENT_EDITION,
+        "revision": PREVIOUS_EDITION,
         "format": "snippet",
         "category": category,
         "title": title,
@@ -669,3 +670,162 @@ _CONDITIONS = [
     ),
 ]
 BANK.update({condition["id"]: condition for condition in _CONDITIONS})
+
+
+# Older case drafts can still resolve the edition from which their excerpts were selected.
+PREVIOUS_BANK = BANK
+
+# Each entry pairs Shadowserver's observation with the limits of the evidence and
+# product or protocol context from the retained citations. No action is prescribed.
+_WORDING = {
+    "http_eol_component": (
+        "Shadowserver's lifecycle tag identifies a reported component or device associated with "
+        "the web service. Suppliers generally stop issuing routine fixes after a support period ends.",
+        "The tag alone identifies neither a particular CVE nor the security-update coverage "
+        "of the installed package.",
+        "A supplier's lifecycle notice describes the covered release and dates. Red Hat explains "
+        "how a maintained package can receive security fixes while retaining an older upstream "
+        "version number.",
+    ),
+    "http_eol_php": (
+        "Shadowserver uses eol-php for a reported PHP release past its upstream support period. "
+        "PHP publishes the support dates for each branch of its server-side software.",
+        "An externally visible PHP version does not identify the distributor's installed package "
+        "or establish whether a specific CVE applies.",
+        "The PHP project lists supported and retired branches. A distributor may maintain "
+        "a package separately. Its package revision and security advisories identify that coverage.",
+    ),
+    "http_iis_support": (
+        "Microsoft identifies IIS as a Windows component. Shadowserver uses eol-iis and eos-iis "
+        "to distinguish its assessments of Windows and extended-security-update support.",
+        "An IIS version alone does not identify the Windows edition, installed updates, or "
+        "extended-support coverage.",
+        "Microsoft's lifecycle documentation links IIS support to the host operating system. "
+        "The Windows release and its eligibility for Extended Security Updates affect how a "
+        "lifecycle tag applies.",
+    ),
+    "exchange-eol": (
+        "Shadowserver's lifecycle tag identifies an Exchange release that it associates "
+        "with the end of its usual support period.",
+        "The externally reported version leaves the installed update level and any separate "
+        "support entitlement unresolved. The tag supplies no evidence of unauthorized access.",
+        "Microsoft lists Exchange build numbers and release dates. Its supportability matrix "
+        "describes support conditions for particular releases.",
+    ),
+    "http_basic_auth": (
+        "Shadowserver uses basic-auth when a plain HTTP endpoint requests Basic authentication. "
+        "RFC 7617 explains that Basic encodes the username and password without encrypting them. "
+        "If a client responds over this connection, someone observing the traffic could read them.",
+        "The observation records the server's challenge. It does not show whether anyone "
+        "sent credentials, intercepted traffic, or signed in.",
+        "RFC 7617 describes TLS as a way to protect the exchange in transit. Whether a client "
+        "used a particular connection is a separate question from what the server offered.",
+    ),
+    "http_git_config": (
+        "Shadowserver uses this tag when a web endpoint returns a Git repository configuration "
+        "file. Git configuration can identify a repository and its remote location.",
+        "The response shows which file was available at the observation time. It does not establish "
+        "that other files or credentials were exposed or downloaded.",
+        "The Swiss National Cyber Security Centre describes how repository metadata published "
+        "with a website can reveal development history or sensitive information. The contents of "
+        "the deployment determine which information was accessible.",
+    ),
+    "http_megarac_management": (
+        "Shadowserver uses megarac and potential-megarac for a public Redfish management endpoint. "
+        "The tags indicate different degrees of confidence in identifying AMI MegaRAC firmware.",
+        "The response alone does not establish the exact firmware revision, patch status, "
+        "or a successful administrative login.",
+        "NSA and CISA describe baseboard management controllers as components that can administer "
+        "hardware independently of the host operating system. The hardware model and controller "
+        "firmware identify the relevant supplier documentation.",
+    ),
+    "vcenter_dcerpc_exposed": (
+        "Shadowserver uses vcenter-dcerpc-exposed when it reports that the vCenter DCERPC service "
+        "was reachable from the internet.",
+        "Reachability does not establish which operations the service allowed, the installed patch "
+        "level, or unauthorized use. An accompanying CVE has its own evidence.",
+        "Broadcom documents how firewall rules affect which clients can reach vCenter "
+        "management services. Installed build and access configuration are separate from the "
+        "response visible to Shadowserver.",
+    ),
+    "mongodb_noauth": (
+        "Shadowserver uses mongodb-noauth when its request receives a list of database names "
+        "without authentication. The visible_databases field can contain up to five names.",
+        "The listing supplies no evidence about document reads, writes, deletion or access "
+        "by another party.",
+        "MongoDB documents authentication, role-based authorization and network exposure as "
+        "separate controls. A list of names alone does not describe which operations any database "
+        "would have permitted.",
+    ),
+    "smtp_exim_21nails": (
+        "Shadowserver associates the SMTP service's advertised Exim version with the group "
+        "of vulnerabilities known as 21Nails.",
+        "The greeting does not identify installed distributor fixes or establish which issue, "
+        "if any, applies to the running mail server.",
+        "Canonical's advisory identifies corrected package revisions for the Ubuntu releases "
+        "it covers. The running distributor package, including its revision, determines whether "
+        "that advisory describes the installation.",
+    ),
+    "isakmp_softether": (
+        "Shadowserver associates this SoftEther VPN service with a documented L2TP response "
+        "behavior. In an affected configuration the service can send unwanted traffic to a third party.",
+        "The report does not establish that the service participated in an attack. An IKE "
+        "protocol version does not identify the installed SoftEther software release.",
+        "The SoftEther maintainer's advisory identifies the software releases and L2TP service "
+        "conditions associated with this finding.",
+    ),
+    "badsecrets_secret_found": (
+        "In Shadowserver's report, SecretFound identifies a detector match between application "
+        "output and a known weak secret. The module and location fields describe the matched check.",
+        "The result does not identify who used the secret, whether a session was forged, or "
+        "which other systems might share the value.",
+        "OWASP describes how applications use and manage secrets. Whether this finding affects "
+        "sessions, tokens or other application data depends on the purpose of the matched key.",
+    ),
+    "rdp_native_security": (
+        "Shadowserver recorded native RDP security in the Remote Desktop negotiation. Its "
+        "rdp_protocol field distinguishes this response from TLS or enforced CredSSP.",
+        "The negotiation records the response at the observation time. It does not establish "
+        "a successful sign-in, the operating system, or which accounts could connect.",
+        "Microsoft describes Network Level Authentication as authentication before a remote "
+        "session is established. The scan records a protocol response rather than an account's "
+        "actual sign-in history.",
+    ),
+}
+BANK = {
+    key: {
+        **PREVIOUS_BANK[key],
+        "revision": CURRENT_EDITION,
+        "body": body,
+        "limitations": limits,
+        "review": reference,
+        "review_heading": "Source context",
+    }
+    for key, (body, limits, reference) in _WORDING.items()
+}
+BANK["http_megarac_management"]["sources"] = [
+    _HTTP_REFERENCE,
+    _reference(
+        "National Security Agency",
+        "NSA and CISA Release Guide To Protect Baseboard Management Controllers",
+        "https://www.nsa.gov/Press-Room/Press-Releases-Statements/Press-Release-View/Article/3426648/nsa-and-cisa-release-guide-to-protect-baseboard-management-controllers/",
+        "NSA describes a baseboard management controller's privileged hardware and "
+        "firmware access. Its operating environment is separate from the host operating system.",
+        edition=CURRENT_EDITION,
+    ),
+]
+BANK["http_iis_support"]["sources"] = [
+    source
+    for source in PREVIOUS_BANK["http_iis_support"]["sources"]
+    if source["public_url"]
+    != "https://learn.microsoft.com/en-us/lifecycle/faq/extended-security-updates"
+] + [
+    _reference(
+        "Microsoft",
+        "Product Lifecycle FAQ - Extended Security Updates",
+        "https://learn.microsoft.com/en-us/lifecycle/faq/extended-security-updates",
+        "Microsoft describes product-specific eligibility, coverage periods and program terms "
+        "for security updates after ordinary support ends.",
+        edition=CURRENT_EDITION,
+    )
+]

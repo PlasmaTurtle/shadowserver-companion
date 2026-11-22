@@ -78,8 +78,8 @@ records its own verification and does not inherit that batch's completion claim.
 | ISS055 | [Website capture permitted file downloads](../modules/tools/docs/ISSUES.md#iss055-website-capture-permitted-file-downloads) | Tools |
 | ISS056 | [North Carolina business-registration import](../modules/attribution/docs/ISSUES.md#iss056-north-carolina-business-registration-import) | Attribution and Entities |
 | ISS057 | [Recognize configured keys in onboarding](../modules/settings/docs/ISSUES.md#iss057-recognize-configured-keys-in-onboarding) | Settings |
-| ISS058 | [Find open notifications affected by an explainer correction](../modules/library/docs/ISSUES.md#iss058-find-open-notifications-affected-by-an-explainer-correction) | Library and Investigations |
-| ISS059 | [Report guidance and changes affecting open notifications](../modules/library/docs/ISSUES.md#iss059-report-guidance-and-changes-affecting-open-notifications) | Library, with Investigations and Accretion interfaces |
+| ISS058 | [Closed proposal for a Library notification review queue](../modules/library/docs/ISSUES.md#iss058-find-open-notifications-affected-by-an-explainer-correction) | Library and Investigations |
+| ISS059 | [Sourced report guidance and entity-based Library research](../modules/library/docs/ISSUES.md#iss059-report-guidance-and-changes-affecting-open-notifications) | Library, with Observatory, Investigations and Accretion interfaces |
 | ISS060 | [Validated profiles and agency authority](../modules/settings/docs/ISSUES.md#iss060-validated-profiles-and-agency-authority) | Settings; Accretion |
 
 ## Project work status

@@ -4498,8 +4498,8 @@
       "path": "modules/investigations/components/api_models.py",
       "module": "modules.investigations.components.api_models",
       "owner": "investigations",
-      "lines": 274,
-      "sha256": "48b1365cdf30260491668727de01e759b95e2e89045222306c2e5def22f1f951",
+      "lines": 277,
+      "sha256": "18f432babeb62fbd8c5beae4ea58fd6162a58eaaaa603fa97b37c7d197cd9798",
       "imports": [],
       "symbols": [
         {
@@ -4524,67 +4524,67 @@
         },
         {
           "name": "DraftUpdate",
-          "line": 173,
+          "line": 176,
           "kind": "class"
         },
         {
           "name": "PresentationAdoption",
-          "line": 178,
+          "line": 181,
           "kind": "class"
         },
         {
           "name": "WebsiteCaptureRequest",
-          "line": 184,
+          "line": 187,
           "kind": "class"
         },
         {
           "name": "EvidenceUpdate",
-          "line": 189,
+          "line": 192,
           "kind": "class"
         },
         {
           "name": "Delivery",
-          "line": 196,
+          "line": 199,
           "kind": "class"
         },
         {
           "name": "CaseCreate",
-          "line": 202,
+          "line": 205,
           "kind": "class"
         },
         {
           "name": "CaseVersion",
-          "line": 208,
+          "line": 211,
           "kind": "class"
         },
         {
           "name": "CaseRevision",
-          "line": 212,
+          "line": 215,
           "kind": "class"
         },
         {
           "name": "SectionVersion",
-          "line": 217,
+          "line": 220,
           "kind": "class"
         },
         {
           "name": "SectionReopen",
-          "line": 222,
+          "line": 225,
           "kind": "class"
         },
         {
           "name": "CasePlan",
-          "line": 226,
+          "line": 229,
           "kind": "class"
         },
         {
           "name": "ContactAttempt",
-          "line": 236,
+          "line": 239,
           "kind": "class"
         },
         {
           "name": "ClosingValues",
-          "line": 269,
+          "line": 272,
           "kind": "class"
         }
       ]
@@ -5344,8 +5344,8 @@
       "path": "modules/investigations/components/finding_explainers.py",
       "module": "modules.investigations.components.finding_explainers",
       "owner": "investigations",
-      "lines": 198,
-      "sha256": "e33a3a14b19b3468dd540b10b11f060d33703bd74bc0de830a51bc754189e024",
+      "lines": 205,
+      "sha256": "fc83d13b4cb3dd6a344b7a603b83f87b9af08c3e27ea76093d10ab7cd3b800cf",
       "imports": [
         "modules.accretion.components.intake.versions",
         "modules.investigations.components.notification_narrative_v4",
@@ -5355,37 +5355,37 @@
       "symbols": [
         {
           "name": "tags",
-          "line": 22,
+          "line": 24,
           "kind": "function"
         },
         {
           "name": "match_snippet",
-          "line": 32,
+          "line": 34,
           "kind": "function"
         },
         {
           "name": "select_finding_explainers",
-          "line": 51,
+          "line": 53,
           "kind": "function"
         },
         {
           "name": "selection_is_current",
-          "line": 66,
+          "line": 71,
           "kind": "function"
         },
         {
           "name": "attach_explanation",
-          "line": 75,
+          "line": 80,
           "kind": "function"
         },
         {
           "name": "observation_conditions",
-          "line": 93,
+          "line": 100,
           "kind": "function"
         },
         {
           "name": "enrich_eol_findings",
-          "line": 136,
+          "line": 143,
           "kind": "function"
         }
       ]
@@ -5490,8 +5490,8 @@
       "path": "modules/investigations/components/information_pages.py",
       "module": "modules.investigations.components.information_pages",
       "owner": "investigations",
-      "lines": 182,
-      "sha256": "3cd24728efc9a0753810700bd6c92cc9bf0a128143e540e1e7f97de4bb14ae38",
+      "lines": 187,
+      "sha256": "07ec62edf6bd89d4fe9a156874e8249ac4ec12cd60ce46592c9aea3ade373313",
       "imports": [
         "modules.investigations.components",
         "modules.investigations.components.approved_template",
@@ -6366,8 +6366,8 @@
       "path": "modules/investigations/components/report_explainers.py",
       "module": "modules.investigations.components.report_explainers",
       "owner": "investigations",
-      "lines": 118,
-      "sha256": "ad529e0b64ac5de0adb7ef5333d9f18e578456069ef0a51de55812aa29eb57fd",
+      "lines": 127,
+      "sha256": "1e255ae3ffe548d632a1f0d3cc158441064724edcd00b721ec6bdf0c26329544",
       "imports": [
         "modules.accretion.components.intake.versions",
         "modules.library.resources.report_explainer_data"
@@ -6375,27 +6375,27 @@
       "symbols": [
         {
           "name": "canonical_source_types",
-          "line": 40,
+          "line": 46,
           "kind": "function"
         },
         {
           "name": "select_report_explainers",
-          "line": 77,
+          "line": 83,
           "kind": "function"
         },
         {
           "name": "selection_notices",
-          "line": 90,
+          "line": 96,
           "kind": "function"
         },
         {
           "name": "selection_is_current",
-          "line": 103,
+          "line": 109,
           "kind": "function"
         },
         {
           "name": "pinned_sources",
-          "line": 113,
+          "line": 119,
           "kind": "function"
         }
       ]
@@ -6765,13 +6765,13 @@
       "path": "modules/investigations/components/repositories/reference_usage.py",
       "module": "modules.investigations.components.repositories.reference_usage",
       "owner": "investigations",
-      "lines": 99,
-      "sha256": "5d0c287c8456c68928c3ee72ef791b05d933166c57792ea55c8a1943c95816aa",
+      "lines": 63,
+      "sha256": "02c2d14c3914edeb28e6ec40869d87a82a0d545f35c8e8ce2659470512498fcb",
       "imports": [],
       "symbols": [
         {
           "name": "ReferenceUsage",
-          "line": 8,
+          "line": 7,
           "kind": "class"
         }
       ]
@@ -7339,7 +7339,7 @@
       "module": "modules.investigations.components.vulnerability_layout",
       "owner": "investigations",
       "lines": 536,
-      "sha256": "baeb91e02bc0e2e360ff9338d8bae03c68d0d0c86b1ad474e1c1ba460c093d7b",
+      "sha256": "63ba45ec87be99aed4f9b9904196700e6272ba6632b3e44289d5a246a85eb984",
       "imports": [
         "modules.ui.components.text_justification",
         "modules.ui.components.vector_layout"
@@ -8375,7 +8375,7 @@
       "module": "modules.library.components.catalog_outreach",
       "owner": "library",
       "lines": 376,
-      "sha256": "4caed7b0a0166b2ac15f644f4321ba8aa98450f54e9aba2c2a71e68f16ed9776",
+      "sha256": "f98d8e7a495094d5e2237984d88a6965e14db57aae3be6a3176e183394fe47ed",
       "imports": [
         "modules.library.components.cve_catalog",
         "modules.library.components.cve_catalog.risk",
@@ -8428,8 +8428,8 @@
       "path": "modules/library/components/content_bank.py",
       "module": "modules.library.components.content_bank",
       "owner": "library",
-      "lines": 26,
-      "sha256": "e6fd05fd7b41e7cc782dbebd28beab1552ea1aae7dbf068590321ddb36b0a0b1",
+      "lines": 55,
+      "sha256": "d95832edacfcee950e1e39c26b147240bc97af01115ea8ae1f694085565d9bfd",
       "imports": [
         "modules.library.components.repositories",
         "modules.library.components.repositories.content",
@@ -9346,18 +9346,17 @@
       "path": "modules/library/components/reference_changes.py",
       "module": "modules.library.components.reference_changes",
       "owner": "library",
-      "lines": 292,
-      "sha256": "59908ebba31840341c70e2c2f6474add7ae4c3d738be0544db8f2d520b5cdd2c",
+      "lines": 223,
+      "sha256": "71942c0d22a89540a6975ad57c0efe93d05b1db8639868948a0b32a210a7040f",
       "imports": [
         "modules.investigations.components.repositories.reference_usage",
         "modules.library.components.cve_catalog.risk",
-        "modules.library.components.cve_catalog.risk_policy",
         "modules.library.components.intelligence.metrics"
       ],
       "symbols": [
         {
           "name": "ReferenceChanges",
-          "line": 145,
+          "line": 135,
           "kind": "class"
         }
       ]
@@ -9547,8 +9546,8 @@
       "path": "modules/library/components/routes/cve_catalog.py",
       "module": "modules.library.components.routes.cve_catalog",
       "owner": "library",
-      "lines": 345,
-      "sha256": "13a608186cb458bc984baa78d5b27b8459f72f1fb5b5a264083fd9eebc68d02b",
+      "lines": 395,
+      "sha256": "9168d3f6ed6a783b02a8ea35251dba7570fc47c51e7e1081aa44e33b19b255b9",
       "imports": [
         "modules.library.components.cve_catalog.analytics",
         "modules.library.components.cve_catalog.credentials"
@@ -9571,22 +9570,42 @@
         },
         {
           "name": "ObservedReferencePage",
-          "line": 28,
+          "line": 30,
+          "kind": "class"
+        },
+        {
+          "name": "EntityReferenceCoverage",
+          "line": 37,
           "kind": "class"
         },
         {
           "name": "ObservedReferenceSummary",
-          "line": 38,
+          "line": 47,
+          "kind": "class"
+        },
+        {
+          "name": "ReferenceEntity",
+          "line": 52,
+          "kind": "class"
+        },
+        {
+          "name": "ReferenceEntities",
+          "line": 57,
+          "kind": "class"
+        },
+        {
+          "name": "CveObservationEvidence",
+          "line": 64,
           "kind": "class"
         },
         {
           "name": "CatalogAccess",
-          "line": 54,
+          "line": 70,
           "kind": "class"
         },
         {
           "name": "register",
-          "line": 145,
+          "line": 161,
           "kind": "function"
         }
       ]
@@ -9615,25 +9634,15 @@
       "path": "modules/library/components/routes/reference_changes.py",
       "module": "modules.library.components.routes.reference_changes",
       "owner": "library",
-      "lines": 50,
-      "sha256": "f2232fb18e8e58a669e334e8659d97078baee6b81724c95a86d9e462ef108ce7",
+      "lines": 20,
+      "sha256": "868a3e4f82f81a0d6ef15c6a6328aafdf1319f48094486b03bf419de2321fffa",
       "imports": [
         "modules.library.components.reference_changes"
       ],
       "symbols": [
         {
-          "name": "OpenKevChange",
-          "line": 10,
-          "kind": "class"
-        },
-        {
-          "name": "OpenKevChanges",
-          "line": 20,
-          "kind": "class"
-        },
-        {
           "name": "register",
-          "line": 32,
+          "line": 8,
           "kind": "function"
         }
       ]
@@ -9807,8 +9816,8 @@
       "path": "modules/library/resources/defaults.py",
       "module": "modules.library.resources.defaults",
       "owner": "library",
-      "lines": 34,
-      "sha256": "3040ae55b6b0852b816062b684fba796d016b529d5906616212ca1dbe6b2b5fb",
+      "lines": 94,
+      "sha256": "e90a1b505d2dd958a38773decfb72aad7306bcdf3621c5168b43898031b0d04d",
       "imports": [],
       "symbols": []
     },
@@ -9816,8 +9825,8 @@
       "path": "modules/library/resources/finding_explainer_data.py",
       "module": "modules.library.resources.finding_explainer_data",
       "owner": "library",
-      "lines": 671,
-      "sha256": "8b1cc940b439434ad19c40b04ff803796c021a94258be77503b0483cf8b03ca4",
+      "lines": 831,
+      "sha256": "0eb04eeb30a8ef22250bf3c2c613ae10087a844c6d9f0adb39cf2772093379d9",
       "imports": [],
       "symbols": []
     },
@@ -9825,8 +9834,8 @@
       "path": "modules/library/resources/report_explainer_data.py",
       "module": "modules.library.resources.report_explainer_data",
       "owner": "library",
-      "lines": 876,
-      "sha256": "ba34bfea48c6b69ee0a67ff2afb743dd797edf142acfcb24ffb42f0de16d77d3",
+      "lines": 859,
+      "sha256": "ac7c2f470b09338e61d02b4c2354f6f11454326a3dc38aea4485172f35dac5a8",
       "imports": [],
       "symbols": []
     },
@@ -9834,19 +9843,18 @@
       "path": "modules/library/static/catalog_library.js",
       "module": "modules/library/static/catalog_library.js",
       "owner": "library",
-      "lines": 840,
-      "sha256": "58736dee30c2b7ba822bcd29d4b2e72aa0e48b732fd3cb834307ca5974c7b34f",
+      "lines": 835,
+      "sha256": "a8e9222e2b34996dd66130a28c06df05eee86077b3498df9447a78c4dede8be9",
       "imports": [
         "modules/library/static/catalog_library_render.js",
         "modules/library/static/catalog_search.js",
-        "modules/library/static/open_kev_changes.js",
         "modules/library/static/reported_references.js",
         "modules/observatory/static/dark_matter_browser.js"
       ],
       "symbols": [
         {
           "name": "installLibrary",
-          "line": 8,
+          "line": 7,
           "kind": "export"
         }
       ]
@@ -9855,8 +9863,8 @@
       "path": "modules/library/static/catalog_library_render.js",
       "module": "modules/library/static/catalog_library_render.js",
       "owner": "library",
-      "lines": 184,
-      "sha256": "3c834c1305eb618b89ddce28eb117a00ab8eecddaf1dbb5f2bb607e55fd7d172",
+      "lines": 189,
+      "sha256": "b2d6eec16fc1b050eff2590b4b1895f3bdc6161413fcd9bb2386f4fd7a069f94",
       "imports": [],
       "symbols": [
         {
@@ -9886,7 +9894,7 @@
       "module": "modules/library/static/cve_catalog.js",
       "owner": "library",
       "lines": 336,
-      "sha256": "eaf744a4899b71f665055f6fa26c8bb5b8d8786eb866b1a96a294f266811a5c8",
+      "sha256": "0c55307837c99537f5da0dbd578ae33f113e3f8fbd170df73ef05e01e5f66120",
       "imports": [
         "modules/library/static/catalog_library.js",
         "modules/library/static/vendor_guidance.js"
@@ -9904,7 +9912,7 @@
       "module": "modules/library/static/library_events.js",
       "owner": "library",
       "lines": 216,
-      "sha256": "b6a0e78726ec5d15202f6a686b4111b9474fefecd4bc9c94eb9546efca3d784b",
+      "sha256": "5b2952f38c3bb4d4dfbac2c2d00651f0d94dcbd0524ef371053355fece3ff61e",
       "imports": [],
       "symbols": [
         {
@@ -9915,26 +9923,11 @@
       ]
     },
     {
-      "path": "modules/library/static/open_kev_changes.js",
-      "module": "modules/library/static/open_kev_changes.js",
-      "owner": "library",
-      "lines": 35,
-      "sha256": "6623c4450468222af859cec0c021d2e8a6a9c89557d891489b63360aa08cd878",
-      "imports": [],
-      "symbols": [
-        {
-          "name": "createOpenKevChanges",
-          "line": 2,
-          "kind": "export"
-        }
-      ]
-    },
-    {
       "path": "modules/library/static/reported_references.js",
       "module": "modules/library/static/reported_references.js",
       "owner": "library",
-      "lines": 59,
-      "sha256": "df9f2d84f3f94a15d60c7a336f9cbf9e496f8b29c71665c5361fdd739813693a",
+      "lines": 120,
+      "sha256": "161acad492032d5b103a29da726c5bb0c0e811ac36e4c3ff23dde6ced16c6471",
       "imports": [],
       "symbols": [
         {
@@ -9966,7 +9959,7 @@
       "module": "modules/library/static/reviewed_guides.js",
       "owner": "library",
       "lines": 79,
-      "sha256": "288b2c9a1f4d27d4b57e4abe25a5826c79e7985f41e5015b2819661c9f5b551d",
+      "sha256": "7a1d14e35dac9d2af1479542b350bf48128e02aecbf27723d22b23fee314c242",
       "imports": [],
       "symbols": [
         {
@@ -9996,7 +9989,7 @@
       "module": "modules/library/static/vendor_guidance.js",
       "owner": "library",
       "lines": 53,
-      "sha256": "ccdf3dab6ff659ddebebdc0011df5b1d6d4de0964c3c27ee84e897bc7a67045f",
+      "sha256": "c0e5a15eb9196cd2c72241ce55d4ad7694a307dc11ed1b25cbb30b485e5d1a3c",
       "imports": [],
       "symbols": [
         {
@@ -10082,8 +10075,8 @@
       "path": "modules/observatory/components/eclipse.py",
       "module": "modules.observatory.components.eclipse",
       "owner": "observatory",
-      "lines": 989,
-      "sha256": "599cbdac782f1ce3f0c4ad7ec39e666bed2e482cc5a1b33def013ec4c17f5e97",
+      "lines": 993,
+      "sha256": "c90944871581d8ece4d525917c7358c5f93e282625845cdf8a0d81109a25c355",
       "imports": [
         "modules.accretion.components.api_import",
         "modules.accretion.components.api_jurisdiction",
@@ -10211,8 +10204,8 @@
       "path": "modules/observatory/components/observatory_queries.py",
       "module": "modules.observatory.components.observatory_queries",
       "owner": "observatory",
-      "lines": 228,
-      "sha256": "7219e4ca708a897147f4b2ad59216b45c8efacc2062dfb50419d677aebb91832",
+      "lines": 234,
+      "sha256": "1aec0570a2ee9d0c7b997ebf40f58c90fe42271beed45a29f378c4a3dbd1883e",
       "imports": [
         "modules.accretion.components.awareness_admission",
         "modules.observatory.components",
@@ -10220,8 +10213,13 @@
       ],
       "symbols": [
         {
-          "name": "load",
+          "name": "observation_ownership",
           "line": 18,
+          "kind": "function"
+        },
+        {
+          "name": "load",
+          "line": 39,
           "kind": "function"
         }
       ]
@@ -10260,19 +10258,25 @@
       "path": "modules/observatory/components/observed_references.py",
       "module": "modules.observatory.components.observed_references",
       "owner": "observatory",
-      "lines": 212,
-      "sha256": "c56cc4220deb38d061e395fa47b57e1a4c1022a776f67d2794b532c673ebdb3f",
+      "lines": 225,
+      "sha256": "334cf7cd1b2c6c6a1890d1c11bfbc796ec9694f625f36106a14fe3c64e9f91a4",
       "imports": [
         "modules.accretion.components.intake.versions",
         "modules.accretion.components.report_profiles",
         "modules.library.components.cve_catalog.products",
         "modules.library.components.intelligence.identifiers",
+        "modules.observatory.components.observatory_queries",
         "modules.observatory.components.observatory_view"
       ],
       "symbols": [
         {
           "name": "observed_references",
-          "line": 173,
+          "line": 185,
+          "kind": "function"
+        },
+        {
+          "name": "reference_entities",
+          "line": 201,
           "kind": "function"
         }
       ]
