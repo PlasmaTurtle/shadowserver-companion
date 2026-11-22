@@ -157,7 +157,7 @@ def test_new_case_inherits_hold_until_explicitly_changed(client, app):
     assert created.json()["outreach_policy"]["reason"] == "IT requested no further contact"
 
 
-def test_material_change_stops_before_qualification_when_entity_is_on_hold(client, app):
+def test_associate_excludes_new_eol_release_against_closed_case_hold(client, app):
     lead = opened(client, app)
     response = client.put(
         "/api/cases/" + lead["case_id"] + "/outreach-policy",
@@ -174,19 +174,49 @@ def test_material_change_stops_before_qualification_when_entity_is_on_hold(clien
     for row in rows:
         row["timestamp"] = "2026-11-07 01:02:03"
         row["version"] = "7.4.10"
-    capture_count = app.state.store.one("SELECT count(*) n FROM website_captures")["n"]
+    saved_captures = app.state.store.all("SELECT id FROM website_captures ORDER BY id")
+    original = client.get("/api/cases/" + lead["case_id"]).json()
     lookups = list(app.state.fake.calls)
-    record, _ = import_rows(client, app, rows, name="new-version.csv")
+    record, _ = import_rows(client, app, rows, name="new-version.csv", start_notifications=False)
     assert client.get("/api/workspace/queue").json()["items"] == []
     assert client.get("/api/pending-leads").json() == []
     current = client.get("/api/cases/" + lead["case_id"]).json()
     assert current["case"]["stage"] == "closed"
     assert current["outreach_policy"]["state"] == "do_not_contact"
+    assert current["finding_history"] == original["finding_history"]
+    assert current["case"]["version"] == original["case"]["version"]
+    assert app.state.store.one("SELECT count(*) n FROM cases")["n"] == 1
     job = app.state.store.one("SELECT * FROM jobs WHERE import_id=?", (record["id"],))
-    assert job["status"] == "deferred" and job["error"] == "outreach_do_not_contact"
-    assert app.state.store.one("SELECT count(*) n FROM website_captures")["n"] == capture_count
-    assert app.state.fake.calls == lookups
+    assert (job["status"], job["error"]) == ("dismissed", "association_deconflicted")
+    assert client.get("/api/imports/" + record["id"]).json()["stage_totals"] == {
+        "qualified": 1,
+        "evaluated": 1,
+        "published": 0,
+        "excluded_by_associate": 1,
+    }
+    attempts = json.loads(job["attempts"])
+    exclusions = [a for a in attempts if a["method"] == "associate" and a["action"] == "exclude"]
+    assert [(a["kind"], a["identifier"], a["reference"], a["reason"]) for a in exclusions] == [
+        ("outreach_do_not_contact", lead["id"], lead["case_id"], "Review new exposures only")
+    ]
+    evidence = json.loads(job["qualification"])
+    assert {finding["condition"] for finding in evidence["findings"]} == {"eol-php:7.4"}
     assert any(
-        item["reason"] == "outreach_do_not_contact"
-        for item in app.state.store.dark_matter.query(limit=100)["items"]
+        a["method"] == "website"
+        and a["status"] == "reused"
+        and a["capture_id"] == evidence["website"]["id"]
+        for a in attempts
     )
+    assert app.state.store.all("SELECT id FROM website_captures ORDER BY id") == saved_captures
+    assert app.state.fake.calls == lookups
+    archived = [
+        item
+        for item in app.state.store.dark_matter.query(limit=100)["items"]
+        if item["import_id"] == record["id"] and item["stage"] == "associate"
+    ]
+    assert sorted(item["source"]["row"] for item in archived) == sorted(
+        entry["source"]["row"] for entry in json.loads(job["payload"])
+    )
+    assert {(item["outcome"], item["reason"]) for item in archived} == {
+        ("rejected", "association_deconflicted")
+    }
