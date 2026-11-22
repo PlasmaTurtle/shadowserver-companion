@@ -46,7 +46,7 @@ These measure production backend paths, not end-to-end browser loading. All 21
 operation/size comparisons returned identical normalized JSON and preserved
 saved logical rows. See [the performance audit](../reviews/PERFORMANCE_0986.md) for the
 complete results, complexity, write/storage cost and measurement limits, and
-[validation](../../../VALIDATION.md) for the release checks.
+[validation](../validation/VALIDATION_0120.md) for the release checks.
 
 ## Upgrade and rollback
 
@@ -58,6 +58,6 @@ does not need downloading again.
 Older executables reject schema 11. To compare or return to 0.9.85, use a separate
 copy of your **pre-upgrade backup**; installing an older executable over the
 upgraded workspace is not a rollback. Preserve any work performed after upgrading
-before attempting a rollback. [HOME_VALIDATION.md](../../../HOME_VALIDATION.md) lists
+before attempting a rollback. [HOME_VALIDATION.md](../../WINDOWS_ACCEPTANCE.md) lists
 the focused workstation checks.
 

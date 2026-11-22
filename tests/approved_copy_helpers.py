@@ -4,7 +4,9 @@ from pathlib import Path
 
 
 def accepted_source_bytes():
-    source = (Path(__file__).parents[1] / "workbench/approved_template.py").read_text()
+    source = (
+        Path(__file__).parents[1] / "modules/investigations/components/approved_template.py"
+    ).read_text(encoding="utf-8")
     additions = {
         "ADDRESSEE_REVISION = 'addressee-2026-11-08-v2'\n": "",
         "ADDRESSEE = 'Principal Executive / IT Director'\nLEGACY_ADDRESSEE = 'Principle Executive / IT Director'": "ADDRESSEE = 'Principle Executive / IT Director'",

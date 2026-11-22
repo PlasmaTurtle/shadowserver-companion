@@ -31,7 +31,7 @@ updates:
       python-dependencies:
         patterns: ['*']
   - package-ecosystem: pip
-    directory: /components/attribution
+    directory: /modules/attribution/components/engine
     schedule:
       interval: weekly
       day: monday

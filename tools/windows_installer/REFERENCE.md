@@ -17,7 +17,9 @@ The source ZIP filename follows the current version and release name.
 
 ## Build
 
-Use Python 3.12 or later with pip and NSIS 3.09 or later on Windows or Linux.
+Use the project's Python 3.14 [development environment](../../docs/DEVELOPMENT.md#windows-ide-setup)
+with pip and NSIS 3.09 or later on Windows or Linux. The builder's source checks
+run in that environment; the packaged runtime is selected by `runtime-lock.json`.
 From the source checkout:
 
 ```text
@@ -35,9 +37,12 @@ may require `NSISDIR` to identify its `share/nsis` directory.
 The first build downloads the pinned embedded Python distribution and exact
 Windows wheels. Subsequent builds can use `--offline` when the build directory's
 `downloads` and `wheelhouse` are populated. `runtime-lock.json` records the
-runtime URL and SHA-256; root `requirements-windows.txt` pins wheel hashes and
-`wheelhouse-sha256.json` inventories the artifacts. The application wheelhouse
-supplies the Attribution Module package.
+runtime URL and SHA-256; root `requirements-windows.txt` is the canonical package
+version/hash lock. `tools/check_dependencies.py` derives the artifact inventory
+from the approved wheels and verifies exact coverage; the builder uses the same
+check for its staging directory. Refresh the generated source constraints with
+`python tools/check_dependencies.py --write` after updating reviewed dependencies.
+The application wheelhouse supplies the independent Attribution Module package.
 
 The builder verifies these inputs, checks the release metadata, and produces
 a payload inventory and uninstall list from the same files. The application
@@ -85,14 +90,10 @@ establishes this application's identity. Unknown runtime code produces an
 explicit error and is preserved; the helper never guesses that a shared Python
 installation belongs to this app.
 
-An installation mutex prevents maintenance while the installed application,
-Demo or a scheduled runner is using the program. A separate installation gate
-also coordinates new launcher registration with replacement/uninstallation.
-The direct shortcut loads Python/DLLs and early imports before that gate, so it
-does not eliminate all launch/replacement races. Earlier launchers cannot
-participate in it. Disable closed-app runs before
-maintenance, stop the foreground consoles, and allow active background work to
-finish or yield before retrying the installer.
+The installed application, Demo, scheduled runner and render workers retain a
+running handle for their process lifetime. Maintenance holds the separate
+start/install gate before checking for running processes and replacing files.
+See the guarded-launch protocol below for ordering, repair and transition limits.
 
 When working data exists, interactive installation defaults to retaining it.
 The fresh-start choice requires a second confirmation whose default is No.
@@ -104,9 +105,67 @@ anything. Silent installation always retains data.
 Uninstall removes generated Python caches before deleting its enumerated
 program files and empty program directories. The cache cleanup and optional
 scheduled-task removal use the staged runtime, so they do not depend on an intact
-old interpreter. Working records and unrecognized user files remain. If owned
-file deletion is blocked, uninstall stops before removing its registry identity,
-allowing the user to close the blocking process and retry.
+old interpreter. Working records and unrecognized user files remain. If payload
+or bootstrap deletion is blocked, uninstall stops before removing its registry
+identity. Required shortcut/registration cleanup also stops on failure while
+retaining the self-contained `Uninstall.exe` for retry. That executable is removed
+last; if its own deletion fails after registration cleanup, retry it directly.
+
+## Guarded launch and maintenance
+
+`bootstrap.nsi` is compiled separately into an immutable
+`bootstrap/launch-<sha256>.exe`, outside the replaceable `app` and `runtime`
+directories. Desktop, Demo, self-test, update restart and installed scheduled
+actions enter through it. It acquires `StartInstall`, reads and validates
+installation readiness, then creates an inherited `Running` handle before starting
+Python. Only that handle is inherited by the child. Closing or killing the bootstrap
+does not release the child's protection. Workspace's installed-child helper
+extends the same contract to report workers before their interpreter starts.
+
+The bootstrap waits at most five seconds for a busy install gate, then exits
+with code 6. This expected maintenance race has no persistent dialog, so a waiting
+launcher cannot indefinitely lock its own executable during removal. Other
+interactive launch failures explain the repair needed; scheduled mode remains
+headless. Overlong arguments are rejected rather than truncated.
+
+`installer.nsi` coordinates this sequence with `upgrade_cleanup.py` under the
+installer-held gate:
+
+1. Validate both payload inventories, paths, compatibility and bootstrap ownership.
+   Verify the optional task's ownership, journal its original settings and enabled
+   intent, then disable it and verify no running or queued instances remain.
+2. Withdraw `installation-ready.ini`, record the new bootstrap in
+   `bootstrap-ledger.json`, and publish its verified bytes without replacing any
+   existing executable. Prior owned launchers remain immutable for gate waiters.
+3. Replace the payload. Require a written uninstaller, shortcuts and registration.
+   Recheck every payload hash and restore the owned task through the new bootstrap.
+4. Record the active bootstrap and atomically publish readiness last. Only then
+   release the gate and permit restart.
+
+Missing or interrupted readiness prevents entry into Python. Rerunning setup
+repairs the known installation and resumes its task journal. Missing ledger
+ownership can be recovered from the matching payload inventory; unknown actions,
+changed owned launchers and unsafe paths stop maintenance without guessing.
+The ledger allows 128 recorded launchers and rejects overflow before mutation.
+It is an ownership record, not a signature or protection against another process
+already running with the same user's permissions.
+
+Uninstall validates and removes only the owned task, withdraws readiness, removes
+the inventoried payload and then removes recorded bootstrap files. Its embedded
+inventory also proves the current launcher if local metadata has been lost.
+Removal waits up to eight seconds for launcher image locks; a persistent lock
+retains ownership and registration for an explicit retry. Unknown files and
+working records remain. Accretion owns the
+[task transition contract](../../modules/accretion/docs/README.md).
+
+**First-upgrade policy:** old shortcuts, old task actions and manual direct-Python
+commands cannot retroactively acquire a pre-import guard. Close the application,
+allow scheduled work to finish, and do not launch during the first upgrade to
+this protocol. Setup migrates only recognized legacy task actions. Once installed,
+use the managed shortcuts/task; manually invoking the installed interpreter is
+outside this launch guarantee. Source-checkout commands keep their existing
+behavior. [ISS015](../../modules/settings/docs/ISSUES.md#iss015-pre-registration-upgrade-race)
+owns completion evidence; this protocol does not replace whole-release acceptance.
 
 ## Setup and update experience
 
@@ -172,10 +231,14 @@ native Windows behavior.
 
 Version 0.9.96 was reported working on the user's Windows workstation. That is
 a prior-version baseline, not an assertion that Guided Setup 0.12.0 has
-completed its own native acceptance. See [application validation](../../VALIDATION.md),
-[Windows acceptance](../../HOME_VALIDATION.md) and [release metadata](../../RELEASE.json) for the exact checks performed and
-remaining checks for the current artifact. The release-candidate designation
-must not be silently presented as a stable release.
+completed its own native acceptance. The
+[November 14 candidate record](../../docs/history/validation/VALIDATION_0120.md)
+contains historical results for its identified build. Use
+[Windows acceptance](../../docs/WINDOWS_ACCEPTANCE.md) for the checks required on
+the exact current artifact, [ISS014](../../docs/ISSUES.md#iss014-current-version-windows-acceptance)
+for tracked acceptance status, and [release metadata](../../RELEASE.json) for its
+version and channel. Preserve the candidate designation until its release gate
+is satisfied.
 
 Windows acceptance should exercise a standard-user install, upgrade from the
 prior version with records retained, normal and Demo launches, bundled
@@ -183,6 +246,12 @@ prior version with records retained, normal and Demo launches, bundled
 records retained. Exercise scheduled background operation and foreground
 handoff separately, along with cancellation of an installation fresh start.
 Record actual outcomes; do not substitute successful compilation for them.
+
+For a focused native exclusion probe, run `verify_bootstrap.py` with a fresh
+`--output` directory, `--makensis` and an existing Python 3.14 `--python-home`.
+It uses a unique synthetic identity, exercises held-gate startup, inherited
+handles, parent death and incomplete readiness, and retains source hashes and
+results. It does not install the production edition or accept the complete app.
 
 The installer is unsigned unless the distributor signs the final artifact with
 an approved Authenticode certificate and timestamp. No publisher certificate

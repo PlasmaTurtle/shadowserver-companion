@@ -6,8 +6,11 @@ attachments and Actions logs. Repository visibility is not a casework boundary.
 
 ## Change and review workflow
 
-1. Open a concise bug or feature issue with a synthetic reproduction and acceptance
-   criteria. Security reports follow [SECURITY.md](../SECURITY.md).
+1. Follow the [maintenance workflow](DEVELOPMENT.md#maintenance-workflow) and
+   identify the canonical project or module issue. When using GitHub for
+   collaboration, link that ID and its canonical completion criteria from the
+   GitHub discussion. Add synthetic reproduction details where needed without
+   creating a second status record. Security reports follow [SECURITY.md](../SECURITY.md).
 2. Create a short-lived branch and a focused pull request. Link the issue using
    `Fixes #number` when the change resolves it. Record actual test results and limits.
 3. Review the diff and CI results. Dependency changes must pass the exact bundled
@@ -19,33 +22,38 @@ attachments and Actions logs. Repository visibility is not a casework boundary.
 prevent merging. A sole maintainer cannot approve their own pull request, so do
 not require an unavailable second reviewer and then routinely bypass the rule.
 
-For the current project size, issues plus a milestone for the next candidate are
-sufficient. If a GitHub Project is used, use Backlog, Ready, In progress, In review
-and Done statuses, with one owner and observable acceptance criteria per item.
-Keep the issue or milestone as the source of truth rather than maintaining a second progress log in Markdown.
+GitHub issues and milestones can organize discussion for the next candidate.
+If a GitHub Project is used, treat its cards as a derived navigation view of the
+canonical trackers and linked pull requests, not an independently maintained
+status or acceptance-criteria register.
+The repository's [project and module trackers](ISSUES.md) own maintenance status
+and completion criteria. GitHub issues, milestones and pull requests link those
+IDs and supply discussion/change references. Update the canonical entry when
+work changes state; do not maintain a second competing backlog.
 
 ## Automated checks
 
-The [CI workflow](https://github.com/PlasmaTurtle/shadowserver-companion/blob/main/.github/workflows/ci.yml)
-is the source of truth for runner selection and triggers. At this documentation
+The checked-in `.github/workflows/ci.yml` is the source of truth for runner
+selection and triggers. At this documentation
 revision it runs the complete `tools/verify.py` on Ubuntu 24.04 and Windows 2025 with
 Python 3.14, Node 24 and Chromium. It also checks bundled wheel/source integrity.
 The verifier covers release identity, module boundaries, formatting, lint, backend
 regressions, frontend contracts and its registered synthetic browser suites.
 It is not the complete manual workstation/installer acceptance procedure.
 
-Source identity, module-map drift, formatting, lint and frontend contracts run
-before downloading Chromium. This preflight writes `verification-preflight.json`
-with `complete: false`; only the subsequent full run can record complete
-verification. Fix stale generated maps with `python tools/program_map.py --write`
-and commit both generated outputs with the source change. The workflow checks
-these outputs; it never silently regenerates them to hide repository drift.
+The workflow verifies bundled dependency integrity, installs development/PDF and
+browser dependencies, then runs the full verifier. It does not currently have a
+separate preflight job. Fix stale generated maps with
+`python tools/program_map.py --write` and include both generated outputs with
+the source change. The verifier checks these outputs; it never silently
+regenerates them to hide repository drift.
 
 The workflow uses read-only repository permissions, full commit action pins,
 ephemeral hosted runners, no persisted checkout credential, cancellation of
-superseded runs, and a 60-minute job ceiling. It preserves source line endings
+superseded runs, and a 90-minute verification-job ceiling. It preserves source line endings
 because component manifests and approved report templates depend on exact bytes.
-Only verification/dependency summaries are retained, for 14 days; no workspace,
+Verification/dependency summaries and backend JUnit results are retained for
+14 days; no workspace,
 database, browser profile, screenshot bundle or raw server log is uploaded.
 
 The dependency-security workflow checks exact bundled Python versions and npm
@@ -54,8 +62,8 @@ high or critical severity fail its check. The Python gate fails on findings or
 incomplete scans. These checks contact package/advisory services and do not
 establish the safety of the embedded interpreter or every native codec.
 
-Dependabot proposes weekly grouped updates. Review each proposal; automatic
-merging is not enabled. Python updates often require a coordinated refresh of
+Dependabot proposes weekly grouped updates. Review each proposal and its required
+checks; a bot proposal is not approval to merge. Python updates often require a coordinated refresh of
 `requirements-constraints.txt`, `requirements-windows.txt`, both wheelhouses and
 their hash/source manifests. Never weaken the integrity gate to accept an isolated
 version bump. Actions updates must preserve full SHA pins.
@@ -97,8 +105,8 @@ wheelhouses are deliberate inputs to the offline Windows installation and hash
 gate; they are not removed as generic binary clutter. Third-party license notices
 remain with their assets and wheels.
 
-Before creating a release tag, follow [DEVELOPMENT.md](../DEVELOPMENT.md), the
-security gate, and [HOME_VALIDATION.md](../HOME_VALIDATION.md). Match `VERSION`,
+Before creating a release tag, follow [Development](DEVELOPMENT.md), the
+security gate, and [Windows acceptance](WINDOWS_ACCEPTANCE.md). Match `VERSION`,
 `RELEASE.json`, package metadata, filenames and changelog. Publish a candidate as
 a prerelease, include checksums, actual validation evidence and signing status,
 and promote only after acceptance of that exact version. CI does not publish,
@@ -111,19 +119,14 @@ Keep that decision separate from third-party notices already present.
 ## References
 
 - [GitHub Actions secure use](https://docs.github.com/en/actions/reference/security/secure-use)
-- [Workflow dependency lockfiles](https://docs.github.com/en/actions/concepts/security/workflow-dependency-lockfiles)
 - [Actions settings](https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/enabling-features-for-your-repository/managing-github-actions-settings-for-a-repository)
 - [Protected branches](https://docs.github.com/en/repositories/configuring-branches-and-merges-in-your-repository/managing-protected-branches/about-protected-branches)
-
-Full SHA pins are used here. A generated Actions dependency lockfile can be
-evaluated later; it must be generated and verified with GitHub's supported tooling,
-not handwritten as an apparent guarantee of provenance.
-
 
 ## Documentation maintenance
 
 Use the [documentation index](README.md) to find the maintained home for each
 topic. Put dated audits and execution evidence in [history](history/README.md);
-record ongoing work in issues and milestones rather than appending session logs
-to setup or architecture guides. Keep README navigation and packaged copies in
+record ongoing work in the canonical project/module tracker, linking GitHub
+discussion when used. Keep session logs out of setup and architecture guides.
+Keep README navigation and packaged copies in
 sync when adding or moving documentation.

@@ -1,16 +1,18 @@
 """Upgrade safety, relational integrity, explicit result references and query plans."""
 
+from tests.support.qualification import registry_factory, capture_website
+
 import sqlite3
 from contextlib import closing
 
 import pytest
 
-from workbench.migrations import SCHEMA_VERSION
-from workbench.store import Store
-from workbench import migrations
-from schema_helpers import legacy_database
-from test_workbench import app, client, import_rows, ready
-from test_attribution_review import review_app, accept_payload
+from modules.workspace.databases.migrations import SCHEMA_VERSION
+from modules.workspace.components.store import Store
+from modules.workspace.databases import migrations
+from tests.schema_helpers import legacy_database
+from tests.support.workbench import app, client, import_rows, ready
+from modules.attribution.tests.support.attribution_review import review_app, accept_payload
 
 
 @pytest.mark.parametrize("version,review_columns", [(0, False), (1, False), (2, False), (2, True)])
@@ -116,7 +118,7 @@ def test_invalid_writes_fail_and_transaction_remains_unchanged(client, app, sql)
 
 
 def test_composite_foreign_key_rejects_wrong_group_even_after_entity_merge(client, app):
-    from test_workbench import FakeRegistry, observations
+    from tests.support.workbench import FakeRegistry, observations
 
     import_rows(client, app)
     first = client.get("/api/leads").json()[0]
@@ -132,7 +134,7 @@ def test_composite_foreign_key_rejects_wrong_group_even_after_entity_merge(clien
                 {"contact": "support@another.com"},
             )
 
-    app.state.intake.lookup_factory = Other
+    app.state.intake.attribution_factory = registry_factory(Other)
     import_rows(
         client,
         app,

@@ -10,13 +10,13 @@ import pytest
 
 from tools.program_map import analyze
 from tools.check_release import verify
-from workbench.release import load_release, check_output_name
-from workbench.services.reviews import SectionReviewService
-from workbench.reviews.queries import SectionReviewQueries
-from workbench.cases import Cases
-from test_workbench import app, client
-from test_section_validation_050 import prepared
-from test_stabilization_071 import protected_state
+from modules.workspace.components.release import load_release, check_output_name
+from modules.investigations.components.services.reviews import SectionReviewService
+from modules.investigations.components.reviews.queries import SectionReviewQueries
+from modules.investigations.components.cases import Cases
+from tests.support.workbench import app, client
+from modules.investigations.tests.support.section_reviews import prepared
+from tests.support.stabilization import protected_state
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -24,15 +24,15 @@ ROOT = Path(__file__).resolve().parents[1]
 def test_workspace_and_review_queries_do_not_load_command_services():
     code = """
 import sys
-import workbench.workspace
-import workbench.repositories.entities
-import workbench.repositories.reviews
-import workbench.repositories.cases
-import workbench.repositories.sources
-import workbench.reviews.queries
-for module in ('workbench.store', 'workbench.api', 'workbench.cases',
-               'workbench.services.reviews', 'workbench.services.certification',
-               'workbench.services.recovery', 'workbench.report_snapshot'):
+import modules.workspace.components.workspace
+import modules.entities.components.repositories.entities
+import modules.investigations.components.repositories.reviews
+import modules.investigations.components.repositories.cases
+import modules.library.components.repositories.sources
+import modules.investigations.components.reviews.queries
+for module in ('modules.workspace.components.store', 'modules.workspace.components.api', 'modules.investigations.components.cases',
+               'modules.investigations.components.services.reviews', 'modules.investigations.components.services.certification',
+               'modules.investigations.components.services.recovery', 'modules.investigations.components.report_snapshot'):
     assert module not in sys.modules, module
 """
     subprocess.run([sys.executable, "-c", code], cwd=ROOT, check=True)
@@ -42,12 +42,15 @@ def test_lifecycle_cycle_exception_is_removed():
     data = analyze()
     assert data["errors"] == []
     assert data["cycles"] == []
-    assert json.loads((ROOT / "docs/components.json").read_text())["known_cycles"] == []
+    assert (
+        json.loads((ROOT / "docs/components.json").read_text(encoding="utf-8"))["known_cycles"]
+        == []
+    )
 
 
 @pytest.mark.parametrize("action", ["validate", "reopen", "revise"])
 def test_review_action_rolls_back_history_when_case_write_fails(client, app, action):
-    from test_workbench import resolve_observation_scope
+    from tests.support.workbench import resolve_observation_scope
 
     lead = prepared(client, app, validate=action != "validate")
     if action == "validate":
@@ -99,6 +102,8 @@ def test_release_gate_never_promotes_without_version_specific_confirmation(tmp_p
     data = {"schema": 1, "version": "0.7.4", "channel": "unstable", "home_confirmation": None}
     write_release(tmp_path, data)
     assert load_release(tmp_path)["validation_status"] == "awaiting_home_validation"
+    # Release checks also work in an installed layout without npm metadata.
+    assert verify(tmp_path) == load_release(tmp_path)
     data["channel"] = "stable"
     write_release(tmp_path, data)
     with pytest.raises(ValueError, match="explicit home confirmation"):

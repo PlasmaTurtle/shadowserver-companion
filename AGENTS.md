@@ -1,78 +1,60 @@
 # Project maintenance rules
 
-These rules apply to work throughout this repository. Read [DEVELOPMENT.md](DEVELOPMENT.md)
-for commands and [HOME_VALIDATION.md](HOME_VALIDATION.md) for Windows release acceptance.
+These rules apply throughout the repository. Read the complete
+[maintenance and execution policy](docs/DEVELOPMENT.md#maintenance-and-execution-policy)
+and [maintenance workflow](docs/DEVELOPMENT.md#maintenance-workflow) before changing
+source. This file is the agent entrypoint; Development owns shared policy and commands.
 
 ## Before choosing the workflow
 
-At the start of a task, or when its environment changes, establish the relevant
-constraints: exact source revision, available machines and target OS, installed
-tools, network access, connector capabilities, permissions, execution limits and
-cost budget. Reuse verified session facts and existing authorization. Record
-unknowns instead of discovering basic limits through repeated failed runs.
+Establish scope, environment, verification and stop condition; reuse verified
+session facts and authorization. Follow the
+[workflow prerequisites](docs/DEVELOPMENT.md#before-choosing-the-workflow).
 
-Define the intended result, change scope, verification command and stop condition
-before introducing automation. Research unfamiliar approaches using official
-documentation and firsthand engineering reports; adapt them to this project's
-resources. Use the project's workflow within tool permissions and safety controls.
-A plugin's default recipe does not determine the project's architecture.
+## Established implementations and reference behavior
+
+Prefer native capabilities or maintained libraries with thin integration. Compare
+ordinary inputs and actual outputs with an independent working reference before
+building custom machinery. Reevaluate accumulating workarounds; tests are evidence,
+not the definition of success. Apply current user direction and update superseded
+agent-written restrictions. See the complete
+[reference-behavior policy](docs/DEVELOPMENT.md#established-implementations-and-reference-behavior).
 
 ## Where work runs
 
-1. **Do capable work in the current Codex environment first.** Inspect, edit, build,
-   reproduce failures and run valid portable checks here. Do not use hosted CI as
-   the first debugging environment for work that can be done locally.
-2. **Use the connected Windows workstation for native Windows evidence.** Once it
-   is available, run relevant native tests, installer checks and release acceptance
-   there. Valid results for the exact revision are authoritative for the behavior
-   tested, regardless of whether GitHub ran them. Until the workstation is connected,
-   identify Windows-only verification that remains outstanding.
-3. **Paid GitHub Actions usage has a zero budget.** GitHub supplies source control,
-   collaboration and optional verification. Do not enable paid usage, raise spending
-   limits, or select billable runners. Check available included usage and configured
-   triggers before dispatching, retrying or publishing changes that start hosted
-   work automatically. Account for push and pull-request triggers, not just manual
-   runs. Stop hosted execution attempts at an exhausted cap;
-   repeated retries or pushes cannot fix it. Avoid redundant hosted runs, including
-   supported CI skips for documentation-only commits where appropriate.
+Work locally first and use available Windows workstations for native evidence.
+**Paid GitHub Actions usage has a zero budget.** Check all hosted triggers and
+included usage; do not enable paid runs, raise caps or retry exhausted budgets.
+Follow the [execution policy](docs/DEVELOPMENT.md#where-work-runs).
 
 ## How failures are handled
 
-4. **Classify the failure before editing.**
-   - No executed steps: inspect the run annotation, usage cap, runner access and
-     service availability. There is no application-test result yet.
-   - Test-harness failure: repair the fixture, dependency setup or automation boundary.
-   - Application failure: change application behavior only when evidence identifies
-     an application defect.
-
-   Record what is known and what evidence is missing. If the connector cannot expose
-   the needed diagnostic, request that specific diagnostic early. Stop a retry loop
-   when it produces no new evidence; resume after a relevant change or diagnostic.
-
-5. **Preserve a known baseline and make the smallest supported change.** Do not add
-   sharding, unrelated dependency upgrades or workflow redesign while diagnosing
-   an unrelated failure. Keep the full, unsharded verifier as the standard baseline.
-   Separate improvements from repairs so each result can be attributed to a change.
-   Review the final diff against the original request before publishing it.
+Classify infrastructure, harness, application and approach failures before editing.
+Preserve evidence, stop uninformative retries and remove obsolete workarounds.
+Do not introduce unrelated upgrades or sharding during diagnosis. Follow the
+[failure policy](docs/DEVELOPMENT.md#how-failures-are-handled).
 
 ## What counts as validation
 
-6. **Match checks to the change.** Reproduce the affected behavior and run focused
-   checks first. Run the relevant complete suite once for a completed application
-   change set. Repeat it only for changed behavior, a new failure or unresolved
-   evidence. Documentation-only changes need content, link and formatting review,
-   not the application suite.
-7. **Keep reproducible evidence.** Record the revision and any uncommitted changes,
-   operating system, relevant runtime/dependency versions, command, scope, result
-   and skips. Reuse results only while that tested state remains applicable. A
-   skipped job is not a pass; a partial run is not complete verification. A hosted
-   infrastructure failure does not invalidate an otherwise valid local result.
-   Report any repository merge-rule conflict separately; never fabricate a status.
-8. **Make automated tests observable and noninteractive.** Use synthetic workspaces,
-   record or stub interactive UI boundaries, retain test names and logs, and use
-   bounded waits with stack diagnostics. Do not suppress real application behavior
-   merely to accommodate an unattended runner.
+Demonstrate a material, observable improvement to the module's purpose. Passing
+tests alone is not success; test-only repairs are verification debt. Do not weaken
+checks to pass. Use focused checks first, batch compatible smaller issues into one
+final integration/build run, and avoid builds for prose-only changes. Retain actual
+results and limits under the [validation policy](docs/DEVELOPMENT.md#what-counts-as-validation)
+and [verification matrix](docs/DEVELOPMENT.md#maintenance-workflow).
 
-A successful launch, a complete regression run and exact-version Windows release
-acceptance establish different things. Report each accurately. Preserve the
-existing release-identity, evidence-integrity and workstation-acceptance gates.
+## Source ownership
+
+Follow [module ownership](docs/ARCHITECTURE.md#module-ownership-and-source-layout).
+Keep implementation, tests, assets and interfaces with their owner, contracts in
+the module guide and status in one canonical issue. Global interfaces need explicit
+consumers and dependency direction; do not create unstructured helper collections.
+Use consistent composition/lifecycle contracts and compare simpler alternatives.
+
+Reusable runtime tools belong in `modules/tools/`; callers own workflow, UI and
+persistence. Root `tools/` and module `tools/` hold developer commands. Follow the
+[tool input/output contract](modules/tools/docs/README.md#boundary-and-public-interface)
+and [reuse audit](modules/tools/docs/TOOL_AUDIT.md). Compare inputs, results, failures
+and real callers before extraction; remove superseded implementations in the same
+migration. Relocation must not silently change saved data, schemas, approved wording
+or business behavior.

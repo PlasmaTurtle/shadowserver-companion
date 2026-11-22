@@ -46,8 +46,9 @@ def security_suites(root: Path) -> list[str]:
     return sorted(
         {
             path.relative_to(root).as_posix()
+            for folder in (root / "tests", *sorted((root / "modules").glob("*/tests")))
             for pattern in SUITE_PATTERNS
-            for path in (root / "tests").glob(pattern)
+            for path in folder.glob(pattern)
             if path.is_file() and not path.is_symlink()
         }
     )
@@ -66,7 +67,7 @@ def main():
     env = dict(os.environ)
     env.pop("WORKBENCH_PREVIEW", None)
     env["PYTHONPATH"] = os.pathsep.join(
-        [str(ROOT), str(ROOT / "tests"), str(ROOT / "components/attribution/src")]
+        [str(ROOT), str(ROOT / "modules/attribution/components/engine/src")]
     )
     commands = [
         (
@@ -95,7 +96,7 @@ def main():
             break
     passed = len(results) == len(commands) and all(r["exit_code"] == 0 for r in results)
     report = {
-        "release": (ROOT / "VERSION").read_text().strip(),
+        "release": (ROOT / "VERSION").read_text(encoding="utf-8").strip(),
         "checked_at": datetime.now(timezone.utc).isoformat(),
         "passed": passed,
         "checks": results,
@@ -103,7 +104,9 @@ def main():
         "native_windows_acceptance": False,
         "scope": "Exact Python dependency advisories and targeted Python security/citation regressions, including session, capture, import and restore boundaries; run tools/verify.py separately for full regressions and browser acceptance.",
     }
-    (output / "security-gate.json").write_text(json.dumps(report, indent=2) + "\n")
+    (output / "security-gate.json").write_text(
+        json.dumps(report, indent=2) + "\n", encoding="utf-8"
+    )
     return 0 if passed else 1
 
 

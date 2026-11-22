@@ -84,13 +84,15 @@ Use the section buttons at the top of **Settings** to reach **Profile**, **Juris
 
 Under **Review & import defaults**, review **Outreach scope**. **Critical or known exploited** is the default. **Targeted outreach** requires a reason for the deliberate change in scope. Priority cities and products affect urgency; they do not bypass intake requirements. Use **Appearance, branding & display** for workspace appearance, report branding, and display time zone.
 
-Choose **Save settings** for profile and preference edits, and confirm **No unsaved changes**. API keys, the retrieval schedule, and maintenance actions have their own controls. Automation also shows whether Library daily reference updates are enabled and links to their separate controls. Unsaved changes are protected when you navigate away or open setup. Your office describes where you work; **Jurisdiction** controls the report scope.
+Choose **Save settings** for profile and preference edits, and confirm **Settings saved**. If a field needs correction inside a closed section, that section opens and the field receives focus. API keys, the retrieval schedule, and maintenance actions have their own controls. Automation also shows whether Library daily reference updates are enabled and links to their separate controls. Unsaved changes are protected when you navigate away or open setup. Your office describes where you work; **Jurisdiction** controls the report scope.
+
+An entered NVD key remains unsaved until you choose **Save NVD key**. New input entered while an earlier save is running stays in the form. **Clear entry** discards the entered text while keeping the saved connection; **Remove key** removes the saved credential. The header appearance shortcut saves only the theme and preserves your other preferences.
 
 Sender and entity details are saved with a report. Changing Settings or an entity later does not silently rewrite that report. Review and adopt the update in the affected draft when appropriate.
 
 ### Prepare your references and connections
 
-If no NVD key is configured, add one in **Settings → API connections** before choosing **Download catalog** in Library. Allow **10 GiB free** for the first download. Check CVE catalog status and **Local intelligence · CVSS, EPSS & KEV** separately. File imports do not require a Shadowserver API key; API acquisition requires your subscription credentials.
+Choose **Download catalog** in Library to load the public NVD feeds. An NVD key is optional for normal downloads and updates; adding one in **Settings → API connections** permits faster API updates. Allow **10 GiB free** for the first download. Check CVE catalog status and **Local intelligence · CVSS, EPSS & KEV** separately. File imports do not require a Shadowserver API key; API acquisition requires your subscription credentials.
 
 Saved records and downloaded references remain available locally. External lookups, new downloads, and feed updates need connectivity. A partially downloaded or stale catalog is not complete current coverage.
 
@@ -111,9 +113,9 @@ Start each day in **Workspace**. Review leads, active investigations, follow-ups
 
 ### Understand Accretion
 
-Accretion is the intake process: **Filter → Qualify → Urgency → Associate**. It checks eligibility and jurisdiction, examines identity and evidence, assigns outreach priority, and links retained records to the appropriate work.
+Accretion is a funnel: **Filter → Qualify → Evaluate → Associate**. Filter checks supported findings and jurisdiction. Qualify requires authoritative IP/domain attribution and a functioning related website with a retained screenshot; a working login page counts. Evaluate ranks the qualified lead, then Associate publishes it and queues contact discovery. Groups awaiting review or retry stay outside active Leads until qualification completes. Retained source records remain available even when they do not pass.
 
-Some observations remain as context without becoming leads. **Settings → How rows qualify** explains required fields, jurisdiction, supported critical or locally verified KEV findings, and report-dependent version requirements. **Dark Matter** describes retained observations without exact approved findings. Missing historical qualification is shown as unavailable; it is neither approval nor rejection. Approval of one condition does not approve every other condition from that source.
+Some observations remain as context without becoming leads. **Settings → How rows qualify** explains required fields, jurisdiction, supported critical or locally verified KEV findings, and report-dependent version requirements. **Dark Matter** keeps complete source rows and their recorded outcomes, including malformed and excluded rows. A retained row is not itself approval for outreach. Approval of one condition does not approve every other condition from that source.
 
 Reimporting the same source does not create extra density. Genuine later sightings extend history. If settings change, use **Re-evaluate import** deliberately to apply current rules to an earlier import; changing Settings alone does not reprocess it.
 
@@ -415,21 +417,43 @@ Review **Local intelligence · CVSS, EPSS & KEV** separately. **Sync EPSS & KEV*
 
 ### Answer a specific research question
 
+Use the Library search to find CVEs, products and explainer titles together. Results
+are grouped by type; an unavailable catalog does not hide available explanation
+text. Select a result to continue in its detailed view.
+
 In **CVEs**, use **Search CVEs** with an identifier, product, or description. Open a result to read CVSS assessments, known exploitation, EPSS probability and percentile, dates, references, and **Source record**. **Open NVD record** opens the public source; **See observed connections** connects the reference to locally retained observations.
 
 In **Products**, use **Find a product** and **Search products**. Choose an **Outreach scope**, then **Compare a reported version → Compare**. Read affected ranges and platform or configuration conditions. A version comparison is evidence to assess, not a substitute for confirming the recipient's installation.
 
 **Fields → Field explorer** groups CVEs by a selected data field. Categories can overlap. **Changes → Catalog changes** shows changes captured by local updates; it is not every revision ever published upstream.
 
+From a catalog change, review affected work to compare the current local reference
+with the older source selected in an active notification. Include completed work
+when needed. Missing comparable source data is shown as unknown. Opening this
+review never changes a draft or a certified report; adopt a replacement deliberately
+in Investigations. CVE details also bring dates, source identity, severity and
+EPSS/KEV context together for review, with links to the underlying source record.
+
+Name a selection under **Saved views** to reopen the same filters later. Rename
+or remove views as needed. Views belong to the workspace and travel with its
+backup; earlier browser-local views are imported without overwriting later edits.
+
 ### Revisit retained observations
 
-**Dark Matter → Intake history** lets you search observations without exact approved findings. Review **Qualification context** and the original report. Historical qualification marked unavailable is not an approval or a rejection. Historical ownership and today's association can differ.
+**Dark Matter** lets you search complete retained report rows, including malformed and out-of-scope observations. Select a field and operator, and choose **Original** or **Normalized** values. Open a record to inspect all fields, normalization diagnostics and its outcome history; the original report remains the source evidence. Archive retention does not establish qualification or current ownership.
 
 ### Maintain reusable text
 
 Choose **New explainer** or **Edit explanation**. Enter the title, explanation, and source URLs, then **Save explainer**. Use **Source citations · publisher, title and dates** for accurate metadata; leave unavailable dates blank.
 
-A report keeps its saved wording until you deliberately adopt a newer revision. Editing an explainer does not rewrite certified reports. **Saved views → Save this view** keeps a catalog selection for reuse in that browser; these preferences are not guaranteed to travel with a workspace backup.
+A report keeps its saved wording until you deliberately adopt a newer revision.
+Editing an explainer does not rewrite certified reports. Compare retained revisions,
+review current case usage, and restore old wording as a new revision. Archive
+obsolete explainers to hide them from new selections; they remain available in
+history and existing case snapshots. Labels distinguish bundled starting text,
+locally edited bundled text and analyst-created text. If another window saved first,
+your draft remains available for comparison and explicit rebasing. History begins
+with the wording retained at upgrade; earlier overwritten revisions cannot be recovered.
 
 ## 14 Protect your work and end the day
 
@@ -451,7 +475,7 @@ Open **Settings → Software → Software updates**. **What’s new** displays t
 
 Choose **Check for updates** to look for a compatible release. Read the result: a connection failure or an unavailable release is not confirmation that you have the newest software. When an update is available, review its changes and choose **Download update**. Downloading alone does not install it.
 
-Save your work and let background operations finish. Choose **Install and restart**, review the confirmation, and confirm when ready. The installed Windows application verifies the downloaded installer, closes for installation, and reopens afterward. Your workspace is retained. If installation reports an error, follow that message and reopen the application after resolving it.
+Save your work and let background operations finish. Choose **Install and restart**, review the confirmation, and confirm when ready. If the available installer changes after that review, the app asks you to review it again. The installed Windows application verifies the downloaded installer, closes for installation, and reopens afterward. Your workspace is retained. If installation reports an error, follow that message and reopen the application after resolving it.
 
 Running a newer installer directly also preserves working data with its default retention choice. Keep that choice when you intend to continue your workspace. Uninstall removes the application's own runtime and retains working data; it does not require you to delete a separate Python installation. Starting fresh in the installer or deleting data from Settings is a separate, deliberate choice.
 
@@ -461,7 +485,7 @@ Running a newer installer directly also preserves working data with its default 
 2. A normal restore first retains the current workspace in a verified restore point. The import is a replacement, not a merge.
 3. Close both browser and console, then reopen to apply it. Before restart, **Cancel pending change** keeps the current records instead.
 
-Invalid imports leave current data untouched. The advanced **Replace without saving a current restore point** option does not preserve a new restore point of damaged current data. If the app cannot open, follow **Recovery when the app cannot open** and `docs/DATA_MANAGEMENT.md`; that offline workflow preserves the entire previous workspace. Do not delete database files manually. **Delete all data** is a deliberate reset that also removes managed restore points after restart.
+Invalid imports leave current data untouched. The advanced **Replace without saving a current restore point** option does not preserve a new restore point of damaged current data. If the app cannot open, follow **Recovery when the app cannot open** and [the offline recovery guide](../modules/workspace/docs/DATA_MANAGEMENT.md#recovery-before-the-app-can-start); that offline workflow preserves the entire previous workspace. Do not delete database files manually. **Delete all data** is a deliberate reset that also removes managed restore points after restart.
 
 ### Check health and use targeted maintenance
 
@@ -526,3 +550,29 @@ Start with the status shown in the app and the record involved. A failed view, i
 | Package files are missing | Use the documented backup recovery workflow. Import replaces the workspace, so preserve current work first. A database entry alone is not an intact package. |
 
 If the issue remains, note the exact action, visible message, affected record, and whether the work was saved. Use **Export diagnostic summary** when useful. Retain the original evidence and describe the actual failure rather than repeating the action without checking its result.
+
+## Support and troubleshooting
+
+Start with [Solve common problems](#16-solve-common-problems),
+[backup and recovery guide](../modules/workspace/docs/DATA_MANAGEMENT.md), and
+[Windows acceptance checklist](WINDOWS_ACCEPTANCE.md). Developers should use
+[Development](DEVELOPMENT.md) for setup and verification commands.
+
+For a reproducible application defect, open a
+[bug report](https://github.com/PlasmaTurtle/shadowserver-companion/issues/new?template=bug_report.yml).
+Include the exact application version, Windows version, whether you used the
+installer or source checkout, steps using synthetic data, and the expected and
+actual behavior. State whether the problem reproduces in a separate synthetic
+workspace. Do not delete or modify working evidence to investigate a defect.
+
+For a proposed improvement, open a
+[feature request](https://github.com/PlasmaTurtle/shadowserver-companion/issues/new?template=feature_request.yml)
+and describe the workflow and desired outcome.
+
+Do not attach real reports, databases, evidence, workspace backups, API credentials,
+launcher/session URLs, or identifiable contact information. Redact diagnostic
+excerpts and use fictional examples. Follow [SECURITY.md](../SECURITY.md) for suspected
+vulnerabilities; ordinary issue reports are not a confidential reporting channel.
+
+Issues track application work. They do not establish an organization's identity,
+validate an exposure, or replace an analyst's review of notification evidence.

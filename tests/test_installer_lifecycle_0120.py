@@ -6,7 +6,9 @@ from pathlib import Path
 
 import pytest
 
-from test_upgrade_cleanup_072 import digest, installation, inventory, upgrade, write_files
+from tests.filesystem_helpers import create_test_symlink
+
+from tests.support.installation import digest, installation, inventory, upgrade, write_files
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -86,7 +88,7 @@ def test_repair_respects_edition_and_downgrade_even_without_inventory(
     inventory(staged, {"app/RELEASE.json": b"new"})
     with pytest.raises(upgrade.UpgradeError, match=match):
         upgrade.cleanup(root, staged)
-    assert json.loads((root / "app/RELEASE.json").read_text()) == release
+    assert json.loads((root / "app/RELEASE.json").read_text(encoding="utf-8")) == release
 
 
 def test_unknown_runtime_code_is_retained_and_preflight_does_not_partially_clean(
@@ -116,7 +118,10 @@ def test_uninstall_removes_generated_caches_without_local_inventory_or_runtime(t
     }
     write_files(root, files)
     embedded = tmp_path / "embedded.json"
-    inventory(embedded, {"app/workbench/api.py": b"code", "runtime/python.exe": b"runtime"})
+    inventory(
+        embedded,
+        {"app/modules/workspace/components/api.py": b"code", "runtime/python.exe": b"runtime"},
+    )
     removed = upgrade.uninstall(root, embedded)
     assert len(removed) == 2
     for name in removed:
@@ -133,7 +138,7 @@ def test_cache_link_fails_before_any_cache_is_removed(tmp_path):
     first.write_bytes(b"cache")
     outside = tmp_path / "outside"
     outside.write_bytes(b"protected")
-    (cache / "linked.cpython-314.pyc").symlink_to(outside)
+    create_test_symlink(cache / "linked.cpython-314.pyc", outside)
     with pytest.raises(upgrade.UpgradeError, match="Linked/reparse"):
         upgrade.uninstall(root, staged)
     assert first.exists() and outside.read_bytes() == b"protected"
@@ -155,7 +160,7 @@ def test_task_removal_uses_staged_adapter_and_only_matching_workspace(tmp_path, 
     monkeypatch.setenv("LOCALAPPDATA", str(local))
     embedded = tmp_path / "embedded.json"
     inventory(embedded, {"runtime/python.exe": b"runtime"})
-    metadata = json.loads(embedded.read_text())
+    metadata = json.loads(embedded.read_text(encoding="utf-8"))
     metadata["release"] = {"edition": "chaos", "variant": "dark_matter"}
     embedded.write_text(json.dumps(metadata))
     calls = []
@@ -194,15 +199,19 @@ def test_static_uninstall_inventory_aborts_before_directory_or_registry_cleanup(
         < script.index("SetErrorLevel 5")
         < script.index("RMDir")
     )
-    installer = (ROOT / "tools/windows_installer/installer.nsi").read_text()
-    assert installer.index('!include "${UNINSTALL_INVENTORY}"') < installer.index(
-        'DeleteRegKey HKCU "${UNKEY}"'
+    installer = (ROOT / "tools/windows_installer/installer.nsi").read_text(encoding="utf-8")
+    uninstall = installer.split('Section "Uninstall"', 1)[1]
+    assert (
+        uninstall.index('!include "${UNINSTALL_INVENTORY}"')
+        < uninstall.index('StrCpy $5 "${KEY}"')
+        < uninstall.index('DeleteRegKey HKCU "$5"')
+        < uninstall.index('Delete "$INSTDIR\\Uninstall.exe"')
     )
 
 
 def test_installer_maintenance_and_update_paths_do_not_depend_on_old_runtime():
-    script = (ROOT / "tools/windows_installer/installer.nsi").read_text()
-    assert 'File "${PAYLOAD}/runtime/*.*"' in script
+    script = (ROOT / "tools/windows_installer/installer.nsi").read_text(encoding="utf-8")
+    assert 'File "${PAYLOAD}\\runtime\\*.*"' in script
     assert '"$PLUGINSDIR\\maintenance-runtime\\python.exe" -I -S -B' in script
     assert '"$INSTDIR\\runtime\\python.exe" -I -S -B' not in script
     assert 'StrCpy $UpdateRequested "yes"' in script

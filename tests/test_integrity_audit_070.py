@@ -2,7 +2,7 @@
 
 import hashlib
 import json
-from workbench.source_capture import capture_sources
+from modules.investigations.components.source_capture import capture_sources
 
 
 def test_failed_cve_response_keeps_metadata_without_reusing_body(tmp_path):

@@ -49,7 +49,7 @@ and manual attachment remains available.
 
 ## Security and stability
 
-See [the audit](../reviews/AUDIT_0985.md) and [executed validation](../../../VALIDATION.md).
+See [the audit](../reviews/AUDIT_0985.md) and [executed validation](../validation/VALIDATION_0120.md).
 The pass adds input byte ceilings before parsing, recorded preview integrity
 checks, off-event-loop image decoding, bounded capture processes and complete
 worker cleanup even on abnormal lifespan exit. It keeps all existing local

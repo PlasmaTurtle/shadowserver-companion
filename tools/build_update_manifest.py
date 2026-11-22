@@ -13,8 +13,12 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from workbench.release import installation_identity, load_release
-from workbench.software_updates import bundled_notes, MAX_INSTALLER, validate_installer_name
+from modules.workspace.components.release import installation_identity, load_release
+from modules.settings.components.software_updates import (
+    bundled_notes,
+    MAX_INSTALLER,
+    validate_installer_name,
+)
 
 
 def build_manifest(installer, output, *, root=ROOT):

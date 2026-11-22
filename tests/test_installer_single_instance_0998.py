@@ -17,7 +17,7 @@ def block(script, declaration, terminator):
 
 
 def test_duplicate_wizard_guard_precedes_both_setup_and_removal_ui():
-    script = INSTALLER.read_text()
+    script = INSTALLER.read_text(encoding="utf-8")
     assert '!define SETUP_INSTANCE_MUTEX "Local\\${APP_ID}.Setup.Instance"' in script
     guard = block(script, "!macro AcquireSetupInstance", "!macroend")
     assert 'CreateMutexW(p 0, i 0, w "${SETUP_INSTANCE_MUTEX}") p.r0 ?e' in guard
@@ -36,7 +36,7 @@ def test_duplicate_wizard_guard_precedes_both_setup_and_removal_ui():
 
 
 def test_wizard_lifetime_and_file_mutation_guards_are_independent():
-    script = INSTALLER.read_text()
+    script = INSTALLER.read_text(encoding="utf-8")
     assert "${APP_ID}.Installed.StartInstall" in script
     for declaration in ('Section "${APP}" SEC_MAIN', 'Section "Uninstall"'):
         section = block(script, declaration, "SectionEnd")
@@ -57,7 +57,7 @@ def test_wizard_lifetime_and_file_mutation_guards_are_independent():
 
 
 def test_duplicate_launch_targets_the_marked_window_without_opening_another_dialog():
-    script = INSTALLER.read_text()
+    script = INSTALLER.read_text(encoding="utf-8")
     focus = block(script, "!macro FocusExistingSetup", "!macroend")
     assert 'GetPropW(p r3, w "${SETUP_WINDOW_PROPERTY}")' in focus
     assert "IsIconic" in focus and "ShowWindow(p r3, i 9)" in focus
@@ -91,6 +91,8 @@ def test_installer_compiles_with_smoke_payload(tmp_path):
     inventory = tmp_path / "uninstall.nsh"
     inventory.write_text('Delete "$INSTDIR\\payload-manifest.json"\n')
     output = tmp_path / "smoke-installer.exe"
+    bootstrap = tmp_path / "compiler-only-bootstrap.exe"
+    bootstrap.write_bytes(b"compiler-only bootstrap placeholder")
     definitions = {
         "PAYLOAD": payload,
         "OUTPUT": output,
@@ -103,9 +105,11 @@ def test_installer_compiles_with_smoke_payload(tmp_path):
         "DEMO_NAME": "Shadowserver Eclipse Demo",
         "RELEASE_NOTICE": "Compiler validation fixture",
         "UNINSTALL_INVENTORY": inventory,
+        "BOOTSTRAP_SOURCE": bootstrap,
+        "BOOTSTRAP_NAME": "launch-" + "0" * 64 + ".exe",
     }
     flag = "/" if os.name == "nt" else "-"
-    subprocess.run(
+    result = subprocess.run(
         [
             shutil.which("makensis"),
             flag + "WX",
@@ -113,9 +117,10 @@ def test_installer_compiles_with_smoke_payload(tmp_path):
             *[flag + "D" + key + "=" + str(value) for key, value in definitions.items()],
             str(INSTALLER),
         ],
-        check=True,
         capture_output=True,
         text=True,
         timeout=60,
+        cwd=INSTALLER.parent,
     )
+    assert result.returncode == 0, result.stdout + result.stderr
     assert output.is_file() and output.stat().st_size > 0

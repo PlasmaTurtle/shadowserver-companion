@@ -12,32 +12,23 @@ import socket
 import sys
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path[:0] = [str(ROOT), str(ROOT / "components" / "attribution" / "src")]
+sys.path[:0] = [str(ROOT)]
+
+from tests.fixture_paths import configure_fixture_imports
+
+configure_fixture_imports(ROOT)
+
+from tests.browser_fixture_support import configure_browser_fixture, prepare_browser_fixture
+
+configure_browser_fixture()
 
 import uvicorn
-from workbench.api import create_app
-from workbench.shadowserver_reports import SignedTransport
-from workbench.shadowserver_reports.demo import _Opener, _Response, _SyntheticService
+from modules.workspace.components.api import create_app
+from modules.accretion.components.shadowserver_reports import SignedTransport
+from modules.accretion.components.shadowserver_reports.demo import _Opener
 
 
-class SetupService(_SyntheticService):
-    """The real signer/client sees state, national and unclassified selections."""
-
-    def api_open(self, request, timeout):
-        response = super().api_open(request, timeout)
-        endpoint = request.full_url.removeprefix("https://transform.shadowserver.org/api2/")
-        if endpoint == "reports/subscribed":
-            return _Response(
-                json.dumps(["US-NC", "US-SC", "united-states", "agency-custom"]).encode(),
-                "application/json",
-            )
-        if endpoint == "reports/list":
-            rows = json.loads(response.read())
-            for row in rows:
-                row["report"] = "US-NC"
-                row["file"] = "2026-11-06-US-NC-scan_http_vulnerable.csv"
-            return _Response(json.dumps(rows).encode(), "application/json")
-        return response
+from modules.settings.tests.support.setup import SetupService
 
 
 def main():
@@ -59,6 +50,7 @@ def main():
     with socket.socket() as sock:
         sock.bind(("127.0.0.1", 0))
         base = "http://127.0.0.1:" + str(sock.getsockname()[1])
+        prepare_browser_fixture(app, args.workspace, base, established=False)
         metadata = {
             "base": base,
             "launch_url": base + "/#launch=" + app.state.sessions.issue_launch(),

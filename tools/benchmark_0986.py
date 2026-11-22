@@ -39,11 +39,11 @@ args = parser.parse_args()
 if not 1 <= args.groups <= 20000 or not 1 <= args.repeats <= 9:
     parser.error("Invalid fixture size or repetition count")
 sys.path.insert(0, str(args.root.resolve()))
-sys.path.insert(0, str(args.root.resolve() / "components/attribution/src"))
-from workbench.api import create_app
-from workbench.store import Store
-from workbench.lead_queue import association, LeadQueue
-from workbench.services.case_queries import list_cases
+sys.path.insert(0, str(args.root.resolve() / "modules/attribution/components/engine/src"))
+from modules.workspace.components.api import create_app
+from modules.workspace.components.store import Store
+from modules.leads.components.lead_queue import association, LeadQueue
+from modules.investigations.components.services.case_queries import list_cases
 from fastapi.testclient import TestClient
 
 STAMP = "2099-01-01T12:00:00Z"
@@ -75,7 +75,7 @@ def fields(index, offset):
 def seed(folder):
     marker = folder / ".performance-fixture"
     if (folder / "workbench.sqlite3").exists():
-        if not marker.is_file() or json.loads(marker.read_text()) != {
+        if not marker.is_file() or json.loads(marker.read_text(encoding="utf-8")) != {
             "groups": args.groups,
             "entries_per_group": PER_GROUP,
         }:
@@ -84,7 +84,7 @@ def seed(folder):
     folder.mkdir(parents=True, exist_ok=True)
     store = Store(folder)
     original = store.path("originals/" + SOURCE)
-    with original.open("w", newline="") as handle:
+    with original.open("w", newline="", encoding="utf-8") as handle:
         writer = csv.DictWriter(handle, fieldnames=list(fields(0, 0)))
         writer.writeheader()
         for index in range(args.groups):
@@ -205,7 +205,9 @@ def seed(folder):
                 ),
             )
         assert not db.execute("PRAGMA foreign_key_check").fetchall()
-    marker.write_text(encoded({"groups": args.groups, "entries_per_group": PER_GROUP}))
+    marker.write_text(
+        encoded({"groups": args.groups, "entries_per_group": PER_GROUP}), encoding="utf-8"
+    )
 
 
 def logical_digest(store):
@@ -359,7 +361,7 @@ with patch.object(socket.socket, "connect", denied), patch("socket.create_connec
             )
 assert logical_digest(store) == before, "A read operation modified saved rows"
 result = {
-    "version": (args.root / "VERSION").read_text().strip(),
+    "version": (args.root / "VERSION").read_text(encoding="utf-8").strip(),
     "groups": args.groups,
     "observations": args.groups * PER_GROUP,
     "repetitions": args.repeats,
@@ -388,14 +390,14 @@ result = {
 result["production_code_sha256"] = {
     name: hashlib.sha256((args.root / name).read_bytes()).hexdigest()
     for name in (
-        "workbench/lead_queue.py",
-        "workbench/intelligence_index.py",
-        "workbench/workspace_queue.py",
-        "workbench/migrations.py",
+        "modules/leads/components/lead_queue.py",
+        "modules/library/components/intelligence_index.py",
+        "modules/workspace/components/workspace_queue.py",
+        "modules/workspace/databases/migrations.py",
     )
 }
 result["limits"].append(
     "Optional traced Python heap measures allocations during one separate call, not native SQLite allocations or total RSS."
 )
 args.output.parent.mkdir(parents=True, exist_ok=True)
-args.output.write_text(json.dumps(result, indent=2) + "\n")
+args.output.write_text(json.dumps(result, indent=2) + "\n", encoding="utf-8")

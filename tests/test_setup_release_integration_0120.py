@@ -2,12 +2,12 @@
 
 import json
 
-from session_helpers import TestClient
-from setup_release_browser_fixture import SetupService as SyntheticReports
-from test_api_acquisition_098 import finished
-from workbench.api import create_app
-from workbench.shadowserver_reports import SignedTransport
-from workbench.shadowserver_reports.demo import _Opener
+from tests.session_helpers import TestClient
+from modules.settings.tests.support.setup import SetupService as SyntheticReports
+from modules.accretion.tests.support.api_acquisition import finished
+from modules.workspace.components.api import create_app
+from modules.accretion.components.shadowserver_reports import SignedTransport
+from modules.accretion.components.shadowserver_reports.demo import _Opener
 
 
 def make_app(workspace, remote):

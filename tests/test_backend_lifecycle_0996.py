@@ -7,9 +7,9 @@ from types import SimpleNamespace
 
 import pytest
 
-from workbench.api import create_app
-from workbench.cve_catalog import credentials
-from workbench.cve_catalog.credentials import NVDKeys
+from modules.workspace.components.api import create_app
+from modules.library.components.cve_catalog import credentials
+from modules.library.components.cve_catalog.credentials import NVDKeys
 
 
 OLD_KEY = "00000000-0000-4000-8000-000000000001"

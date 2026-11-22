@@ -1,19 +1,21 @@
 """Snapshot consistency and atomic publication across the extracted repositories."""
 
+from tests.support.qualification import registry_factory, capture_website
+
 import json
 import sqlite3
 
 import pytest
 
-from workbench.cases import Cases
-from workbench.repositories.records import Records
-from workbench.repositories.sources import SourceRepository
-from workbench.services.entities import EntityService
-from workbench.store import Store
-from workbench.intelligence import acquisition, service
-from test_workbench import app, client, import_rows, observations, FakeRegistry
-from test_cases import opened, certified, attempt
-from test_cve_sources_040 import ID, nvd, response
+from modules.investigations.components.cases import Cases
+from modules.workspace.components.repositories.records import Records
+from modules.library.components.repositories.sources import SourceRepository
+from modules.entities.components.services.entities import EntityService
+from modules.workspace.components.store import Store
+from modules.library.components.intelligence import acquisition, service
+from tests.support.workbench import app, client, import_rows, observations, FakeRegistry
+from modules.investigations.tests.support.cases import opened, certified, attempt
+from modules.library.tests.support.cve_sources import ID, nvd, response
 
 
 def database_state(store):
@@ -97,7 +99,7 @@ def test_entity_command_rolls_back_all_related_writes(client, app, monkeypatch, 
                     {"contact": "support@another.com"},
                 )
 
-        app.state.intake.lookup_factory = Other
+        app.state.intake.attribution_factory = registry_factory(Other)
         import_rows(
             client,
             app,
@@ -222,8 +224,10 @@ def test_repositories_cannot_commit_and_extracted_commands_cannot_execute_sql():
     from pathlib import Path
 
     root = Path(__file__).resolve().parents[1]
-    for path in (root / "workbench/repositories").glob("*.py"):
-        tree = ast.parse(path.read_text())
+    repositories = list((root / "modules").glob("*/components/repositories/*.py"))
+    assert repositories
+    for path in repositories:
+        tree = ast.parse(path.read_text(encoding="utf-8"))
         forbidden = [
             node.func.attr
             for node in ast.walk(tree)
@@ -233,13 +237,13 @@ def test_repositories_cannot_commit_and_extracted_commands_cannot_execute_sql():
         ]
         assert not forbidden, (path.name, forbidden)
     for name in (
-        "cases.py",
-        "services/entities.py",
-        "services/case_queries.py",
-        "intelligence/acquisition.py",
-        "intelligence/service.py",
+        "investigations/components/cases.py",
+        "entities/components/services/entities.py",
+        "investigations/components/services/case_queries.py",
+        "library/components/intelligence/acquisition.py",
+        "library/components/intelligence/service.py",
     ):
-        tree = ast.parse((root / "workbench" / name).read_text())
+        tree = ast.parse((root / "modules" / name).read_text(encoding="utf-8"))
         assert not any(
             isinstance(node, ast.Call)
             and isinstance(node.func, ast.Attribute)

@@ -7,9 +7,12 @@ passed the same checks. A completed item or test result applies only to the
 version and environment recorded in that document.
 
 Start with the [current documentation](../README.md) for supported behavior and
-working guidance. Use [current validation](../../VALIDATION.md) and the
-[Windows acceptance checklist](../../HOME_VALIDATION.md) for release readiness.
-The [changelog](../../CHANGELOG.md) provides the chronological product summary.
+working guidance. Use [candidate build evidence](validation/VALIDATION_0120.md),
+[the module-reorganization record](validation/module-reorganization-validation.md) and the
+[Windows acceptance checklist](../WINDOWS_ACCEPTANCE.md) to distinguish recorded
+checks from outstanding release acceptance.
+The [root changelog](../../CHANGELOG.md) retains current and recent releases;
+the [earlier changelog](releases/CHANGELOG_PRE_0.11.md) preserves entries before 0.11.
 
 Historical content is retained so decisions and limits remain inspectable.
 Source-specific handling notices, including TLP markings, continue to apply.
@@ -20,6 +23,7 @@ current guide and create a new dated record when evidence needs preserving.
 
 Version-specific feature and implementation notes.
 
+- [Changelog before 0.11](releases/CHANGELOG_PRE_0.11.md): consolidated chronological entries for 0.10.1 and earlier.
 - [Shadowserver Companion 0.9.5 · UNSTABLE](releases/RELEASE_095.md)
 - [Shadowserver Companion 0.9.6 - Report explainers](releases/RELEASE_096.md)
 - [Shadowserver Companion 0.9.7 — Contact discovery](releases/RELEASE_097.md)
@@ -42,7 +46,7 @@ Version-specific feature and implementation notes.
 
 ## Validation records
 
-Recorded checks, environments and limits for earlier versions.
+Recorded checks, environments and limits for specific source states.
 
 - [Shadowserver Companion 0.9.0 · UNSTABLE](validation/VALIDATION_090.md)
 - [Validation · Shadowserver Companion 0.9.5 · UNSTABLE](validation/VALIDATION_095.md)
@@ -53,6 +57,10 @@ Recorded checks, environments and limits for earlier versions.
 - [Shadowserver Eclipse 0.10.0 Entity Map validation](validation/VALIDATION_0100.md)
 - [Shadowserver Eclipse 0.10.1 Analyst Workflow validation](validation/VALIDATION_0101.md)
 - [Validation — 0.11.0 Workspace Evolution](validation/VALIDATION_0110.md)
+- [Validation — 0.12.0 Guided Setup, November 14 candidate](validation/VALIDATION_0120.md)
+- [Module reorganization validation](validation/module-reorganization-validation.md)
+- [Maintenance validation — November 21, 2026](validation/maintenance-2026-11-21.md)
+- [Full build validation — November 21, 2026](validation/full-build-2026-11-21.md): candidate evidence and unresolved full-run validation findings.
 
 ## Audits and reviews
 
@@ -76,5 +84,5 @@ Versioned workflow, map, data and reporting decisions.
 - [Analyst workday review — 0.10.1](design/ANALYST_WORKFLOW_0101.md)
 - [Observatory entity map release contract](design/OBSERVATORY_ENTITY_MAP_0100.md)
 - [Shadowserver Companion v0.7.0 — Release Requirements](design/REPORT_REQUIREMENTS_070.md)
+- [0.9.8 requirements proposal](design/REQUIREMENTS_098.html)
 - [Workspace Evolution — 0.11.0 implementation record](design/WORKSPACE_EVOLUTION_0110.md)
-

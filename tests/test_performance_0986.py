@@ -6,14 +6,14 @@ import sqlite3
 
 import pytest
 
-from test_workbench import app, client, observations
-from test_lead_queue_098 import queue_import
-from workbench.cases import Cases
-from workbench.lead_queue import LeadQueue, association
-from workbench.intelligence_index import decorate_rows
-from workbench.store import Store
-from workbench.awareness import digest, link_asset
-from workbench.ownership import ensure_asset
+from tests.support.workbench import app, client, observations
+from modules.leads.tests.support.lead_queue import queue_import
+from modules.investigations.components.cases import Cases
+from modules.leads.components.lead_queue import LeadQueue, association
+from modules.library.components.intelligence_index import decorate_rows
+from modules.workspace.components.store import Store
+from modules.accretion.components.awareness import digest, link_asset
+from modules.entities.components.ownership import ensure_asset
 
 
 @pytest.mark.parametrize("stored_status", ["pending", "deferred", "dismissed"])
@@ -58,7 +58,7 @@ def test_pending_observation_beyond_batch_boundary_is_not_lost(client, app):
 
 
 def test_filtered_intelligence_does_not_read_unrequested_drafts():
-    from workbench.repositories.records import Records
+    from modules.workspace.components.repositories.records import Records
 
     with closing(sqlite3.connect(":memory:")) as db:
         db.row_factory = sqlite3.Row

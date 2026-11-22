@@ -19,6 +19,12 @@ Var Parameters
 !ifndef PAYLOAD
   !error "Run tools/windows_installer/build.py to supply the verified payload."
 !endif
+!ifndef BOOTSTRAP_SOURCE
+  !error "Run build.py to supply the verified immutable launcher."
+!endif
+!ifndef BOOTSTRAP_NAME
+  !error "Missing content-addressed launcher filename."
+!endif
 
 ; Identity is supplied by the verified RELEASE.json metadata in build.py.
 !ifndef APP_ID
@@ -47,12 +53,12 @@ SetFont "Segoe UI" 9
 BrandingText "${APP}"
 ShowInstDetails nevershow
 ShowUninstDetails nevershow
-!define MUI_ICON "../../static/favicon.ico"
-!define MUI_UNICON "../../static/favicon.ico"
-!define MUI_WELCOMEFINISHPAGE_BITMAP "assets/setup-sidebar.bmp"
-!define MUI_UNWELCOMEFINISHPAGE_BITMAP "assets/uninstall-sidebar.bmp"
+!define MUI_ICON "..\..\modules\ui\static\favicon.ico"
+!define MUI_UNICON "..\..\modules\ui\static\favicon.ico"
+!define MUI_WELCOMEFINISHPAGE_BITMAP "assets\setup-sidebar.bmp"
+!define MUI_UNWELCOMEFINISHPAGE_BITMAP "assets\uninstall-sidebar.bmp"
 !define MUI_HEADERIMAGE
-!define MUI_HEADERIMAGE_BITMAP "assets/setup-header.bmp"
+!define MUI_HEADERIMAGE_BITMAP "assets\setup-header.bmp"
 !define MUI_HEADERIMAGE_RIGHT
 !define MUI_BGCOLOR "FFFFFF"
 !define MUI_TEXTCOLOR "14212B"
@@ -321,18 +327,18 @@ Function DataChoiceLeave
 FunctionEnd
 
 Function LaunchWorkbench
-  Exec '"$INSTDIR\runtime\python.exe" -I -B "$INSTDIR\app\desktop.py"'
+  Exec '"$INSTDIR\bootstrap\${BOOTSTRAP_NAME}"'
 FunctionEnd
 
 !macro StageMaintenanceRuntime
   ; Never rely on a stale or partly uninstalled interpreter for maintenance.
   ; Only the embedded runtime's top-level standard-library/DLL files are needed.
   SetOutPath "$PLUGINSDIR\maintenance-runtime"
-  File "${PAYLOAD}/runtime/*.*"
+  File "${PAYLOAD}\runtime\*.*"
   SetOutPath "$PLUGINSDIR"
   File /oname=upgrade_cleanup.py "upgrade_cleanup.py"
-  File /oname=windows_schedule.py "../../workbench/windows_schedule.py"
-  File /oname=next-payload-manifest.json "${PAYLOAD}/payload-manifest.json"
+  File /oname=windows_schedule.py "..\..\modules\accretion\components\windows_schedule.py"
+  File /oname=next-payload-manifest.json "${PAYLOAD}\payload-manifest.json"
 !macroend
 
 !macro CheckInstallLocation
@@ -394,7 +400,11 @@ Section "${APP}" SEC_MAIN
     ${EndIf}
   ${EndIf}
   DetailPrint "Checking the existing installation and preserving working records..."
-    nsExec::ExecToStack '"$PLUGINSDIR\maintenance-runtime\python.exe" -I -S -B "$PLUGINSDIR\upgrade_cleanup.py" --install-dir "$INSTDIR" --next-manifest "$PLUGINSDIR\next-payload-manifest.json" $2'
+    ; Bootstrap bytes are staged outside the replaceable payload and published
+    ; without replacement by the ownership-checked maintenance helper.
+    SetOutPath "$PLUGINSDIR"
+    File /oname=next-bootstrap.exe "${BOOTSTRAP_SOURCE}"
+    nsExec::ExecToStack '"$PLUGINSDIR\maintenance-runtime\python.exe" -I -S -B "$PLUGINSDIR\upgrade_cleanup.py" --install-dir "$INSTDIR" --next-manifest "$PLUGINSDIR\next-payload-manifest.json" --prepare --bootstrap-source "$PLUGINSDIR\next-bootstrap.exe" $2'
     Pop $0
     Pop $1
     ${If} $0 != 0
@@ -408,7 +418,7 @@ Section "${APP}" SEC_MAIN
   SetOutPath "$INSTDIR"
   SetOverwrite on
   ClearErrors
-  File /r "${PAYLOAD}/*"
+  File /r "${PAYLOAD}\*"
   ${If} ${Errors}
     MessageBox MB_OK|MB_ICONSTOP "Some program files could not be installed. Close any application windows and retry setup. Your working records are retained." /SD IDOK
     SetErrorLevel 5
@@ -427,7 +437,13 @@ Section "${APP}" SEC_MAIN
     ${EndIf}
     DetailPrint "$1"
   ${EndIf}
+  ClearErrors
   WriteUninstaller "$INSTDIR\Uninstall.exe"
+  ${If} ${Errors}
+    MessageBox MB_OK|MB_ICONSTOP "Setup could not write the application uninstaller. Launch remains disabled. Close other setup or uninstall windows and retry; working records are retained." /SD IDOK
+    SetErrorLevel 5
+    Abort
+  ${EndIf}
   ; Only standard releases own the legacy shortcuts.
 !if "${APP_EDITION}" == "standard"
   Delete "$DESKTOP\Outreach Workbench.lnk"
@@ -438,23 +454,27 @@ Section "${APP}" SEC_MAIN
   Delete "$SMPROGRAMS\Outreach Workbench\Uninstall.lnk"
   RMDir "$SMPROGRAMS\Outreach Workbench"
 !endif
-  CreateDirectory "$LOCALAPPDATA\${APP_ID}\data"
   ClearErrors
+  CreateDirectory "$LOCALAPPDATA\${APP_ID}\data"
   CreateDirectory "$SMPROGRAMS\${APP}"
-  CreateShortCut "$SMPROGRAMS\${APP}\${APP}.lnk" "$INSTDIR\runtime\python.exe" '-I -B "$INSTDIR\app\desktop.py"' "$INSTDIR\app\static\favicon.ico" 0 SW_SHOWNORMAL "" "Open the local notification workspace"
-  CreateShortCut "$SMPROGRAMS\${APP}\${DEMO_NAME}.lnk" "$INSTDIR\runtime\python.exe" '-I -B "$INSTDIR\app\desktop.py" --demo' "$INSTDIR\app\static\favicon.ico" 0 SW_SHOWNORMAL "" "Explore separate synthetic records"
-  CreateShortCut "$SMPROGRAMS\${APP}\Check installation.lnk" "$INSTDIR\runtime\python.exe" '-I -B "$INSTDIR\app\desktop.py" --self-test'
+  CreateShortCut "$SMPROGRAMS\${APP}\${APP}.lnk" "$INSTDIR\bootstrap\${BOOTSTRAP_NAME}" '' "$INSTDIR\app\modules\ui\static\favicon.ico" 0 SW_SHOWNORMAL "" "Open the local notification workspace"
+  CreateShortCut "$SMPROGRAMS\${APP}\${DEMO_NAME}.lnk" "$INSTDIR\bootstrap\${BOOTSTRAP_NAME}" '--demo' "$INSTDIR\app\modules\ui\static\favicon.ico" 0 SW_SHOWNORMAL "" "Explore separate synthetic records"
+  CreateShortCut "$SMPROGRAMS\${APP}\Check installation.lnk" "$INSTDIR\bootstrap\${BOOTSTRAP_NAME}" '--self-test'
   CreateShortCut "$SMPROGRAMS\${APP}\Application logs.lnk" "$LOCALAPPDATA\${APP_ID}\data-logs"
   CreateShortCut "$SMPROGRAMS\${APP}\Working data.lnk" "$LOCALAPPDATA\${APP_ID}\data"
   CreateShortCut "$SMPROGRAMS\${APP}\Getting started.lnk" "$INSTDIR\Getting started.txt"
   CreateShortCut "$SMPROGRAMS\${APP}\Uninstall.lnk" "$INSTDIR\Uninstall.exe"
-  CreateShortCut "$DESKTOP\${APP}.lnk" "$INSTDIR\runtime\python.exe" '-I -B "$INSTDIR\app\desktop.py"' "$INSTDIR\app\static\favicon.ico" 0 SW_SHOWNORMAL "" "Open the local notification workspace"
+  CreateShortCut "$DESKTOP\${APP}.lnk" "$INSTDIR\bootstrap\${BOOTSTRAP_NAME}" '' "$INSTDIR\app\modules\ui\static\favicon.ico" 0 SW_SHOWNORMAL "" "Open the local notification workspace"
+  ${If} ${Errors}
+    MessageBox MB_OK|MB_ICONSTOP "Setup could not create the application shortcuts or working folder. Launch remains disabled. Review folder access and retry; working records are retained." /SD IDOK
+    SetErrorLevel 5
+    Abort
+  ${EndIf}
   ; Same installed identity, new public name. Create the replacement shortcuts
   ; first and remove only the known old DarkMatter links, never other editions
   ; or unrecognized files in the old Start menu folder.
 !if "${APP_VARIANT}" == "dark_matter"
 !if "${APP}" != "Shadowserver Companion DarkMatter"
-  IfErrors keep_legacy_darkmatter_links
   Delete "$DESKTOP\Shadowserver Companion DarkMatter.lnk"
   Delete "$SMPROGRAMS\Shadowserver Companion DarkMatter\Shadowserver Companion DarkMatter.lnk"
   Delete "$SMPROGRAMS\Shadowserver Companion DarkMatter\Companion DarkMatter Demo.lnk"
@@ -464,20 +484,35 @@ Section "${APP}" SEC_MAIN
   Delete "$SMPROGRAMS\Shadowserver Companion DarkMatter\Getting started.lnk"
   Delete "$SMPROGRAMS\Shadowserver Companion DarkMatter\Uninstall.lnk"
   RMDir "$SMPROGRAMS\Shadowserver Companion DarkMatter"
-  keep_legacy_darkmatter_links:
 !endif
 !endif
+  ClearErrors
   WriteRegStr HKCU "${KEY}" "InstallLocation" "$INSTDIR"
   WriteRegStr HKCU "${UNKEY}" "DisplayName" "${APP}"
   WriteRegStr HKCU "${UNKEY}" "DisplayVersion" "${APP_DISPLAY_VERSION}"
   WriteRegStr HKCU "${UNKEY}" "InstallLocation" "$INSTDIR"
-  WriteRegStr HKCU "${UNKEY}" "DisplayIcon" "$INSTDIR\app\static\favicon.ico,0"
+  WriteRegStr HKCU "${UNKEY}" "DisplayIcon" "$INSTDIR\app\modules\ui\static\favicon.ico,0"
   WriteRegStr HKCU "${UNKEY}" "UninstallString" '$\"$INSTDIR\Uninstall.exe$\"'
   WriteRegStr HKCU "${UNKEY}" "QuietUninstallString" '$\"$INSTDIR\Uninstall.exe$\" /S'
   WriteRegDWORD HKCU "${UNKEY}" "NoModify" 1
   WriteRegDWORD HKCU "${UNKEY}" "NoRepair" 1
+  ${If} ${Errors}
+    MessageBox MB_OK|MB_ICONSTOP "Setup could not register the application for repair and removal. Launch remains disabled. Review account permissions and retry; working records are retained." /SD IDOK
+    SetErrorLevel 5
+    Abort
+  ${EndIf}
   ${GetSize} "$INSTDIR" "/S=0K" $0 $1 $2
   WriteRegDWORD HKCU "${UNKEY}" "EstimatedSize" $0
+  DetailPrint "Verifying the completed installation and restoring its scheduled action..."
+  nsExec::ExecToStack '"$PLUGINSDIR\maintenance-runtime\python.exe" -I -S -B "$PLUGINSDIR\upgrade_cleanup.py" --install-dir "$INSTDIR" --next-manifest "$PLUGINSDIR\next-payload-manifest.json" --commit'
+  Pop $0
+  Pop $1
+  ${If} $0 != 0
+    DetailPrint "$1"
+    MessageBox MB_OK|MB_ICONSTOP "Installation is incomplete and application launch remains disabled.$\r$\n$\r$\n$1$\r$\n$\r$\nRetry setup to repair the program. Working records are retained." /SD IDOK
+    SetErrorLevel 5
+    Abort
+  ${EndIf}
   !insertmacro ReleaseInstallGate
 SectionEnd
 
@@ -525,23 +560,22 @@ Section "Uninstall"
     SetErrorLevel 4
     Abort
   ${EndIf}
-  ; Remove this workspace's optional task before its interpreter is removed.
-  ; Other workspaces, credentials and working records remain untouched.
-    nsExec::ExecToLog '"$PLUGINSDIR\maintenance-runtime\python.exe" -I -S -B "$PLUGINSDIR\upgrade_cleanup.py" --install-dir "$INSTDIR" --next-manifest "$PLUGINSDIR\next-payload-manifest.json" --remove-task'
-    Pop $0
-    ${If} $0 != 0
-      DetailPrint "Windows could not remove the optional scheduled task."
-    ${EndIf}
+  ; The maintenance helper verified and removed only this workspace's owned
+  ; optional task and withdrawn readiness before any program-file deletion.
   ; Delete only installer-owned files. Never recursively delete a workspace.
   !include "${UNINSTALL_INVENTORY}"
-  ClearErrors
-  Delete "$INSTDIR\Uninstall.exe"
-  ${If} ${Errors}
-    MessageBox MB_OK|MB_ICONSTOP "The uninstaller could not finish removing program files. Retry uninstall after closing any application windows. Working records are retained." /SD IDOK
-    SetErrorLevel 5
+  nsExec::ExecToStack '"$PLUGINSDIR\maintenance-runtime\python.exe" -I -S -B "$PLUGINSDIR\upgrade_cleanup.py" --install-dir "$INSTDIR" --next-manifest "$PLUGINSDIR\next-payload-manifest.json" --remove-bootstraps'
+  Pop $0
+  Pop $1
+  ${If} $0 != 0
+    DetailPrint "$1"
+    MessageBox MB_OK|MB_ICONSTOP "A launcher could not be removed.$\r$\n$\r$\n$1$\r$\n$\r$\nClose application launch windows and retry uninstall. Working records are retained." /SD IDOK
+    SetErrorLevel 4
     Abort
   ${EndIf}
-  RMDir "$INSTDIR"
+  ; Keep the self-contained uninstaller until required shell/registry cleanup
+  ; succeeds, so an access failure leaves a concrete way to retry removal.
+  ClearErrors
   Delete "$DESKTOP\${APP}.lnk"
   Delete "$SMPROGRAMS\${APP}\${APP}.lnk"
   Delete "$SMPROGRAMS\${APP}\${DEMO_NAME}.lnk"
@@ -550,9 +584,47 @@ Section "Uninstall"
   Delete "$SMPROGRAMS\${APP}\Working data.lnk"
   Delete "$SMPROGRAMS\${APP}\Getting started.lnk"
   Delete "$SMPROGRAMS\${APP}\Uninstall.lnk"
+  ${If} ${Errors}
+    MessageBox MB_OK|MB_ICONSTOP "Some application shortcuts could not be removed. Close any windows using them and retry $INSTDIR\Uninstall.exe. Working records are retained." /SD IDOK
+    SetErrorLevel 5
+    Abort
+  ${EndIf}
+  ; DeleteRegKey reports an absent key as an error. Inspect the same 64-bit
+  ; view first: absence is an idempotent retry, access/query failures are not.
+  StrCpy $5 "${KEY}"
+  StrCpy $6 0
+  ${Do}
+    System::Call 'advapi32::RegOpenKeyExW(p 0x80000001, w r5, i 0, i 0x20119, *p .r0) i.r1'
+    ${If} $1 == 0
+      System::Call 'advapi32::RegCloseKey(p r0)'
+      ClearErrors
+      DeleteRegKey HKCU "$5"
+      ${If} ${Errors}
+        MessageBox MB_OK|MB_ICONSTOP "Application registration could not be removed. Review account permissions and retry $INSTDIR\Uninstall.exe. Working records are retained." /SD IDOK
+        SetErrorLevel 5
+        Abort
+      ${EndIf}
+    ${ElseIf} $1 != 2 ; ERROR_FILE_NOT_FOUND is the only confirmed absence.
+      MessageBox MB_OK|MB_ICONSTOP "Application registration could not be inspected safely. Review account permissions and retry $INSTDIR\Uninstall.exe. Working records are retained." /SD IDOK
+      SetErrorLevel 5
+      Abort
+    ${EndIf}
+    ${If} $6 == 1
+      ${ExitDo}
+    ${EndIf}
+    StrCpy $5 "${UNKEY}"
+    StrCpy $6 1
+  ${Loop}
+  ClearErrors
+  Delete "$INSTDIR\Uninstall.exe"
+  ${If} ${Errors}
+    MessageBox MB_OK|MB_ICONSTOP "The uninstaller could not finish removing program files. Close application windows and retry $INSTDIR\Uninstall.exe. Working records are retained." /SD IDOK
+    SetErrorLevel 5
+    Abort
+  ${EndIf}
+  ; Unknown files and nonempty folders are retained without failing removal.
   RMDir "$SMPROGRAMS\${APP}"
-  DeleteRegKey HKCU "${UNKEY}"
-  DeleteRegKey HKCU "${KEY}"
+  RMDir "$INSTDIR"
   !insertmacro ReleaseInstallGate
 SectionEnd
 

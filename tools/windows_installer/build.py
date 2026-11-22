@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import argparse
 from datetime import datetime, timezone
-from email.parser import BytesParser
 import hashlib
 import json
 import os
@@ -13,56 +12,19 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 import urllib.request
 import zipfile
 
 HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
-TOP_FILES = (
-    "run.py",
-    "excel_intake.py",
-    "VERSION",
-    "RELEASE.json",
-    "HOME_VALIDATION.md",
-    "README.md",
-    "CHANGELOG.md",
-    "VALIDATION.md",
-    "DEPENDENCIES.md",
-    "REPORT_REQUIREMENTS.md",
-    "ARCHITECTURE.md",
-    "DEVELOPMENT.md",
-    "SECURITY.md",
-    "CONTRIBUTING.md",
-    "SUPPORT.md",
-    "requirements-constraints.txt",
-)
-FOLDERS = (
-    "workbench",
-    "static",
-    "schemas",
-    "fonts",
-    "examples",
-    "tools",
-    "components",
-    "docs",
-    "resources",
-)
+FOLDERS = ("modules", "tools", "docs")
 sys.path.insert(0, str(HERE.parent))
-from release_policy import distributable
-from check_dependencies import verify as verify_dependencies
+from release_policy import INSTALLED_TOP_FILES, distributable
+from check_dependencies import verify as verify_dependencies, wheel_inventory
 from program_map import verify as verify_architecture
 from check_release import verify as verify_release, check_output_name
-from workbench.release import installation_identity
-
-IGNORED = {"__pycache__", ".pytest_cache", ".git", ".venv", "build", "dist"}
-EXAMPLES = {
-    "Sample_Notification.pdf",
-    "Sample_Notification.docx",
-    "qualified-lead.json",
-    "intake_fixture.xlsx",
-    "Multiple_CVE_Notification.pdf",
-    "Multiple_CVE_Notification.docx",
-}
+from modules.workspace.components.release import installation_identity
 
 
 def sha256(path: Path) -> str:
@@ -75,8 +37,9 @@ def sha256(path: Path) -> str:
 
 def copy_source(target: Path) -> None:
     target.mkdir(parents=True)
-    for name in TOP_FILES:
-        shutil.copy2(ROOT / name, target / name)
+    for name in INSTALLED_TOP_FILES:
+        if distributable(Path(name), installed=True):
+            shutil.copy2(ROOT / name, target / name)
     for name in FOLDERS:
         for path in sorted((ROOT / name).rglob("*")):
             relative = path.relative_to(ROOT)
@@ -107,22 +70,7 @@ def extract_runtime(archive: Path, target: Path, python_tag: str) -> None:
 
 
 def validate_wheels(folder: Path) -> list[dict]:
-    expected = json.loads((ROOT / "wheelhouse-sha256.json").read_text(encoding="utf-8"))
-    records = []
-    for name, digest in expected.items():
-        path = folder / name
-        if not path.is_file() or sha256(path) != digest:
-            raise ValueError(f"Missing or changed dependency artifact: {name}")
-        with zipfile.ZipFile(path) as wheel:
-            bad = wheel.testzip()
-            if bad:
-                raise ValueError(f"Corrupt wheel member: {name}/{bad}")
-            metadata = next(n for n in wheel.namelist() if n.endswith(".dist-info/METADATA"))
-            meta = BytesParser().parsebytes(wheel.read(metadata))
-        records.append(
-            {"name": meta["Name"], "version": meta["Version"], "artifact": name, "sha256": digest}
-        )
-    return records
+    return list(wheel_inventory(ROOT, folder=folder).values())
 
 
 def uninstall_inventory(payload: Path) -> str:
@@ -169,6 +117,40 @@ def installer_definitions(release):
     }
 
 
+def build_bootstrap(build: Path, app_id: str, makensis: str) -> tuple[Path, dict]:
+    """Compile a separately owned, immutable launcher; never overlay an old image."""
+    if not re.fullmatch(r"[A-Za-z0-9_.-]+", app_id):
+        raise ValueError("Invalid bootstrap identity")
+    folder = build.resolve() / "bootstrap"
+    folder.mkdir(parents=True, exist_ok=True)
+    flag = "/" if os.name == "nt" else "-"
+    with tempfile.TemporaryDirectory(prefix=".compile-", dir=folder) as temporary:
+        output = Path(temporary) / "launcher.exe"
+        assert output.resolve().is_relative_to(folder)
+        subprocess.run(
+            [
+                makensis,
+                flag + "WX",
+                flag + "V2",
+                flag + "DAPP_ID=" + app_id,
+                flag + "DOUTPUT=" + str(output),
+                str(HERE / "bootstrap.nsi"),
+            ],
+            check=True,
+            cwd=HERE,
+        )
+        digest = sha256(output)
+        name = "launch-" + digest + ".exe"
+        target = folder / name
+        if target.exists():
+            if target.is_symlink() or not target.is_file() or sha256(target) != digest:
+                raise ValueError("Existing bootstrap build artifact does not match its identity")
+        else:
+            with target.open("xb") as destination, output.open("rb") as source:
+                shutil.copyfileobj(source, destination)
+    return target, {"protocol": 1, "path": "bootstrap/" + name, "sha256": digest}
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path)
@@ -180,7 +162,7 @@ def main() -> None:
     verify_dependencies(ROOT)
     verify_architecture(ROOT)
     build = args.build_dir.resolve()
-    version = (ROOT / "VERSION").read_text().strip()
+    version = (ROOT / "VERSION").read_text(encoding="utf-8").strip()
     identity = installation_identity(release["edition"], release.get("variant", ""))
     definitions = installer_definitions(release)
     label = (
@@ -246,6 +228,7 @@ def main() -> None:
             check=True,
         )
     packages = validate_wheels(wheels)
+    bootstrap_source, bootstrap = build_bootstrap(build, identity["app_id"], args.makensis)
     payload = build / "payload"
     marker = build / ".workbench-installer-build"
     if payload.exists():
@@ -311,12 +294,12 @@ def main() -> None:
         "EDITION_NOTICE": (
             "Shadowserver Eclipse uses the existing installation and data folders. "
             "Upgrades retain your working records by default; uninstall also retains those records. "
-            "Use Settings > Data for backup and restore."
+            "Use Settings > Backup & recovery for backup and restore."
             if release.get("variant") == "dark_matter"
             else f"EXPERIMENTAL COMPARISON: {identity['app_name']} installs separately from the standard "
             "application and other experimental variants. It does not automatically copy existing "
-            "records. In your existing installation, export a backup from Settings > Data. "
-            f"Import that copy in {identity['app_name']} from Settings > Data and restart when prompted. "
+            "records. In your existing installation, export a backup from Settings > Backup & recovery. "
+            f"Import that copy in {identity['app_name']} from Settings > Backup & recovery and restart when prompted. "
             "Keep the original export and workspace for comparison. Fresh-start and uninstall "
             "affect only this separate installation; uninstall retains its working records."
             if release["edition"] == "chaos"
@@ -330,12 +313,12 @@ def main() -> None:
         f"{identity['app_name']} {version} - third-party components",
         "",
         f"Python {runtime_lock['version']} (Python Software Foundation): runtime/LICENSE.txt",
-        "Bundled report fonts: app/fonts/LICENSE.txt and NotoSansSC-OFL.txt",
-        "Noto Sans SC static derivative: app/fonts/NotoSansSC-Provenance.json",
-        "D3 7.9.0 (ISC): app/static/vendor/D3-LICENSE.txt",
-        "U.S. Census Bureau geography: app/static/geo/README.txt and source metadata in places.json/states.json",
-        "Shadowserver field inventory: app/schemas/shadowserver-reports.meta.json",
-        "Bundled timezone data: app/resources/timezones/provenance.json and LICENSE*",
+        "Bundled report fonts: app/modules/ui/fonts/LICENSE.txt and NotoSansSC-OFL.txt",
+        "Noto Sans SC static derivative: app/modules/ui/fonts/NotoSansSC-Provenance.json",
+        "D3 7.9.0 (ISC): app/modules/observatory/static/vendor/D3-LICENSE.txt",
+        "U.S. Census Bureau geography: app/modules/observatory/static/geo/README.txt and source metadata in places.json/states.json",
+        "Shadowserver field inventory: app/modules/accretion/schemas/shadowserver-reports.meta.json",
+        "Bundled timezone data: app/modules/investigations/resources/timezones/provenance.json and LICENSE*",
         "NSIS installer engine: https://nsis.sourceforge.io/License",
         "Python package licenses are retained in runtime/Lib/site-packages/*.dist-info.",
         "Transitive/native-library license notices bundled inside wheels are retained.",
@@ -354,7 +337,7 @@ def main() -> None:
         "database_schema_max": int(
             re.search(
                 r"^SCHEMA_VERSION\s*=\s*(\d+)",
-                (ROOT / "workbench/migrations.py").read_text(),
+                (ROOT / "modules/workspace/databases/migrations.py").read_text(encoding="utf-8"),
                 re.MULTILINE,
             ).group(1)
         ),
@@ -363,6 +346,9 @@ def main() -> None:
         "built_at": datetime.now(timezone.utc).isoformat(),
         "runtime": runtime_lock,
         "packages": packages,
+        # Managed separately: loaded launchers may be waiting on the install
+        # gate, and must never be overwritten with the mutable runtime payload.
+        "bootstrap": bootstrap,
         "files": {
             p.relative_to(payload).as_posix(): sha256(p)
             for p in sorted(payload.rglob("*"))
@@ -386,10 +372,14 @@ def main() -> None:
         flag + "DAPP_DISPLAY_VERSION=" + release["display_version"],
         flag + "DRELEASE_NOTICE=" + release_notice,
         flag + "DUNINSTALL_INVENTORY=" + str(inventory),
+        flag + "DBOOTSTRAP_SOURCE=" + str(bootstrap_source),
+        flag + "DBOOTSTRAP_NAME=" + bootstrap_source.name,
+        flag + "DBOOTSTRAP_SHA256=" + bootstrap["sha256"],
+        flag + "DBOOTSTRAP_PROTOCOL=" + str(bootstrap["protocol"]),
         *[flag + "D" + key + "=" + value for key, value in definitions.items()],
         str(HERE / "installer.nsi"),
     ]
-    subprocess.run(command, check=True)
+    subprocess.run(command, check=True, cwd=HERE)
     print(
         json.dumps(
             {

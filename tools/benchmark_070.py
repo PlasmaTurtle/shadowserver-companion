@@ -3,7 +3,7 @@
 Run from the source checkout after installing development requirements:
     python tools/benchmark_070.py --output-dir benchmark-results
 
-All observations, references and registration records are fictional. Network
+All observations, references and registration records are fictional. External
 connections are blocked. This measures local work separately from acquisition;
 it cannot establish real provider latency or a Windows result on a Linux host.
 """
@@ -30,19 +30,24 @@ from unittest.mock import patch
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-sys.path.insert(0, str(ROOT / "components/attribution/src"))
+sys.path.insert(0, str(ROOT / "modules/attribution/components/engine/src"))
 
-from fastapi.testclient import TestClient
+from tests.session_helpers import TestClient
 from openpyxl import Workbook
-from excel_intake import EntryValidator, ValidatedLeads, WhoisRecord
-from workbench.api import create_app
-from workbench.intake_service import read_entries
-from workbench.intelligence_index import bank_index
-from workbench.report_profiles import inventory_metadata, notification_eligibility, resolve_profile
-from workbench.report_composition import compose
-from workbench.reporting import default_draft, render_pdf, render_docx
-from workbench.presentation import document_policy
-from workbench.store import DEFAULT_SETTINGS, dump
+from modules.accretion.components.intake import EntryValidator, CandidateGroup, read_entries
+from tests.support.qualification import WhoisRecord, capture_website, registry_factory
+from modules.workspace.components.api import create_app
+from modules.library.components.intelligence_index import bank_index
+from modules.library.components.repositories.sources import SourceRepository
+from modules.accretion.components.report_profiles import (
+    inventory_metadata,
+    notification_eligibility,
+    resolve_profile,
+)
+from modules.investigations.components.report_composition import compose
+from modules.investigations.components.reporting import default_draft, render_pdf, render_docx
+from modules.ui.components.presentation import document_policy
+from modules.workspace.databases.workspace_defaults import DEFAULT_SETTINGS
 
 STAMP = "2099-01-01T12:00:00Z"
 
@@ -145,7 +150,7 @@ def machine():
         "physical_memory_bytes": total_memory,
         "cgroup_memory_limit_bytes": memory_limit,
         "packages": versions,
-        "app_version": (ROOT / "VERSION").read_text().strip(),
+        "app_version": (ROOT / "VERSION").read_text(encoding="utf-8").strip(),
         "native_windows_execution": os.name == "nt",
     }
 
@@ -369,13 +374,15 @@ def main():
             "external_connections_allowed": False,
             "acquisition_latency_measured": False,
             "attribution_and_cve_providers": "in-process fixture responses",
+            "website_capture": "labelled synthetic screenshot; no browser latency",
         },
         "measurements": {},
         "limits": [
-            "This is host-specific evidence, not a native Windows acceptance result unless machine.native_windows_execution is true.",
+            "This is host-specific developer benchmark evidence, not release acceptance.",
             "API timings use in-process ASGI requests including serialization; no browser first-paint timing is measured.",
-            "Main-only PDF is a benchmark slice; production notifications include the complete appendix.",
-            "The 10,000-row fixture is retained for intake/map/queue measurements; report rendering uses the separate stated 70-asset fixture.",
+            "Main-only PDF uses the normal include_appendix=False composition option.",
+            "Report rendering uses a separate synthetic layout fixture; it does not certify a notification or verify its evidence.",
+            "Fixture sizes in this record define the measured intake and document workloads.",
         ],
     }
 
@@ -394,7 +401,15 @@ def main():
         return value
 
     with ExitStack() as stack:
-        stack.enter_context(patch.object(socket.socket, "connect", blocked))
+        connect = socket.socket.connect
+
+        def local_connect(sock, address):
+            # Windows asyncio implements its wake-up socketpair over loopback.
+            if isinstance(address, tuple) and address[0] in {"127.0.0.1", "::1"}:
+                return connect(sock, address)
+            return blocked()
+
+        stack.enter_context(patch.object(socket.socket, "connect", local_connect))
         stack.enter_context(patch("socket.create_connection", blocked))
         temporary = Path(
             stack.enter_context(tempfile.TemporaryDirectory(prefix="companion-benchmark-"))
@@ -413,7 +428,7 @@ def main():
                 for row in originals
             ],
         )
-        grouped = timed("root_domain_grouping", lambda: ValidatedLeads.group(valid))
+        grouped = timed("root_domain_grouping", lambda: CandidateGroup.group(valid))
         assert (
             len(originals) == args.rows and len(valid) == args.rows and len(grouped) == args.groups
         )
@@ -429,7 +444,17 @@ def main():
                     "Synthetic provider",
                     "https://example.com/synthetic/registration",
                     STAMP,
-                    {"contact": ["admin@" + name for name in names]},
+                    {
+                        "entities": [
+                            {
+                                "roles": ["registrant"],
+                                "vcardArray": [
+                                    "vcard",
+                                    [["email", {}, "text", "admin@" + name] for name in names],
+                                ],
+                            }
+                        ]
+                    },
                 )
 
             def close(self):
@@ -437,10 +462,16 @@ def main():
 
         stack.enter_context(
             patch(
-                "workbench.intake_service.verify", lambda store, cve_id: deepcopy(records[cve_id])
+                "modules.accretion.components.intake_service.verify",
+                lambda store, cve_id, *, local_only: deepcopy(records[cve_id]),
             )
         )
-        app = create_app(temporary / "workspace", worker=False, lookup_factory=Registry)
+        app = create_app(
+            temporary / "workspace",
+            worker=False,
+            attribution_factory=registry_factory(Registry),
+            capture=capture_website,
+        )
         intake, store = app.state.intake, app.state.store
         imported = intake.enqueue(source.name, source.read_bytes())
         timed("production_intake_with_fixture_providers", lambda: intake.process(imported["id"]))
@@ -452,18 +483,10 @@ def main():
         result["fixture"]["saved_groups"] = saved["groups_total"]
         with store.transaction() as db:
             for cve_id, record in records.items():
-                revision = record["intelligence_revision_id"]
-                db.execute(
-                    "INSERT INTO cache VALUES(?,?,?)",
-                    ("intelligence-version:" + revision, dump(record), STAMP),
-                )
-                db.execute(
-                    "INSERT INTO cache VALUES(?,?,?)",
-                    ("intelligence-latest:" + cve_id, dump({"revision_id": revision}), STAMP),
-                )
+                SourceRepository(store).publish_intelligence(db, cve_id, record)
         bank = timed("cached_intelligence_index", lambda: bank_index(store), args.repeats)
         assert len(bank) == args.cves
-        client = stack.enter_context(TestClient(app))
+        client = stack.enter_context(TestClient(app, base_url="http://127.0.0.1"))
 
         def request(path):
             response = client.get(path)
@@ -479,7 +502,8 @@ def main():
             return request("/api/dashboard"), request("/api/cases"), request("/api/leads")
 
         queue = timed("dashboard_case_and_lead_queue_api", dashboard_queue, args.repeats)
-        assert queue[0]["counts"]["observations"] == args.rows and len(queue[1]) == args.groups
+        assert queue[0]["counts"]["observations"] == args.rows
+        assert len(queue[2]) == args.groups and not queue[1]
         data = report_fixture(args.assets)
         data["composition"] = timed(
             "report_assembly_70_assets", lambda: compose(data), args.repeats
@@ -489,11 +513,8 @@ def main():
         result["fixture"]["appendix_entries"] = len(entries)
         result["fixture"]["appendix_fields"] = sum(len(e["fields"]) for e in entries)
         front = deepcopy(data)
-        nodes = front["composition"]["sections"]
-        cut = next(i for i, node in enumerate(nodes) if node.get("text") == "Companion Appendix")
-        if cut and nodes[cut - 1]["kind"] == "page_break":
-            cut -= 1
-        front["composition"]["sections"] = nodes[:cut]
+        front["draft"]["include_appendix"] = False
+        front["composition"] = compose(front)
         timed(
             "main_only_pdf_render_after_assembly",
             lambda: render_pdf(front, output / "BENCHMARK-front-only.pdf", temporary, draft=True),

@@ -10,22 +10,23 @@ async function loadApplication(context, { theme = false, attach = true } = {}) {
   if (!vm.SourceTextModule) {
     throw new Error('Run DOM tests with node --experimental-vm-modules.');
   }
-  const root = path.resolve(__dirname, '../static');
+  const root = path.resolve(__dirname, '../modules/ui/static');
   if (theme) vm.runInContext(fs.readFileSync(path.join(root, 'theme.js'), 'utf8'), context);
   const modules = new Map();
-  async function load(filename) {
+  function load(filename) {
     if (modules.has(filename)) return modules.get(filename);
     const mod = new vm.SourceTextModule(fs.readFileSync(filename, 'utf8'), {
       context,
       identifier: filename,
     });
     modules.set(filename, mod);
-    await mod.link((specifier, referencing) =>
-      load(path.resolve(path.dirname(referencing.identifier), specifier)),
-    );
     return mod;
   }
-  const module = await load(path.join(root, 'app.js'));
+  const module = load(path.join(root, 'app.js'));
+  // Node links the graph once, including shared dependencies reached by several owners.
+  await module.link((specifier, referencing) =>
+    load(path.resolve(path.dirname(referencing.identifier), specifier)),
+  );
   await module.evaluate();
   const application = module.namespace.createApplication();
   for (const container of [

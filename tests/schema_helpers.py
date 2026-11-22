@@ -3,7 +3,7 @@
 import sqlite3
 from contextlib import closing
 
-from workbench.migrations import _schema_one, _schema_two, _schema_three
+from modules.workspace.databases.migrations import _schema_one, _schema_two, _schema_three
 
 
 def schema_snapshot(source, version):
@@ -12,7 +12,7 @@ def schema_snapshot(source, version):
     Later constraints and triggers cannot be simulated by dropping a few tables.
     The copied rows keep their IDs and rowids; source files are never touched.
     """
-    from workbench.migrations import MIGRATIONS
+    from modules.workspace.databases.migrations import MIGRATIONS
 
     old = sqlite3.connect(":memory:")
     old.row_factory = sqlite3.Row
@@ -23,6 +23,8 @@ def schema_snapshot(source, version):
         source_tables = {
             row[0] for row in source.execute("SELECT name FROM sqlite_master WHERE type='table'")
         }
+        source_rowid_tables = {row[1] for row in source.execute("PRAGMA table_list") if not row[4]}
+        old_rowid_tables = {row[1] for row in old.execute("PRAGMA table_list") if not row[4]}
         tables = [
             row[0]
             for row in old.execute(
@@ -38,11 +40,16 @@ def schema_snapshot(source, version):
             }
             columns = [name for name in old_columns if name in source_columns]
             names = ",".join('"' + name + '"' for name in columns)
-            marks = ",".join("?" for _ in range(len(columns) + 1))
+            # Newer schemas can use WITHOUT ROWID. Preserve rowids only when
+            # both versions have them; declared primary keys always survive.
+            copied_names = (
+                "rowid," if table in source_rowid_tables & old_rowid_tables else ""
+            ) + names
+            marks = ",".join("?" for _ in range(len(columns) + (copied_names != names)))
             old.execute('DELETE FROM "' + table + '"')
-            for row in source.execute("SELECT rowid," + names + ' FROM "' + table + '"'):
+            for row in source.execute("SELECT " + copied_names + ' FROM "' + table + '"'):
                 old.execute(
-                    'INSERT INTO "' + table + '"(rowid,' + names + ") VALUES(" + marks + ")",
+                    'INSERT INTO "' + table + '"(' + copied_names + ") VALUES(" + marks + ")",
                     tuple(row),
                 )
         old.execute(f"PRAGMA user_version={version}")

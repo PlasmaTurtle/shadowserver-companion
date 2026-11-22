@@ -16,7 +16,11 @@ import time
 import urllib.request
 import webbrowser
 
-from workbench.release import installation_identity, load_release, validate_workspace_identity
+from modules.workspace.components.release import (
+    installation_identity,
+    load_release,
+    validate_workspace_identity,
+)
 
 RELEASE = load_release()
 IDENTITY = installation_identity(RELEASE["edition"], RELEASE.get("variant", ""))
@@ -59,7 +63,7 @@ def read_local_json(url: str, *, launcher_key: str | None = None, timeout: float
 
 def existing_instance(port: int, workspace: Path, demo: bool, *, timeout: float = 1) -> str | None:
     try:
-        from workbench.local_session import read_instance
+        from modules.workspace.components.local_session import read_instance
 
         deadline = time.monotonic() + timeout
         health = read_local_json(f"http://127.0.0.1:{port}/api/health", timeout=timeout)
@@ -162,7 +166,7 @@ def runtime_self_test() -> None:
     from docx import Document
     from lxml import etree
     from reportlab.pdfgen.canvas import Canvas
-    from workbench.api import create_app
+    from modules.workspace.components.api import create_app
 
     with tempfile.TemporaryDirectory(prefix="outreach-self-test-") as folder:
         root = Path(folder)
@@ -186,7 +190,7 @@ def runtime_self_test() -> None:
 def configure_logging(workspace: Path | None = None):
     # Logs must exist before port/session checks and stay outside a replaceable
     # workspace. A fallback also records failures before LOCALAPPDATA is known.
-    from workbench.runtime_logging import configure_runtime_logging
+    from modules.workspace.components.runtime_logging import configure_runtime_logging
 
     return configure_runtime_logging(
         workspace,
@@ -233,12 +237,12 @@ def main(argv: list[str] | None = None) -> int:
         return 0
     # Only the server's actual bind determines availability. Client connection
     # probes can time out on an unused Windows port; raw binds reject TIME_WAIT.
-    # The workspace may be atomically replaced during run.main startup. Keep
+    # The workspace may be atomically replaced during Workspace startup. Keep
     # open log handles outside it so the rename also works on Windows.
     # Prevent installed source directories accumulating bytecode between upgrades.
     sys.dont_write_bytecode = True
     os.environ.pop("WORKBENCH_PREVIEW", None)
-    from run import main as run_workbench
+    from modules.workspace.components.startup import main as run_workbench
 
     saved_args = sys.argv
     sys.argv = [
@@ -292,7 +296,7 @@ def entrypoint() -> int:
                 pass
         logging.exception("%s could not start", APP_NAME)
         message = str(error)
-    from workbench.runtime_logging import safe_write
+    from modules.workspace.components.runtime_logging import safe_write
 
     safe_write(sys.stderr, f"\n{APP_NAME} could not start: {message}\n")
     if sys.platform == "win32":

@@ -6,19 +6,19 @@ import json
 
 import pytest
 
-from workbench.aegis import antimalware as content_scan
-from workbench import aegis
-from workbench.contact_discovery import ContactDiscovery, FetchResponse
-from test_contact_discovery_090 import FixtureFetcher, ROOT, SECURITY, html
+from modules.workspace.components.aegis import antimalware as content_scan
+from modules.workspace.components import aegis
+from modules.entities.components.contact_discovery import ContactDiscovery, FetchResponse
+from modules.entities.tests.support.contact_discovery import FixtureFetcher, ROOT, SECURITY, html
 
 
-from content_scan_helpers import NativeFunction, NativeProvider, install
+from tests.content_scan_helpers import install
 
 
 def test_system_directory_loader_exact_abi_unicode_bytes_and_context_lifecycle(monkeypatch):
     provider, loads = install(monkeypatch)
     text = "Zoë — 🌘 contact fixture"
-    result = content_scan.scan_contact_text(text)
+    result = content_scan.scan_text(text)
     assert result == {
         "status": "allowed",
         "provider": "windows_amsi",
@@ -43,6 +43,7 @@ def test_system_directory_loader_exact_abi_unicode_bytes_and_context_lifecycle(m
     assert scan[1] == text.encode("utf-16-le")
     assert scan[2] == len(text.encode("utf-16-le"))
     assert text not in scan[3]
+    assert scan[3] == "contact-response:" + hashlib.sha256(text.encode("utf-16-le")).hexdigest()
     assert [e[0] for e in provider.events] == ["initialize", "scan", "close"]
     content_scan.scan_buffer(b"another inert resource")
     assert len(loads) == 1
@@ -72,7 +73,7 @@ def test_results_below_block_threshold_preserve_provider_distinction(monkeypatch
 def test_detected_and_administrator_blocked_content_never_proceeds(monkeypatch, result, verdict):
     provider, _ = install(monkeypatch, result=result)
     with pytest.raises(content_scan.ContentScanError) as caught:
-        content_scan.scan_contact_text("inert fixture")
+        content_scan.scan_text("inert fixture")
     assert caught.value.code == "content_scan_blocked"
     assert caught.value.receipt["status"] == "blocked"
     assert caught.value.receipt["verdict"] == verdict
@@ -96,7 +97,7 @@ def test_native_failures_fail_closed_and_valid_context_is_always_released(
 ):
     provider, _ = install(monkeypatch, **kwargs)
     with pytest.raises(content_scan.ContentScanError) as caught:
-        content_scan.scan_contact_text("inert fixture")
+        content_scan.scan_text("inert fixture")
     assert caught.value.code == "content_scan_unavailable"
     assert caught.value.receipt["status"] == "unavailable"
     assert "INERT_PRIVATE_TEXT" not in str(caught.value)
@@ -121,7 +122,7 @@ def test_missing_system_provider_never_falls_back(monkeypatch):
 def test_non_windows_and_empty_buffers_truthfully_report_no_scan(monkeypatch):
     monkeypatch.setattr(content_scan, "_is_windows", lambda: False)
     monkeypatch.setattr(content_scan, "_api", lambda: pytest.fail("No native API on this platform"))
-    receipt = content_scan.scan_contact_text("inert fixture")
+    receipt = content_scan.scan_text("inert fixture")
     assert receipt["status"] == "not_supported" and receipt["provider"] == "none"
     receipt = content_scan.scan_buffer(b"")
     assert receipt["status"] == "empty" and receipt["verdict"] == "empty_not_scanned"
@@ -146,22 +147,34 @@ def test_raw_buffer_scan_does_not_decode_or_stop_at_embedded_null(monkeypatch):
 def test_engine_preserves_only_rejection_receipt_and_digest_before_parsing(
     monkeypatch, result, status, code
 ):
-    install(monkeypatch, result=result, scan_status=0x80004005 if status == "unavailable" else 0)
-    from workbench.contact_discovery import engine
+    provider, _ = install(
+        monkeypatch, result=result, scan_status=0x80004005 if status == "unavailable" else 0
+    )
+    from modules.entities.components.contact_discovery import engine
 
     monkeypatch.setattr(
         engine, "parse_html", lambda *a, **k: pytest.fail("Blocked text must not reach parser")
     )
     page = "<p>Security team: security@example.org</p>"
-    fetcher = FixtureFetcher({ROOT: html(page)})
+    counterpart = "https://www.example.org/"
+    fetcher = FixtureFetcher({ROOT: html(page), counterpart: html(page)})
     found = ContactDiscovery(fetcher=fetcher).discover("example.org")
-    snapshot = found["snapshots"][0]
-    assert snapshot["content_scan"]["status"] == status
-    assert snapshot["sha256"] == hashlib.sha256(page.encode()).hexdigest()
-    assert snapshot["derived_evidence"] is None and "body" not in snapshot
+    rejected = [
+        snapshot for snapshot in found["snapshots"] if snapshot["url"] in {ROOT, counterpart}
+    ]
+    assert len(rejected) == 2
+    for snapshot in rejected:
+        assert snapshot["content_scan"]["status"] == status
+        assert snapshot["sha256"] == hashlib.sha256(page.encode()).hexdigest()
+        assert snapshot["derived_evidence"] is None and "body" not in snapshot
     assert not found["candidates"]
     assert any(issue["code"] == code for issue in found["issues"])
-    assert fetcher.calls == [ROOT, SECURITY]
+    # A failed homepage can try only its approved counterpart (ISS043). Every
+    # fetched representation must still pass the native scanner before parsing.
+    assert fetcher.calls == [ROOT, counterpart, SECURITY]
+    assert found["request_count"] == found["page_request_count"] == 3
+    assert found["redirect_request_count"] == 0
+    assert len([event for event in provider.events if event[0] == "scan"]) == 2
     assert "<p>" not in json.dumps(found)
 
 
@@ -183,8 +196,8 @@ def test_engine_does_not_scan_error_or_unsupported_bodies(monkeypatch):
 
 
 def test_engine_scan_capacity_or_timeout_never_falls_back_to_parser(monkeypatch):
-    from workbench.contact_discovery import engine
-    from workbench.aegis.errors import SecurityExecutionError
+    from modules.entities.components.contact_discovery import engine
+    from modules.workspace.components.aegis.errors import SecurityExecutionError
 
     def bounded(*args, **kwargs):
         raise SecurityExecutionError("security_timeout", "Synthetic scan timeout")
@@ -222,4 +235,4 @@ def test_scan_helpers_never_write_files_or_start_external_processes(monkeypatch)
         patch.setattr(Path, "write_text", forbidden)
         patch.setattr(tempfile, "mkstemp", forbidden)
         patch.setattr(subprocess, "Popen", forbidden)
-        assert content_scan.scan_contact_text("inert fixture")["status"] == "allowed"
+        assert content_scan.scan_text("inert fixture")["status"] == "allowed"

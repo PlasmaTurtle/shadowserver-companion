@@ -1,8 +1,9 @@
 """Build the navigable source map and enforce explicit import boundaries.
 
 No application imports, workspace reads, network calls or third-party tooling.
-The graph includes local/deferred Python imports and literal ES module imports;
-it does not infer dynamic calls, SQL access or browser action-registry dispatch.
+The graph includes local/deferred Python imports and literal ES module imports,
+including import('...'). It does not infer computed imports, Python imported
+symbols, dynamic calls, SQL access or browser action-registry dispatch.
 """
 
 from __future__ import annotations
@@ -12,69 +13,244 @@ import ast
 from collections import defaultdict
 import hashlib
 import json
+import os
 from pathlib import Path
 import re
 import sys
+from urllib.parse import unquote, urlsplit
 
 ROOT = Path(__file__).resolve().parents[1]
+MODULE_FOLDERS = {
+    "components",
+    "tools",
+    "helpers",
+    "databases",
+    "static",
+    "tests",
+    "docs",
+    "fonts",
+    "schemas",
+    "resources",
+}
 
 
 def module_name(path):
     value = path.as_posix()
-    if value.startswith("components/attribution/src/"):
-        value = value.removeprefix("components/attribution/src/")
+    if value.startswith("modules/attribution/components/engine/src/"):
+        value = value.removeprefix("modules/attribution/components/engine/src/")
     if value.endswith(".py"):
         return value[:-3].replace("/", ".").removesuffix(".__init__")
     return value
 
 
 def inventory(root):
-    paths = {root / "run.py", root / "excel_intake.py"}
-    for folder, pattern in [
-        ("workbench", "*.py"),
-        ("components/attribution/src", "*.py"),
-        ("tools", "*.py"),
-        ("static", "*.js"),
-    ]:
-        paths.update((root / folder).rglob(pattern))
-    return sorted(
-        p.relative_to(root)
-        for p in paths
-        if "__pycache__" not in p.parts and "vendor" not in p.parts
-    )
+    """Find owned source and accidental loose programs without scanning dependencies."""
+    paths = []
+    excluded = {
+        "tests",
+        "node_modules",
+        "vendor",
+        "wheelhouse",
+        "build",
+        "dist",
+        "__pycache__",
+        "data",
+        "data-demo",
+    }
+    for directory, folders, filenames in os.walk(root):
+        folders[:] = [
+            name
+            for name in folders
+            if not name.startswith(".") and name not in excluded and not name.endswith(".egg-info")
+        ]
+        for filename in filenames:
+            if filename == "conftest.py":
+                continue
+            path = Path(directory) / filename
+            if path.suffix in {".py", ".js"}:
+                paths.append(path.relative_to(root))
+    return sorted(paths)
 
 
-def imports(path, text):
-    if path.suffix == ".js":
-        result = []
-        for target in re.findall(
-            r"\b(?:import|export)\s+(?:[^;]*?\s+from\s+)?[\'\"]([^\'\"]+)[\'\"]", text
+_JS_TOKENS = re.compile(
+    r"(?P<comment>//[^\n]*|/\*[\s\S]*?\*/)"
+    r"|(?P<string>'(?:\\[\s\S]|[^'\\])*'|\"(?:\\[\s\S]|[^\"\\])*\")"
+    r"|(?P<template>`(?:\\[\s\S]|[^`\\])*`)"
+    r"|(?P<word>[A-Za-z_$][\w$]*)|(?P<operator>=>|\?\.)|(?P<other>[^\s])"
+)
+_JS_REGEX = re.compile(r"/(?![/*])(?:\\.|\[(?:\\.|[^\]\\])*\]|[^/\\\n])+/[a-z]*")
+
+
+def javascript_targets(text):
+    """Read literal ES imports without matching comments or quoted examples.
+
+    This is a lexical scanner, not a JavaScript parser. Template strings (including
+    their interpolations), computed imports and CommonJS calls are outside scope.
+    """
+    tokens, offset = [], 0
+    while match := _JS_TOKENS.search(text, offset):
+        kind, value = match.lastgroup, match.group()
+        offset = match.end()
+        if kind == "comment":
+            continue
+        if value == "/" and (
+            not tokens
+            or tokens[-1][1] in {"=", "(", "[", "{", ",", ":", ";", "!", "?", "return", "=>"}
         ):
-            if target.startswith("."):
-                parts = []
-                for part in (path.parent / target).parts:
-                    if part == "..":
-                        parts.pop()
-                    elif part != ".":
-                        parts.append(part)
-                result.append("/".join(parts))
-        return result
+            literal = _JS_REGEX.match(text, match.start())
+            if literal:
+                offset = literal.end()
+                tokens.append(("regex", literal.group(), match.start()))
+                continue
+        tokens.append((kind, value, match.start()))
+    for index, (kind, value, start) in enumerate(tokens):
+        if kind != "word" or value not in {"import", "export"}:
+            continue
+        if index and tokens[index - 1][1] in {".", "?."}:
+            continue
+        tail = tokens[index + 1 :]
+        candidate = None
+        if value == "import" and tail and tail[0][0] == "string":
+            candidate = tail[0]
+        elif value == "import" and len(tail) >= 3 and tail[0][1] == "(":
+            if tail[1][0] == "string" and tail[2][1] in {")", ","}:
+                candidate = tail[1]
+        elif tail and (tail[0][1] in {"{", "*"} or (value == "import" and tail[0][0] == "word")):
+            binding_depth = 0
+            for left, right in zip(tail, tail[1:]):
+                if left[1] == "{":
+                    binding_depth += 1
+                elif left[1] == "}":
+                    binding_depth -= 1
+                if not binding_depth and left[1] in {
+                    ";",
+                    "import",
+                    "export",
+                    "const",
+                    "let",
+                    "var",
+                    "function",
+                    "class",
+                    "return",
+                }:
+                    break
+                if not binding_depth and left[1] == "from" and right[0] == "string":
+                    candidate = right
+                    break
+        if candidate:
+            # JSON-style escapes and ordinary JS string escapes used in paths.
+            # JS permits \/; Python retains it. Replace by escape-pair so an
+            # escaped backslash followed by a slash is not changed accidentally.
+            literal = re.sub(
+                r"\\[\s\S]",
+                lambda match: "/" if match.group() == r"\/" else match.group(),
+                candidate[1],
+            )
+            try:
+                target = ast.literal_eval(literal)
+            except (SyntaxError, ValueError):
+                continue
+            yield target, text.count("\n", 0, start) + 1
+
+
+def import_details(path, text):
+    """Return graph candidates, actual module bases and source diagnostics."""
+    found, targets, diagnostics = [], [], []
+    if path.suffix == ".js":
+        for target, line in javascript_targets(text):
+            if not target.startswith(("./", "../", "/modules/")):
+                continue
+            try:
+                target_path = unquote(urlsplit(target).path)
+            except ValueError:
+                diagnostics.append(
+                    f"{path.as_posix()}:{line}: invalid local JavaScript import {target}"
+                )
+                continue
+            if "\\" in target_path:
+                diagnostics.append(
+                    f"{path.as_posix()}:{line}: local JavaScript imports must use URL path separators: {target}"
+                )
+                continue
+            parts = [] if target_path.startswith("/") else list(path.parent.parts)
+            for part in target_path.split("/"):
+                if part == "..":
+                    if not parts:
+                        diagnostics.append(
+                            f"{path.as_posix()}:{line}: JavaScript import escapes source root: {target}"
+                        )
+                        break
+                    parts.pop()
+                elif part not in {"", "."}:
+                    parts.append(part)
+            else:
+                name = "/".join(parts)
+                found.append(name)
+                targets.append((name, line, True))
+        return sorted(set(found)), targets, diagnostics
     module = module_name(path)
     package = module if path.name == "__init__.py" else module.rpartition(".")[0]
-    found = []
-    for node in ast.walk(ast.parse(text)):
+    package_parts = package.split(".") if package else []
+    try:
+        tree = ast.parse(text)
+    except SyntaxError as error:
+        return [], [], [f"{path.as_posix()}:{error.lineno}: invalid Python syntax: {error.msg}"]
+    for node in ast.walk(tree):
         if isinstance(node, ast.Import):
             found.extend(a.name for a in node.names)
+            targets.extend((a.name, node.lineno, False) for a in node.names)
         elif isinstance(node, ast.ImportFrom):
+            if node.level > len(package_parts):
+                diagnostics.append(
+                    f"{path.as_posix()}:{node.lineno}: relative Python import escapes package root"
+                )
+                continue
             prefix = (
-                ".".join(package.split(".")[: len(package.split(".")) - node.level + 1])
-                if node.level
-                else ""
+                ".".join(package_parts[: len(package_parts) - node.level + 1]) if node.level else ""
             )
             base = ".".join(p for p in (prefix, node.module) if p)
             found.append(base)
+            targets.append((base, node.lineno, bool(node.level)))
             found.extend(base + "." + a.name for a in node.names)
-    return sorted(set(found))
+    return sorted(set(found)), targets, diagnostics
+
+
+def imports(path, text):
+    return import_details(path, text)[0]
+
+
+def missing_imports(root, path, targets, python_roots):
+    """Check local module bases, without importing code or guessing symbols.
+
+    Existing directories may be namespace packages; files outside the graph (for
+    example generated/vendor code) remain valid targets. Unknown absolute Python
+    roots may be third-party packages and are deliberately not checked here.
+    """
+    errors = []
+    for name, line, relative in targets:
+        if path.suffix == ".js":
+            try:
+                candidate = (root / name).resolve()
+                if not candidate.is_relative_to(root.resolve()):
+                    errors.append(
+                        f"{path.as_posix()}:{line}: JavaScript import escapes source root: {name}"
+                    )
+                    continue
+                exists = candidate.is_file()
+            except (OSError, ValueError):
+                errors.append(f"{path.as_posix()}:{line}: invalid local JavaScript import {name}")
+                continue
+            language = "JavaScript"
+        else:
+            first, *rest = name.split(".")
+            if first not in python_roots and not relative:
+                continue
+            base = python_roots.get(first, root / first).joinpath(*rest)
+            exists = base.is_dir() or base.with_suffix(".py").is_file()
+            language = "Python"
+        if not exists:
+            errors.append(f"{path.as_posix()}:{line}: missing local {language} module {name}")
+    return errors
 
 
 def cycles(edges):
@@ -111,28 +287,67 @@ def cycles(edges):
 
 
 def within(name, prefixes):
-    return any(name == prefix or name.startswith(prefix + ".") for prefix in prefixes)
+    return any(
+        name == prefix or name.startswith((prefix + ".", prefix + "/")) for prefix in prefixes
+    )
 
 
 def analyze(root=ROOT):
-    registry = json.loads((root / "docs/components.json").read_text())
+    registry = json.loads((root / "docs/components.json").read_text(encoding="utf-8"))
     components = registry["components"]
+    layout_errors = []
+    if registry.get("project_paths"):
+        expected = {component["id"] for component in components}
+        present = {
+            path.name
+            for path in (root / "modules").iterdir()
+            if path.is_dir() and not path.name.startswith((".", "__"))
+        }
+        for name in sorted(present - expected):
+            layout_errors.append(f"modules/{name}: module has no registered owner")
+        for name in sorted(expected):
+            for folder in sorted(MODULE_FOLDERS):
+                if not (root / "modules" / name / folder).is_dir():
+                    layout_errors.append(f"modules/{name}/{folder}: missing module folder")
+        components = [
+            *components,
+            {
+                "id": "project",
+                "name": "Project infrastructure",
+                "kind": "Top-level integration",
+                "paths": registry["project_paths"],
+                "entry": "run.py",
+                "contract": "Application launch, release packaging and project-wide verification.",
+                "tests": ["tests"],
+                "next_work": "Keep feature implementations inside their module.",
+            },
+        ]
     paths = inventory(root)
     modules = {module_name(p): p for p in paths}
-    errors, files, edges, referenced_by_module = [], [], {}, {}
+    python_roots = {
+        name.split(".")[0]: root / name.split(".")[0]
+        for name, path in modules.items()
+        if path.suffix == ".py"
+    }
+    engine = root / "modules/attribution/components/engine/src/attribution"
+    if engine.is_dir():
+        python_roots["attribution"] = engine
+    errors, files, edges, referenced_by_module = layout_errors, [], {}, {}
     for module, path in modules.items():
-        owners = [c for c in components if any(path.match(pattern) for pattern in c["paths"])]
+        owners = [c for c in components if any(path.full_match(pattern) for pattern in c["paths"])]
         if len(owners) != 1:
             errors.append(f"{path}: expected one owner, found {[c['id'] for c in owners]}")
         text = (root / path).read_text(encoding="utf-8")
-        referenced = imports(path, text)
+        referenced, targets, diagnostics = import_details(path, text)
+        errors.extend(diagnostics)
+        errors.extend(missing_imports(root, path, targets, python_roots))
         referenced_by_module[module] = referenced
         # Include imported package init and explicit submodule imports when both exist.
         resolved = set()
         for name in referenced:
             if name in modules:
                 resolved.add(name)
-            elif path.parts[0] == "tools":
+            elif "tools" in path.parts:
                 sibling = ".".join(path.parent.parts) + "." + name
                 if sibling in modules:
                     resolved.add(sibling)
@@ -140,7 +355,11 @@ def analyze(root=ROOT):
         edges[module] = set(internal)
         symbols = []
         if path.suffix == ".py":
-            for node in ast.parse(text).body:
+            try:
+                body = ast.parse(text).body
+            except SyntaxError:
+                body = []  # import_details already reports the source diagnostic.
+            for node in body:
                 if isinstance(
                     node, (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef)
                 ) and not node.name.startswith("_"):
@@ -182,9 +401,9 @@ def analyze(root=ROOT):
                     errors.append(
                         f"{rule['name']}: prohibited provider/persistence import {module} -> {target}"
                     )
-            for target in dependencies:
                 if within(target, rule.get("deny", [])):
                     errors.append(f"{rule['name']}: {module} -> {target}")
+            for target in dependencies:
                 if (
                     "allow_internal" in rule
                     and not within(target, rule["allow_internal"])
@@ -196,8 +415,10 @@ def analyze(root=ROOT):
         if not any(set(group) <= set(known) for known in registry["known_cycles"]):
             errors.append("New dependency cycle: " + " -> ".join(group))
     for component in components:
+        if component.get("entry") and not (root / component["entry"]).is_file():
+            errors.append(f"{component['id']}: missing component entry {component['entry']}")
         for target in component["tests"]:
-            if target.startswith(("tests/", "components/")) and not (root / target).exists():
+            if target.startswith(("tests/", "modules/")) and not (root / target).exists():
                 errors.append(f"{component['id']}: missing test entry {target}")
     owner = {f["module"]: f["owner"] for f in files}
     grouped = defaultdict(list)
@@ -211,8 +432,10 @@ def analyze(root=ROOT):
     ]
     return {
         "schema": 1,
-        "release": (root / "VERSION").read_text().strip(),
-        "release_channel": json.loads((root / "RELEASE.json").read_text()).get("channel")
+        "release": (root / "VERSION").read_text(encoding="utf-8").strip(),
+        "release_channel": json.loads((root / "RELEASE.json").read_text(encoding="utf-8")).get(
+            "channel"
+        )
         if (root / "RELEASE.json").exists()
         else "unspecified",
         "scope": registry["description"],
@@ -226,7 +449,7 @@ def analyze(root=ROOT):
 
 
 def render(data, root=ROOT):
-    template = (root / "tools/program_map_template.html").read_text()
+    template = (root / "tools/program_map_template.html").read_text(encoding="utf-8")
     payload = (
         json.dumps(data, ensure_ascii=False)
         .replace("<", "\\u003c")
@@ -245,7 +468,7 @@ def verify(root=ROOT):
         root / "docs/program-map.html": render(data, root),
     }
     for path, expected in outputs.items():
-        if not path.exists() or path.read_text() != expected:
+        if not path.exists() or path.read_text(encoding="utf-8") != expected:
             errors.append(
                 f"{path.relative_to(root)} is stale; run python tools/program_map.py --write"
             )
@@ -273,10 +496,10 @@ def main():
     errors = list(data["errors"])
     if args.write and not errors:
         for path, value in outputs.items():
-            path.write_text(value, encoding="utf-8")
+            path.write_text(value, encoding="utf-8", newline="\n")
     if args.check:
         for path, value in outputs.items():
-            if not path.exists() or path.read_text() != value:
+            if not path.exists() or path.read_text(encoding="utf-8") != value:
                 errors.append(
                     f"{path.relative_to(ROOT)} is stale; run python tools/program_map.py --write"
                 )

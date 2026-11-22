@@ -9,9 +9,10 @@ from types import SimpleNamespace
 
 import pytest
 
-import run
-from test_chaos_isolation_0981 import helper
-from workbench.local_session import LocalSessions, write_instance
+from modules.workspace.components import startup as workspace_startup
+from modules.workspace.components.workspace_session import workspace_session
+from tests.support.installation import helper
+from modules.workspace.components.local_session import LocalSessions, write_instance
 
 
 class Function:
@@ -206,7 +207,7 @@ def separate_workspace_owner(workspace):
     script = (
         "from pathlib import Path\n"
         "import sys\n"
-        "from run import workspace_session\n"
+        "from modules.workspace.components.workspace_session import workspace_session\n"
         "root = Path(sys.argv[1])\n"
         "with workspace_session(root):\n"
         "    (root / 'owner-ready').write_text('ready')\n"
@@ -263,11 +264,11 @@ def test_simultaneous_launch_uses_real_workspace_exclusion_then_waits_for_matchi
         return url if len(calls) == 4 else None
 
     def second_server():
-        with run.workspace_session(tmp_path):
+        with workspace_session(tmp_path):
             pytest.fail("The second launch must not acquire the first process's workspace")
 
     monkeypatch.setattr(desktop, "existing_instance", lookup)
-    monkeypatch.setattr(run, "main", second_server)
+    monkeypatch.setattr(workspace_startup, "main", second_server)
     previous_argv = list(desktop.sys.argv)
     with separate_workspace_owner(tmp_path):
         assert desktop.main(["--data-dir", str(tmp_path), "--port", "8881"]) == 0
@@ -289,12 +290,12 @@ def test_unmatched_busy_workspace_times_out_without_guessing_url_or_starting_aga
 
     def second_server():
         starts.append(True)
-        with run.workspace_session(tmp_path):
+        with workspace_session(tmp_path):
             pytest.fail("An already-owned workspace must not start")
 
-    monkeypatch.setattr(run, "main", second_server)
+    monkeypatch.setattr(workspace_startup, "main", second_server)
     with (
-        run.workspace_session(tmp_path),
+        workspace_session(tmp_path),
         pytest.raises(RuntimeError, match="matching browser session"),
     ):
         desktop.main(["--data-dir", str(tmp_path), "--port", "8882", "--demo"])
@@ -310,7 +311,7 @@ def test_unrelated_startup_errors_are_not_retried(launcher, tmp_path, monkeypatc
     def fail():
         raise SystemExit(exit_code)
 
-    monkeypatch.setattr(run, "main", fail)
+    monkeypatch.setattr(workspace_startup, "main", fail)
     with pytest.raises(SystemExit) as failure:
         desktop.main(["--data-dir", str(tmp_path)])
     assert failure.value.code == exit_code
@@ -370,7 +371,7 @@ def test_reuse_requires_valid_authenticated_launch_token_and_shares_timeout_budg
 def test_nsis_owns_gate_for_all_replacement_and_uninstall_mutations():
     script = (
         Path(__file__).resolve().parents[1] / "tools/windows_installer/installer.nsi"
-    ).read_text()
+    ).read_text(encoding="utf-8")
     desktop = helper("desktop")
     assert desktop.INSTALL_GATE == f"Local\\{desktop.IDENTITY['app_id']}.Installed.StartInstall"
     assert '!define START_INSTALL_MUTEX "Local\\${APP_ID}.Installed.StartInstall"' in script
@@ -381,7 +382,7 @@ def test_nsis_owns_gate_for_all_replacement_and_uninstall_mutations():
             "!insertmacro CheckNotRunning"
         )
         assert section.rstrip().endswith("!insertmacro ReleaseInstallGate")
-    assert install.index("!insertmacro CheckNotRunning") < install.index('File /r "${PAYLOAD}/*"')
+    assert install.index("!insertmacro CheckNotRunning") < install.index('File /r "${PAYLOAD}\\*"')
     assert uninstall.index("!insertmacro CheckNotRunning") < uninstall.index(
         '!include "${UNINSTALL_INVENTORY}"'
     )
@@ -397,7 +398,7 @@ def test_nsis_owns_gate_for_all_replacement_and_uninstall_mutations():
 def test_public_rename_replaces_only_legacy_darkmatter_shortcuts_after_new_links_exist():
     script = (
         Path(__file__).resolve().parents[1] / "tools/windows_installer/installer.nsi"
-    ).read_text()
+    ).read_text(encoding="utf-8")
     marker = (
         '!if "${APP_VARIANT}" == "dark_matter"\n!if "${APP}" != "Shadowserver Companion DarkMatter"'
     )
@@ -426,9 +427,13 @@ def test_public_rename_replaces_only_legacy_darkmatter_shortcuts_after_new_links
     assert 'RMDir "$SMPROGRAMS\\Shadowserver Companion DarkMatter"' in cleanup
     assert "RMDir /r" not in cleanup and "$LOCALAPPDATA" not in cleanup
     assert "Shadowserver Companion Chaos" not in cleanup and "OutreachWorkbench" not in cleanup
-    assert cleanup.index("IfErrors keep_legacy_darkmatter_links") < cleanup.index("Delete ")
-    assert cleanup.rstrip().endswith("keep_legacy_darkmatter_links:")
-    assert 'ClearErrors\n  CreateDirectory "$SMPROGRAMS\\${APP}"' in script
+    # Required shortcut failure now aborts setup before legacy links are touched.
+    guard = script.split('CreateShortCut "$DESKTOP\\${APP}.lnk"', 1)[1].split(marker, 1)[0]
+    assert guard.index("${If} ${Errors}") < guard.index("Abort") < guard.index("${EndIf}")
+    assert (
+        'ClearErrors\n  CreateDirectory "$LOCALAPPDATA\\${APP_ID}\\data"\n'
+        '  CreateDirectory "$SMPROGRAMS\\${APP}"'
+    ) in script
     assert script.index(marker) > script.index('CreateShortCut "$DESKTOP\\${APP}.lnk"')
     assert script.index(marker) > script.index(
         'CreateShortCut "$SMPROGRAMS\\${APP}\\${DEMO_NAME}.lnk"'

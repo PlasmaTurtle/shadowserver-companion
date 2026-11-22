@@ -6,15 +6,15 @@ import pytest
 from PIL import Image
 from starlette.requests import Request
 from starlette.responses import JSONResponse
-from workbench.request_limits import RequestBodyLimit
-from test_workbench import app, client, import_rows
-from workbench.image_evidence import metadata_path
+from modules.workspace.components.request_limits import RequestBodyLimit
+from tests.support.workbench import app, client, import_rows
+from modules.investigations.components.image_evidence import metadata_path
 
 
 @pytest.mark.parametrize("multipart", [False, True])
 def test_streaming_limit_also_handles_missing_content_length(multipart, monkeypatch):
     import asyncio
-    import workbench.request_limits as limits
+    import modules.workspace.components.request_limits as limits
     from fastapi import FastAPI
     from fastapi.testclient import TestClient
 
@@ -51,7 +51,7 @@ def test_streaming_limit_also_handles_missing_content_length(multipart, monkeypa
 
 def test_declared_over_limit_never_reads_the_body(monkeypatch):
     import asyncio
-    import workbench.request_limits as limits
+    import modules.workspace.components.request_limits as limits
 
     monkeypatch.setattr(limits, "request_limit", lambda path: 50)
     called = []
@@ -92,7 +92,7 @@ def test_upload_hashes_preview_and_rejects_changed_image(client, app):
     )
     assert response.status_code == 200, response.text
     row = response.json()["evidence"][0]
-    meta = json.loads(app.state.store.path(metadata_path(row["id"])).read_text())
+    meta = json.loads(app.state.store.path(metadata_path(row["id"])).read_text(encoding="utf-8"))
     assert meta["preview_sha256"]
     app.state.store.path(row["preview_path"]).write_bytes(b"changed")
     response = client.get("/api/evidence/" + row["id"] + "/image")
@@ -100,7 +100,7 @@ def test_upload_hashes_preview_and_rejects_changed_image(client, app):
 
 
 def test_affected_fips_runtime_is_rejected_without_disabling_policy(monkeypatch):
-    from workbench import crypto_policy
+    from modules.workspace.components import crypto_policy
 
     monkeypatch.setattr(crypto_policy.sys, "version_info", (3, 14, 10))
     monkeypatch.setattr(crypto_policy._hashlib, "get_fips_mode", lambda: 1)
@@ -112,7 +112,7 @@ def test_affected_fips_runtime_is_rejected_without_disabling_policy(monkeypatch)
 
 def test_all_workers_close_even_when_lifespan_exits_with_an_error(tmp_path, monkeypatch):
     import asyncio
-    from workbench.api import create_app
+    from modules.workspace.components.api import create_app
 
     application = create_app(tmp_path / "lifecycle", worker=False)
     closed = []

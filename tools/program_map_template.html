@@ -25,7 +25,7 @@
 const DATA=/*PROGRAM_DATA*/null;
 const byId=new Map(DATA.components.map(c=>[c.id,c]));
 const filesByComponent=new Map(DATA.components.map(c=>[c.id,DATA.files.filter(f=>f.owner===c.id)]));
-const NS='http://www.w3.org/2000/svg';let selected='api';let query='';
+const NS='http://www.w3.org/2000/svg';let selected='workspace';let query='';
 const $=s=>document.querySelector(s);
 function el(tag,text,cls){const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;}
 function svgEl(tag,attrs){const n=document.createElementNS(NS,tag);Object.entries(attrs||{}).forEach(([k,v])=>n.setAttribute(k,v));return n;}
@@ -51,6 +51,6 @@ function detail(){
  const expanded=el('div');host.append(expanded);
  for(const f of files){const b=el('button',f.path,'file');b.append(el('span',`${f.lines} lines · ${f.imports.length} internal imports · inspect symbols`));b.addEventListener('click',()=>{expanded.replaceChildren();const box=el('div',undefined,'source-detail');box.append(el('code',f.path),el('p','Public symbols / source line'));const symbols=el('ul');f.symbols.forEach(s=>symbols.append(el('li',`${s.name} — ${s.kind}, line ${s.line}`)));if(!f.symbols.length)symbols.append(el('li','Re-exports, constants or module initialization'));box.append(symbols,el('p','Internal imports'));const deps=el('ul');f.imports.forEach(d=>deps.append(el('li',d)));if(!f.imports.length)deps.append(el('li','None'));box.append(deps);expanded.append(box);});host.append(b);}
 }
-$('#search').addEventListener('input',e=>{query=e.target.value.trim().toLowerCase();const first=DATA.components.find(matches);if(first&&!matches(byId.get(selected)))selected=first.id;draw();detail();});$('#all-links').addEventListener('change',draw);$('#reset').addEventListener('click',()=>{query='';$('#search').value='';$('#all-links').checked=false;select('api');});select(selected);
+$('#search').addEventListener('input',e=>{query=e.target.value.trim().toLowerCase();const first=DATA.components.find(matches);if(first&&!matches(byId.get(selected)))selected=first.id;draw();detail();});$('#all-links').addEventListener('change',draw);$('#reset').addEventListener('click',()=>{query='';$('#search').value='';$('#all-links').checked=false;select('workspace');});select(selected);
 </script>
 </body></html>

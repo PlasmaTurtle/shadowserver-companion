@@ -1,81 +1,27 @@
-"""Cross-component acceptance checks for source-backed, image-optional reports."""
+"""Cross-component acceptance checks for source-backed reports with screenshots."""
+
+from tests.support.qualification import registry_factory
 
 import hashlib
 import io
 import json
-from workbench import compact_json
+from modules.workspace.components import compact_json
 import posixpath
 import zipfile
-from unittest.mock import patch
 from xml.etree import ElementTree
 
 import pytest
 
-from test_workbench import app, client, import_rows, observations, validate_sections
-from workbench.store import Store, dump, now
+from tests.support.workbench import app, client, import_rows, observations
+from modules.workspace.components.store import Store
+from modules.workspace.components.primitives import dump, now
 
-CVE = "CVE-2025-12345"
+from tests.support.acceptance import CVE, certify, open_case, review_case
+
 DESCRIPTION = (
     "A boundary-checking error allows an authenticated user to read a "
     "restricted object when the documented configuration is enabled."
 )
-
-
-def open_case(client, app, tag="eol-php"):
-    rows = observations()
-    for row in rows:
-        row["tag"] = tag
-    unavailable = {
-        "id": CVE,
-        "state": "UNKNOWN",
-        "verification_status": "unavailable",
-        "description": "",
-        "cvss": None,
-        "epss": None,
-        "kev": None,
-        "sources": [],
-        "errors": ["Deterministic offline acceptance fixture"],
-    }
-    with patch("workbench.intake_service.verify", return_value=unavailable):
-        import_rows(client, app, rows)
-    return client.get("/api/cases/" + client.get("/api/cases").json()[0]["id"]).json()
-
-
-def save_case(client, lead, **changes):
-    fields = {**lead["draft"], **changes}
-    response = client.put(
-        "/api/leads/" + lead["id"] + "/draft",
-        params={"case_id": lead["case_id"]},
-        json={"expected_revision": lead["draft_revision"], "fields": fields},
-    )
-    assert response.status_code == 200, response.text
-    return response.json()
-
-
-def review_case(client, lead, **changes):
-    lead = save_case(
-        client,
-        lead,
-        company="Acceptance Example",
-        sender_name="Acceptance Analyst",
-        website_verified=True,
-        reviewed=True,
-        **changes,
-    )
-    # Adopting sources or disposition changes clears review. Review is a second,
-    # explicit action once the new content is available to the analyst.
-    if not lead["draft"]["reviewed"]:
-        lead = save_case(client, lead, reviewed=True)
-    return lead
-
-
-def certify(client, lead):
-    lead = validate_sections(client, lead)
-    response = client.post(
-        "/api/leads/" + lead["id"] + "/finalize", params={"case_id": lead["case_id"]}
-    )
-    assert response.status_code == 200, response.text
-    return response.json()
 
 
 def source_record(store, description=DESCRIPTION):
@@ -163,16 +109,20 @@ def word_text(content, exhibit_id=None):
     return " ".join(" ".join(parts).split())
 
 
-def test_eol_report_certifies_without_images_and_survives_schema_four_reopen(client, app):
+def test_eol_report_retains_qualification_image_and_survives_schema_four_reopen(client, app):
     lead = review_case(
         client,
         open_case(client, app),
         narrative="This is a case-specific narrative retained verbatim.",
     )
-    assert lead["evidence"] == []
+    assert len(lead["evidence"]) == 1
+    captured_website = lead["evidence"][0]
+    assert captured_website["kind"] == "website" and captured_website["included"]
     report = certify(client, lead)
     folder = app.state.store.path(report["path"])
     before = {str(p.relative_to(folder)): p.read_bytes() for p in folder.rglob("*") if p.is_file()}
+    saved = compact_json.loads((folder / "snapshot.json").read_text(encoding="utf-8"))
+    assert saved["evidence"][0]["sha256"] == captured_website["sha256"]
     reopened = Store(app.state.store.root)
     assert reopened.one("PRAGMA user_version")["user_version"] >= 4
     assert reopened.package_available(report)
@@ -186,7 +136,7 @@ def test_eol_report_certifies_without_images_and_survives_schema_four_reopen(cli
     assert CVE not in text
 
 
-def test_published_cve_without_images_exports_offline_and_preserves_quotation(
+def test_published_cve_with_retained_image_exports_offline_and_preserves_quotation(
     client, app, monkeypatch
 ):
     lead = open_case(client, app, CVE + ";test-product")
@@ -197,7 +147,8 @@ def test_published_cve_without_images_exports_offline_and_preserves_quotation(
         cve_records=[record],
         narrative="Analyst narrative remains separate from the source quotation.",
     )
-    assert lead["evidence"] == []
+    assert len(lead["evidence"]) == 1
+    assert lead["evidence"][0]["kind"] == "website" and lead["evidence"][0]["included"]
 
     def fail_network(*args, **kwargs):
         raise AssertionError("Rendering/certification must not fetch a live source")
@@ -214,7 +165,7 @@ def test_published_cve_without_images_exports_offline_and_preserves_quotation(
     assert DESCRIPTION in text
     assert word_text(document, "EX-VULNERABILITY").count(DESCRIPTION) == 1
     assert "began reviewing Shadowserver observations" in text
-    data = compact_json.loads((folder / "snapshot.json").read_text())
+    data = compact_json.loads((folder / "snapshot.json").read_text(encoding="utf-8"))
     # The CVE-only observation with no version is intentionally retained too.
     assert len(data["assets"]) == 4
     assert len(data["scope_source_entries"]) == 5
@@ -234,7 +185,9 @@ def test_published_cve_without_images_exports_offline_and_preserves_quotation(
 
 
 @pytest.mark.parametrize("action", ["fallback", "exclude"])
-def test_unresolved_finding_requires_explicit_disposition_without_screenshot(client, app, action):
+def test_unresolved_finding_requires_explicit_disposition_despite_website_screenshot(
+    client, app, action
+):
     lead = review_case(client, open_case(client, app, CVE))
     denied = client.post(
         "/api/leads/" + lead["id"] + "/finalize", params={"case_id": lead["case_id"]}
@@ -255,7 +208,7 @@ def test_unresolved_finding_requires_explicit_disposition_without_screenshot(cli
     lead = review_case(client, lead, cve_dispositions={CVE: decision})
     report = certify(client, lead)
     folder = app.state.store.path(report["path"])
-    data = compact_json.loads((folder / "snapshot.json").read_text())
+    data = compact_json.loads((folder / "snapshot.json").read_text(encoding="utf-8"))
     assert data["draft"]["cve_dispositions"][CVE]["reason"] == decision["reason"]
     assert any(
         CVE in entry["source"]["fields"]["tag"]
@@ -279,6 +232,9 @@ def test_pinned_draft_sources_and_explainers_survive_bank_update_and_later_scan(
     )
     prior_revision = lead["draft_revision"]
     prior_entry_ids = {entry["id"] for entry in lead["entries"]}
+    prior_finding = app.state.store.one(
+        "SELECT last_seen,workflow FROM awareness_findings WHERE condition=?", (CVE,)
+    )
     pinned = lead["draft"]["explainer_snapshots"]
     selected = next(block for block in pinned if block["id"] == "attribution")
     response = client.put(
@@ -287,17 +243,17 @@ def test_pinned_draft_sources_and_explainers_survive_bank_update_and_later_scan(
             "title": "Changed shared attribution block",
             "body": "Changed bank content must not replace saved draft text.",
             "sources": "https://www.arin.net/resources/registry/whois/",
+            "expected_revision": selected["revision"],
         },
     )
     assert response.status_code == 200
-    newer = source_record(app.state.store, "A later source revision that was not adopted.")
+    source_record(app.state.store, "A later source revision that was not adopted.")
     rows = observations()
     for row in rows:
         row.update(tag=CVE, version="7.3.26", timestamp="2026-12-03T00:00:00Z")
-    # Seed the normal intake result directly so this tests adoption behavior,
-    # rather than depending on implementation-specific cache TTLs/providers.
-    with patch("workbench.intake_service.verify", return_value=newer):
-        import_rows(client, app, rows, "later-scan.csv")
+    # The real qualification gate stops already handled findings before
+    # evaluation; a refreshed shared source must not change their case pin.
+    import_rows(client, app, rows, "later-scan.csv")
     lead = client.get("/api/cases/" + lead["case_id"]).json()
     assert lead["draft"]["cve_records"][0]["description"] == DESCRIPTION
     assert (
@@ -309,14 +265,15 @@ def test_pinned_draft_sources_and_explainers_survive_bank_update_and_later_scan(
     assert lead["draft"]["reviewed"] is True
     assert lead["draft_revision"] == prior_revision
     assert {entry["id"] for entry in lead["entries"]} == prior_entry_ids
-    # Another sighting of the assigned CVE, including a patch-version change,
-    # contributes history without asking the analyst to notify it again.
+    # Already assigned conditions stop at the local qualification gate; their
+    # later source rows remain in Dark Matter without rewriting the active case.
     assert client.get("/api/pending-leads").json() == []
     finding = app.state.store.one(
         "SELECT last_seen,workflow FROM awareness_findings WHERE condition=?", (CVE,)
     )
-    assert finding["last_seen"].startswith("2026-12-03")
-    assert finding["workflow"] == "handled"
+    assert finding == prior_finding and finding["workflow"] == "handled"
+    archived = app.state.store.dark_matter.query(q="later-scan.csv")
+    assert any(item["reason"] == "no_actionable_findings" for item in archived["items"])
 
 
 def test_certified_package_unchanged_after_shared_content_refresh(client, app):
@@ -338,6 +295,7 @@ def test_certified_package_unchanged_after_shared_content_refresh(client, app):
             "title": "Updated CVE explainer",
             "body": "Updated wording.",
             "sources": "https://www.cve.org/",
+            "expected_revision": client.get("/api/explainers/cve").json()["revision"],
         },
     )
     assert response.status_code == 200
@@ -353,7 +311,7 @@ def test_certified_package_unchanged_after_shared_content_refresh(client, app):
 
 
 def test_all_case_attribution_groups_render_from_saved_case_evidence(client, app):
-    from test_workbench import FakeRegistry
+    from tests.support.workbench import FakeRegistry
 
     first = open_case(client, app)
 
@@ -368,7 +326,7 @@ def test_all_case_attribution_groups_render_from_saved_case_evidence(client, app
                 {**record.record, "contact": "support@another.com"},
             )
 
-    app.state.intake.lookup_factory = OtherRegistry
+    app.state.intake.attribution_factory = registry_factory(OtherRegistry)
     import_rows(
         client,
         app,
@@ -414,7 +372,7 @@ def test_all_case_attribution_groups_render_from_saved_case_evidence(client, app
     lead = review_case(client, lead)
     report = certify(client, lead)
     folder = app.state.store.path(report["path"])
-    snapshot = compact_json.loads((folder / "snapshot.json").read_text())
+    snapshot = compact_json.loads((folder / "snapshot.json").read_text(encoding="utf-8"))
     assert len(snapshot["composition"]["attribution_groups"]) == 2
     assert {g["hostname"] for g in snapshot["composition"]["attribution_groups"]} == {
         "example.com",

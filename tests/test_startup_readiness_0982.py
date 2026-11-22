@@ -10,8 +10,8 @@ import threading
 import pytest
 import uvicorn
 
-import run
-from test_chaos_isolation_0981 import helper
+from modules.workspace.components import startup as workspace_startup
+from tests.support.installation import helper
 
 
 class MinimalApp:
@@ -37,8 +37,8 @@ class MinimalApp:
 
 @pytest.fixture
 def startup(tmp_path, monkeypatch):
-    import workbench.api
-    import workbench.local_session
+    import modules.workspace.components.api
+    import modules.workspace.components.local_session
 
     instance = tmp_path / "instance.json"
 
@@ -46,10 +46,14 @@ def startup(tmp_path, monkeypatch):
         instance.write_text("synthetic")
         return instance
 
-    monkeypatch.setattr(workbench.api, "create_app", lambda *args, **kwargs: MinimalApp())
-    monkeypatch.setattr(workbench.local_session, "write_instance", write_instance)
+    monkeypatch.setattr(
+        modules.workspace.components.api, "create_app", lambda *args, **kwargs: MinimalApp()
+    )
+    monkeypatch.setattr(
+        modules.workspace.components.local_session, "write_instance", write_instance
+    )
     opened = []
-    monkeypatch.setattr(run.webbrowser, "open", lambda url: opened.append(url))
+    monkeypatch.setattr(workspace_startup.webbrowser, "open", lambda url: opened.append(url))
     return SimpleNamespace(
         args=SimpleNamespace(port=0, host="127.0.0.1", demo=False, no_browser=False),
         workspace=tmp_path,
@@ -100,13 +104,13 @@ def test_browser_opens_once_after_own_server_binds_despite_connect_timeout(start
         raise TimeoutError("Windows client connection timed out")
 
     monkeypatch.setattr(uvicorn, "Server", server_factory)
-    monkeypatch.setattr(run.webbrowser, "open", open_browser)
+    monkeypatch.setattr(workspace_startup.webbrowser, "open", open_browser)
     monkeypatch.setattr(socket, "create_connection", blocked_connect)
     # Prevent a regression from hanging the suite if no browser is opened.
     watchdog = threading.Timer(5, lambda: setattr(servers[0], "should_exit", True))
     watchdog.start()
     try:
-        run.serve(startup.args, startup.workspace, False)
+        workspace_startup.serve(startup.args, startup.workspace, False)
     finally:
         watchdog.cancel()
         watchdog.join()
@@ -119,7 +123,7 @@ def test_occupied_port_exits_without_opening_browser(startup):
     with socket.create_server(("127.0.0.1", 0)) as unrelated:
         startup.args.port = unrelated.getsockname()[1]
         with pytest.raises(RuntimeError, match="Could not start the local server") as failure:
-            run.serve(startup.args, startup.workspace, False)
+            workspace_startup.serve(startup.args, startup.workspace, False)
         assert isinstance(failure.value.__cause__, SystemExit)
         assert failure.value.__cause__.code != 0
         assert unrelated.fileno() >= 0
@@ -204,7 +208,7 @@ def test_non_startup_exits_keep_their_original_status(startup, monkeypatch, star
     startup.args.no_browser = True
     monkeypatch.setattr(uvicorn, "Server", ExitingServer)
     with pytest.raises(SystemExit) as failure:
-        run.serve(startup.args, startup.workspace, False)
+        workspace_startup.serve(startup.args, startup.workspace, False)
     assert failure.value.code == code
     assert not startup.instance.exists()
     assert_browser_thread_stopped()
@@ -222,7 +226,7 @@ def test_server_failure_stops_readiness_thread(startup, monkeypatch):
 
     monkeypatch.setattr(uvicorn, "Server", FailedServer)
     with pytest.raises(PermissionError, match="Bind denied"):
-        run.serve(startup.args, startup.workspace, False)
+        workspace_startup.serve(startup.args, startup.workspace, False)
     assert startup.opened == []
     assert not startup.instance.exists()
     assert_browser_thread_stopped()
@@ -240,7 +244,7 @@ def test_no_browser_does_not_start_readiness_thread(startup, monkeypatch):
 
     startup.args.no_browser = True
     monkeypatch.setattr(uvicorn, "Server", HeadlessServer)
-    run.serve(startup.args, startup.workspace, False)
+    workspace_startup.serve(startup.args, startup.workspace, False)
     assert startup.opened == []
     assert not startup.instance.exists()
     assert_browser_thread_stopped()

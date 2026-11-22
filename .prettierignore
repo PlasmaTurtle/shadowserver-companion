@@ -1,3 +1,2 @@
-static/vendor/
-static/geo/
-node_modules/
+modules/observatory/static/vendor/
+modules/observatory/static/geo/

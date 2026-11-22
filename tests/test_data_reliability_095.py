@@ -1,5 +1,7 @@
 """0.9.5 backup contracts, recovery copies and diagnostics protect real workflows."""
 
+from tests.filesystem_helpers import create_test_symlink
+
 from contextlib import closing
 
 import importlib.util
@@ -11,11 +13,11 @@ from types import SimpleNamespace
 from fastapi.testclient import TestClient
 import pytest
 
-from workbench import workspace_data as data
-from workbench.api import create_app
-from workbench.store import Store
-from test_workspace_data_080 import label, login, manager
-from test_upgrade_cleanup_072 import installation, upgrade
+from modules.workspace.components import workspace_data as data
+from modules.workspace.components.api import create_app
+from modules.workspace.components.store import Store
+from modules.workspace.tests.support.workspace_data import label, login, manager
+from tests.support.installation import installation, upgrade
 
 
 @pytest.mark.parametrize("limit", ["MAX_ARCHIVE", "MAX_EXPANDED", "MAX_MEMBERS", "MAX_MANIFEST"])
@@ -69,7 +71,9 @@ def test_restorable_pre_import_points_rotate_and_permanent_delete_removes_them(t
         restored = tmp_path / "verified-point"
         data.unpack_workspace(data.restore_point_path(target.root, point["id"]), restored)
         assert Store(restored).settings()["office"] == "original"
-        assert (restored / "operations" / "finished.json").read_text() == '{"state":"succeeded"}'
+        assert (restored / "operations" / "finished.json").read_text(
+            encoding="utf-8"
+        ) == '{"state":"succeeded"}'
         control.stage("delete")
         assert data.restore_dir(target.root).exists()
         data.apply_pending_workspace(target.root)
@@ -94,7 +98,7 @@ def test_pre_schema_snapshot_includes_files_and_skips_isolated_recursion(tmp_pat
 
 
 def test_application_startup_saves_pre_upgrade_schema_and_complete_files(tmp_path):
-    from workbench.migrations import MIGRATIONS, SCHEMA_VERSION
+    from modules.workspace.databases.migrations import MIGRATIONS, SCHEMA_VERSION
     from zipfile import ZipFile
 
     root = tmp_path / "legacy"
@@ -121,7 +125,7 @@ def test_application_startup_saves_pre_upgrade_schema_and_complete_files(tmp_pat
 def test_failed_pre_upgrade_backup_does_not_migrate_or_replace_existing_records(
     tmp_path, monkeypatch
 ):
-    from workbench.migrations import MIGRATIONS
+    from modules.workspace.databases.migrations import MIGRATIONS
 
     root = tmp_path / "legacy"
     (root / "inbox").mkdir(parents=True)
@@ -175,7 +179,7 @@ def test_changed_restore_point_is_never_downloaded_as_valid(tmp_path):
 
 
 def test_active_report_operation_blocks_backup_and_transient_render_files_are_omitted(tmp_path):
-    from workbench.report_operations import ReportOperations
+    from modules.investigations.components.report_operations import ReportOperations
     from zipfile import ZipFile
 
     store = Store(tmp_path / "data")
@@ -236,7 +240,7 @@ def test_linked_restore_point_directory_prevents_deletion_without_touching_targe
     outside.mkdir()
     marker = outside / "keep.txt"
     marker.write_text("retained")
-    data.restore_dir(store.root).symlink_to(outside, target_is_directory=True)
+    create_test_symlink(data.restore_dir(store.root), outside, target_is_directory=True)
     with pytest.raises(ValueError, match="links"):
         manager(store).stage("delete")
     assert store.settings()["office"] == "retained"
@@ -259,7 +263,7 @@ def test_diagnostics_exclude_operational_values_and_paths(tmp_path):
 
 def test_installer_stops_downgrade_before_removing_program_files(tmp_path):
     root, staged = installation(tmp_path)
-    manifest = json.loads((root / "payload-manifest.json").read_text())
+    manifest = json.loads((root / "payload-manifest.json").read_text(encoding="utf-8"))
     manifest["application_version"] = "0.9.5"
     (root / "payload-manifest.json").write_text(json.dumps(manifest))
     with pytest.raises(upgrade.UpgradeError, match="downgrade"):
@@ -275,7 +279,7 @@ def test_installer_stops_incompatible_existing_schema_before_cleanup(tmp_path, m
     with closing(sqlite3.connect(database)) as db, db:
         db.execute("PRAGMA user_version=999")
     monkeypatch.setenv("LOCALAPPDATA", str(local))
-    manifest = json.loads(staged.read_text())
+    manifest = json.loads(staged.read_text(encoding="utf-8"))
     manifest["database_schema_max"] = 9
     staged.write_text(json.dumps(manifest))
     with pytest.raises(upgrade.UpgradeError, match="schema 999"):

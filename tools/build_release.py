@@ -42,7 +42,7 @@ def main():
     manifest = {
         "handling": "TLP:AMBER",
         "distribution_policy": "program-assets-and-synthetic-fixtures-v1",
-        "version": (ROOT / "VERSION").read_text().strip(),
+        "version": (ROOT / "VERSION").read_text(encoding="utf-8").strip(),
         "release": release,
         "files": hashes,
     }

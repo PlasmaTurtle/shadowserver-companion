@@ -1,0 +1,25 @@
+.lead-website {
+  margin: 0 0 1.5rem;
+  width: min(100%, 480px);
+}
+
+.lead-website img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.lead-website figcaption {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding-top: 0.4rem;
+}
+
+.lead-website-compact {
+  width: 144px;
+  margin: 0;
+}

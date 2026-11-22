@@ -1,5 +1,9 @@
 # Database audit — 0.10.1
 
+> Source-link destinations were updated for the module relocation. The findings,
+> path labels, and line references below describe the reviewed historical revision;
+> following a link opens the current implementation.
+
 > **Historical record.** This document retains its original release or review scope.
 > It does not describe current acceptance. See the [current documentation](../../README.md)
 > or the [history index](../README.md) before using its instructions or results.
@@ -45,20 +49,20 @@ row. Both retained their original CSV/sheet/row and canonical observation. This 
 intentional frontier retirement, not evidence loss: `entries` holds compact working/
 case source rows; `awareness_*` holds canonical history; imports preserve original
 files. Cleanup must respect those distinct lifecycles
-([`lead_frontier.py:112`](../../../workbench/lead_frontier.py#L112),
-[`awareness_migration.py:33`](../../../workbench/awareness_migration.py#L33)).
+([`lead_frontier.py:112`](../../../modules/leads/components/lead_frontier.py#L112),
+[`awareness_migration.py:33`](../../../modules/accretion/databases/awareness_migration.py#L33)).
 
 ## Implemented correctness fixes
 
 | Finding and reproduction | Corrected behavior and source |
 |---|---|
-| A case-list read combined old case stage with newly committed KEV intelligence, a combination never committed together. | Direct list calls now own one read snapshot and pass it through both adapters. The Workspace priority queue already passes its shared snapshot. [`services/case_queries.py:24`](../../../workbench/services/case_queries.py#L24). |
-| Case/Workspace priority-queue counts expanded JSON exclusions once per observation, producing quadratic work. | Exclusions are materialized once per selected scope and joined by case/entry; counts aggregate in one pass. No new authority table or migration. [`repositories/cases.py:429`](../../../workbench/repositories/cases.py#L429), [`workspace_queue.py:39`](../../../workbench/workspace_queue.py#L39). |
-| Delivery coverage included a CVE explicitly excluded from a mixed CVE/EOL report. | Canonical and earlier-schema coverage apply the same reasoned CVE-exclusion predicate as report composition. Actual delivery events and source findings are retained. [`cve_state.py:19`](../../../workbench/cve_state.py#L19), [`case_conditions.py:8`](../../../workbench/case_conditions.py#L8), [`awareness_history.py:71`](../../../workbench/awareness_history.py#L71). |
-| Injecting report B's intact package path into report A passed file-hash validation; a changed closure snapshot digest was also accepted. | A shared contract now binds report ID, case, original entity and revision to the row; current ownership follows recorded merges. Modern analyst-certified rows cannot bypass the contract by pointing at an identityless legacy manifest. Genuine `legacy_finalized` reports remain supported and their declared identities are checked. Closure ID/case/digest must match. [`artifact_identity.py:14`](../../../workbench/artifact_identity.py#L14), [`artifact_identity.py:59`](../../../workbench/artifact_identity.py#L59). |
-| Freshly retrieving an EPSS score dated ten days earlier gave conflicting freshness in direct risk and catalog views. | Both consumers use score date and retrieval age through one policy. [`cve_catalog/risk_policy.py:29`](../../../workbench/cve_catalog/risk_policy.py#L29). |
-| An unsupported future risk schema blocked writes but was accepted by direct and catalog-attached reads. | The shared schema gate covers reads, writes and attached queries before journaling changes. Unrelated workspace/NVD reads remain available. [`cve_catalog/risk_policy.py:21`](../../../workbench/cve_catalog/risk_policy.py#L21). |
-| A valid-JSON mutable cache could disagree with its intact captured provider response and still pass restore validation. | EPSS/KEV/CVE Program reuse decodes verified retained bytes. Current normalized NVD/CVE summaries are checked against those bytes and existing normalizers; corrupt current summaries become cache misses and cannot serve as failed-refresh fallback. Transfer rejects divergent captured projections. [`intelligence/acquisition.py:304`](../../../workbench/intelligence/acquisition.py#L304), [`intelligence/acquisition.py:328`](../../../workbench/intelligence/acquisition.py#L328), [`workspace_data_captures.py:61`](../../../workbench/workspace_data_captures.py#L61). |
+| A case-list read combined old case stage with newly committed KEV intelligence, a combination never committed together. | Direct list calls now own one read snapshot and pass it through both adapters. The Workspace priority queue already passes its shared snapshot. [`services/case_queries.py:24`](../../../modules/investigations/components/services/case_queries.py#L24). |
+| Case/Workspace priority-queue counts expanded JSON exclusions once per observation, producing quadratic work. | Exclusions are materialized once per selected scope and joined by case/entry; counts aggregate in one pass. No new authority table or migration. [`repositories/cases.py:429`](../../../modules/investigations/components/repositories/cases.py#L429), [`workspace_queue.py:39`](../../../modules/workspace/components/workspace_queue.py#L39). |
+| Delivery coverage included a CVE explicitly excluded from a mixed CVE/EOL report. | Canonical and earlier-schema coverage apply the same reasoned CVE-exclusion predicate as report composition. Actual delivery events and source findings are retained. [`cve_state.py:19`](../../../modules/investigations/components/cve_state.py#L19), [`case_conditions.py:8`](../../../modules/investigations/components/case_conditions.py#L8), [`awareness_history.py:71`](../../../modules/entities/components/awareness_history.py#L71). |
+| Injecting report B's intact package path into report A passed file-hash validation; a changed closure snapshot digest was also accepted. | A shared contract now binds report ID, case, original entity and revision to the row; current ownership follows recorded merges. Modern analyst-certified rows cannot bypass the contract by pointing at an identityless legacy manifest. Genuine `legacy_finalized` reports remain supported and their declared identities are checked. Closure ID/case/digest must match. [`artifact_identity.py:14`](../../../modules/investigations/components/artifact_identity.py#L14), [`artifact_identity.py:59`](../../../modules/investigations/components/artifact_identity.py#L59). |
+| Freshly retrieving an EPSS score dated ten days earlier gave conflicting freshness in direct risk and catalog views. | Both consumers use score date and retrieval age through one policy. [`cve_catalog/risk_policy.py:29`](../../../modules/library/components/cve_catalog/risk_policy.py#L29). |
+| An unsupported future risk schema blocked writes but was accepted by direct and catalog-attached reads. | The shared schema gate covers reads, writes and attached queries before journaling changes. Unrelated workspace/NVD reads remain available. [`cve_catalog/risk_policy.py:21`](../../../modules/library/components/cve_catalog/risk_policy.py#L21). |
+| A valid-JSON mutable cache could disagree with its intact captured provider response and still pass restore validation. | EPSS/KEV/CVE Program reuse decodes verified retained bytes. Current normalized NVD/CVE summaries are checked against those bytes and existing normalizers; corrupt current summaries become cache misses and cannot serve as failed-refresh fallback. Transfer rejects divergent captured projections. [`intelligence/acquisition.py:304`](../../../modules/library/components/intelligence/acquisition.py#L304), [`intelligence/acquisition.py:328`](../../../modules/library/components/intelligence/acquisition.py#L328), [`workspace_data_captures.py:61`](../../../modules/workspace/components/workspace_data_captures.py#L61). |
 
 The package-path and cache/proof reproductions were injected logical corruption,
 not observed wrong deliveries or evidence that ordinary API refresh creates those
@@ -78,11 +82,11 @@ identity/digest/path failure cases cover that distinction.
 ## OPEN: condition–observation admission provenance
 
 `awareness_memberships` currently stores only `(finding_id, observation_id)`
-([schema:51](../../../workbench/awareness_migration.py#L51)). Membership is inserted even
-when that condition was not qualified ([writer:484](../../../workbench/awareness.py#L484)).
+([schema:51](../../../modules/accretion/databases/awareness_migration.py#L51)). Membership is inserted even
+when that condition was not qualified ([writer:484](../../../modules/accretion/components/awareness.py#L484)).
 History subsequently checks observation-wide `o.admitted=1`
-([reader:45](../../../workbench/awareness_history.py#L45)); recurrence evaluation uses the
-same broad assumption ([settle_findings:527](../../../workbench/awareness.py#L527)).
+([reader:45](../../../modules/entities/components/awareness_history.py#L45)); recurrence evaluation uses the
+same broad assumption ([settle_findings:527](../../../modules/accretion/components/awareness.py#L527)).
 
 The adversarial sequence is concrete:
 
@@ -136,9 +140,9 @@ growth regression based on exact counts, query shape and VM work, not wall time.
 | One case, 2,500 observations, half excluded | Case-list work: 28.332m→188k VM steps, 2.662s→0.021s; Workspace priority queue: 37.838m→355k, 3.578s→0.182s. | Fixed repeated exclusion scans. Tests cover 500/1,000/2,500 rows. |
 | Fixed entity history in 50k observations/5k findings/100 entities | 18.016m VM steps before statistics; 13k after ANALYZE with no new index. A separate `PRAGMA optimize` probe reached the same 13k plan on SQLite 3.53.1. | Plan measured statistics maintenance after material growth/migration, outside publication/request-critical transactions. No maintenance policy was added by this audit. |
 | Workspace priority queue limit=100 with 1k active entities/cases | Baseline 7,014 traced statements; seven contact-summary reads per eligible entity dominate. | Bulk contact summaries and select eligible IDs before costly projection. Do not apply LIMIT before correct ranking/hold/new-finding semantics. Count work in this baseline predates the fixed query. |
-| One Observatory observation detail, 1k→50k retained observations | 75k→3.594m VM steps because global densities/membership statistics are built first. | Add direct detail queries and scoped statistics. [`eclipse.py:218`](../../../workbench/eclipse.py#L218). |
-| Observatory cache invalidation at 10k observations | Unrelated cache-key commit changed 0.113s/zero-SQL cached access into a 3.515s/56-statement rebuild. At 50k, cold builds varied substantially, including one instrumentation-deadline interruption. | Separate analytical revisions from unrelated writes, then evaluate incremental summaries with reconciliation. No broad projection/schema change implemented. [`observatory_view.py:30`](../../../workbench/observatory_view.py#L30). |
-| Source lookup/current bank | Primary-key lookup stayed about 0.6–1.2ms through 100k unrelated revisions. Current-bank LIKE scanned history; equivalent prefix GLOB used the existing key range. | Point lookup is sound. Prefix optimization is lower priority; preserve key/case semantics. [`intelligence_index.py:24`](../../../workbench/intelligence_index.py#L24). |
+| One Observatory observation detail, 1k→50k retained observations | 75k→3.594m VM steps because global densities/membership statistics are built first. | Add direct detail queries and scoped statistics. [`eclipse.py:218`](../../../modules/observatory/components/eclipse.py#L218). |
+| Observatory cache invalidation at 10k observations | Unrelated cache-key commit changed 0.113s/zero-SQL cached access into a 3.515s/56-statement rebuild. At 50k, cold builds varied substantially, including one instrumentation-deadline interruption. | Separate analytical revisions from unrelated writes, then evaluate incremental summaries with reconciliation. No broad projection/schema change implemented. [`observatory_view.py:30`](../../../modules/observatory/components/observatory_view.py#L30). |
+| Source lookup/current bank | Primary-key lookup stayed about 0.6–1.2ms through 100k unrelated revisions. Current-bank LIKE scanned history; equivalent prefix GLOB used the existing key range. | Point lookup is sound. Prefix optimization is lower priority; preserve key/case semantics. [`intelligence_index.py:24`](../../../modules/library/components/intelligence_index.py#L24). |
 
 Existing entity/asset/source/membership indexes support suitable plans. Statistics
 and query shape are stronger next steps than indiscriminate additional indexes or
@@ -148,27 +152,27 @@ an engine migration. A bounded returned payload does not by itself bound the wor
 
 - Connections enable foreign keys and a bounded busy timeout; reads use query-only
   transactions, and writes use a process lock plus `BEGIN IMMEDIATE`
-  ([`workspace.py:52`](../../../workbench/workspace.py#L52)). Controlled readers retained
+  ([`workspace.py:52`](../../../modules/workspace/components/workspace.py#L52)). Controlled readers retained
   their old snapshot while a writer committed; concurrent writers serialized without
   a lost/partial update. The SQLite timeout does not bound waiting on the Python lock.
 - Ordered upgrades reject future schemas, preserve a database backup, apply pending
   migrations atomically and check foreign keys before commit
-  ([`migrations.py:414`](../../../workbench/migrations.py#L414)). Schema 16 adds case-owned
+  ([`migrations.py:414`](../../../modules/workspace/databases/migrations.py#L414)). Schema 16 adds case-owned
   outreach preparation, not a rewrite of report/source content.
 - **Verified full-workspace pre-upgrade restore points already exist.** Normal
-  [`create_app:100`](../../../workbench/api.py#L100) calls
-  [`before_schema_upgrade:159`](../../../workbench/workspace_data.py#L159) before Store
+  [`create_app:100`](../../../modules/workspace/components/api.py#L100) calls
+  [`before_schema_upgrade:159`](../../../modules/workspace/components/workspace_data.py#L159) before Store
   construction. It uses export and isolated restore verification. Store's SQLite-only
   backup is an additional lower-level safeguard; direct Store callers bypass the
   application hook. A new full-checkpoint feature is not needed.
 - Automatic retention keeps the latest **three total** restore points across reasons,
   not three per reason; status and ZIP files rotate together
-  ([`workspace_data.py:119`](../../../workbench/workspace_data.py#L119)). Separately downloaded
+  ([`workspace_data.py:119`](../../../modules/workspace/components/workspace_data.py#L119)). Separately downloaded
   exports are outside that managed pool.
 - Transfer snapshots databases, inventories files, verifies hashes/source references,
   bounds archive/member sizes, rejects unsafe paths and upgrades only a staged copy
-  ([`workspace_data.py:341`](../../../workbench/workspace_data.py#L341),
-  [`export_workspace:444`](../../../workbench/workspace_data.py#L444)). Replacement retains
+  ([`workspace_data.py:341`](../../../modules/workspace/components/workspace_data.py#L341),
+  [`export_workspace:444`](../../../modules/workspace/components/workspace_data.py#L444)). Replacement retains
   the prior tree until the installed copy passes checks; recovery handles interrupted
   rename/journal phases. Existing reports are never regenerated during recovery.
 - Public catalogs/risk feeds are separate from immutable case evidence. Explicit
@@ -211,8 +215,8 @@ Measurements: `workflow_review/database_storage_measurement.json` and
    path producing it was demonstrated. Plan composite foreign keys and appropriate
    `json_valid` checks with preflight, preserved row IDs and history, rather than
    silently deleting suspect rows. Definitions:
-   [`awareness_migration.py:56`](../../../workbench/awareness_migration.py#L56),
-   [`migrations.py:276`](../../../workbench/migrations.py#L276).
+   [`awareness_migration.py:56`](../../../modules/accretion/databases/awareness_migration.py#L56),
+   [`migrations.py:276`](../../../modules/workspace/databases/migrations.py#L276).
 3. **Typed evidence registry and artifact metadata:** separate mutable lookup projections
    from historical revisions with explicit provider, identity, file/hash and references.
    Consider unique package paths, retained manifest digest and immutable certification

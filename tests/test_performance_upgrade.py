@@ -8,16 +8,16 @@ import sys
 
 import pytest
 
-from workbench import analytical_index
-from workbench.contact_outcomes import contact_summaries, contact_summary
-from workbench.eclipse import Eclipse
-from workbench.observatory_view import _base, _revision
-from workbench.planner_maintenance import run, status
-from workbench.store import Store
-from workbench.workspace_queue import workspace_queue
-from test_eclipse import base
-from test_observatory_canonical_0994 import add
-from test_workbench import app, client, import_rows, observations
+from modules.observatory.components import analytical_index
+from modules.entities.components.contact_outcomes import contact_summaries, contact_summary
+from modules.observatory.components.eclipse import Eclipse
+from modules.observatory.components.observatory_view import _base, _revision
+from modules.workspace.components.planner_maintenance import run, status
+from modules.workspace.components.store import Store
+from modules.workspace.components.workspace_queue import workspace_queue
+from modules.observatory.tests.support.observations import base
+from modules.observatory.tests.support.observations import add
+from tests.support.workbench import app, client, import_rows, observations
 
 
 def _copy(db, table, row, **changes):

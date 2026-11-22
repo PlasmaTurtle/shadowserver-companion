@@ -1,0 +1,26 @@
+"""Initial workspace configuration; seeded without replacing analyst edits."""
+
+DEFAULT_SETTINGS = {
+    "regions": ["North Carolina"],
+    "sheet": "",
+    "analyst_name": "",
+    "analyst_title": "",
+    "agency": "United States Secret Service",
+    "department": "U.S. Department of Homeland Security",
+    "office": "Charlotte, NC Field Office",
+    "email": "",
+    "timeout": 10,
+    "retries": 1,
+    "interval": 0.25,
+    "watch_inbox": True,
+    "brand_profile": "companion",
+    "brand_profile_version": "1",
+    "appearance": None,
+    "display_timezone": "America/New_York",
+    "critical_only": True,
+    "outreach_mode": "critical",
+    "targeted_reason": "",
+    "report_type": "auto",
+    "accretion_priority_cities": [],
+    "accretion_priority_products": [],
+}

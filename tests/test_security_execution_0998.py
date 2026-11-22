@@ -6,10 +6,10 @@ import time
 
 import pytest
 
-from workbench import aegis
-from workbench.aegis import execution
-from workbench.aegis.errors import SecurityExecutionError
-from test_content_scan_0998 import install
+from modules.workspace.components import aegis
+from modules.workspace.components.aegis import execution
+from modules.workspace.components.aegis.errors import SecurityExecutionError
+from tests.content_scan_helpers import install
 
 
 def test_native_timeouts_hold_capacity_until_contexts_actually_close(monkeypatch):

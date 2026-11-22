@@ -5,7 +5,7 @@ import sys
 
 import pytest
 
-from workbench.aegis.json import strict_json_decoder, strict_json_loads
+from modules.workspace.components.aegis.json import strict_json_decoder, strict_json_loads
 
 
 @pytest.mark.parametrize(
@@ -91,12 +91,12 @@ def test_invalid_limit_configuration_is_rejected(kwargs):
 def test_json_module_has_no_domain_dependency():
     import ast
     from pathlib import Path
-    from workbench.aegis import json as boundary
+    from modules.workspace.components.aegis import json as boundary
 
-    tree = ast.parse(Path(boundary.__file__).read_text())
+    tree = ast.parse(Path(boundary.__file__).read_text(encoding="utf-8"))
     assert not any(isinstance(node, ast.ImportFrom) and node.level for node in ast.walk(tree))
     assert not any(
         isinstance(node, ast.Import)
-        and any(n.name.startswith(("workbench", "attribution")) for n in node.names)
+        and any(n.name.startswith(("modules", "attribution")) for n in node.names)
         for node in ast.walk(tree)
     )

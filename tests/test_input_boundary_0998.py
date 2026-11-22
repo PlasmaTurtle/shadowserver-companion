@@ -15,11 +15,11 @@ from zipfile import ZipFile
 
 import pytest
 
-from test_contacts_invariants_090 import attributed_entity
-from workbench.cases import Cases
-from workbench.contact_discovery import ContactDiscovery, FetchResponse
-from workbench.contact_records import ContactRecords
-from workbench.store import Store
+from modules.entities.tests.support.contacts import attributed_entity
+from modules.investigations.components.cases import Cases
+from modules.entities.components.contact_discovery import ContactDiscovery, FetchResponse
+from modules.entities.components.contact_records import ContactRecords
+from modules.workspace.components.store import Store
 
 ROOT = "https://example.com/"
 MARKER = "INERT_EXTERNAL_SCRIPT_MARKER_0998"
@@ -247,7 +247,7 @@ def _replace_artifact(store, snapshot, artifact):
 def test_schema_invalid_extract_rejected_even_with_matching_artifact_hash(
     derived_artifact, mutation
 ):
-    from workbench.contact_evidence import snapshot_content
+    from modules.entities.components.contact_evidence import snapshot_content
 
     store, run_id, snapshot, artifact = derived_artifact
     if mutation == "kind":
@@ -285,7 +285,7 @@ def test_schema_invalid_extract_rejected_even_with_matching_artifact_hash(
 def test_contact_source_semantics_revalidated_after_artifact_hash_matches(
     derived_artifact, key, value
 ):
-    from workbench.contact_evidence import snapshot_content
+    from modules.entities.components.contact_evidence import snapshot_content
 
     store, run_id, snapshot, artifact = derived_artifact
     snapshot[key] = value
@@ -296,7 +296,7 @@ def test_contact_source_semantics_revalidated_after_artifact_hash_matches(
 
 
 def test_unknown_retention_cannot_downgrade_extract_validation(derived_artifact):
-    from workbench.contact_evidence import snapshot_content
+    from modules.entities.components.contact_evidence import snapshot_content
 
     store, run_id, snapshot, artifact = derived_artifact
     snapshot["retention"] = "unrecognized-format"

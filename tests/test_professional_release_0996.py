@@ -6,7 +6,11 @@ from pathlib import Path
 
 import pytest
 
-from workbench.release import check_output_name, installation_identity, load_release
+from modules.workspace.components.release import (
+    check_output_name,
+    installation_identity,
+    load_release,
+)
 
 
 def metadata(tmp_path, **changes):

@@ -5,9 +5,11 @@ used by the application. It is intended for maintainers changing provider adapte
 contact extraction, browser capture, or exports.
 
 The boundaries were introduced during the 0.9.98 input-validation work. The
-[historical release record](history/releases/RELEASE_098.md) explains that change;
-[validation evidence](../VALIDATION.md) records the current candidate's checks and
-remaining acceptance.
+[historical changelog](history/releases/CHANGELOG_PRE_0.11.md#0998--input-validation) records that change;
+[November 14 candidate evidence](history/validation/VALIDATION_0120.md) records
+checks and acceptance limits for that source state. Use the
+[maintenance workflow](DEVELOPMENT.md#maintenance-workflow) when changing these
+contracts and the owning module's tracker for follow-up work.
 
 ## Required boundaries
 
@@ -18,7 +20,7 @@ remaining acceptance.
 | Failed contact response | Retain bounded metadata and the received-response hash. Do not preserve error pages, unsupported bodies or script-only pages. |
 | Registry response | Validate successful JSON against the expected registry contract before retaining its body. Rejected responses retain metadata with separate received-body and retained-body hashes. |
 | Published vulnerability source | Require successful status, supported JSON representation, strict parsing and expected provider/CVE identity before accepting a captured source. |
-| Browser capture | On Windows, scan each intercepted response before rendering it. A blocked or unavailable scan aborts the whole capture; no partial screenshot is accepted as success. |
+| Browser capture | Validate the requested HTTP(S) URL and use native installed-browser loading in a fresh profile. Preserve requested/final URL and fallback provenance; validate and hash the resulting PNG before attachment. Browser resources do not pass through the application's response scanner. |
 | Export | Validate the bytes actually exported. Omit legacy raw contact pages explicitly, including from old internal-report transport downloads, without rewriting certified files in place. |
 | Historical records | Preserve existing certified snapshots and original imports. Missing or quarantined optional contact bodies do not silently initiate another download. |
 
@@ -29,7 +31,7 @@ no body is retained, so the page and observation time can still be investigated.
 
 ## Aegis contracts
 
-The reusable primitives live in `workbench/aegis/`. Provider schemas and contact
+The reusable primitives live in `modules/workspace/components/aegis/`. Provider schemas and contact
 meaning remain in their owning adapters; the shared package uses only the Python
 standard library and imports no application state or network client.
 
@@ -92,15 +94,17 @@ and recording the omitted name, original digest and reason. Such an export is no
 a byte-complete workspace backup. Full workspace backups remain archival transfers
 and can contain historical evidence; their existing integrity rules still apply.
 
-Website screenshots use the separate restricted browser-capture subsystem. On
-Windows, every intercepted raw response is scanned before browser fulfillment;
-a blocked, failed or unavailable scan aborts the whole capture. Static contact
-parsing does not execute JavaScript. A browser capture can execute permitted page
-scripts within its configured isolation; a successful scan is not proof that all
-code is harmless. These distinct boundaries are tested without executing live malware.
+Website screenshots use native Edge/Chrome networking and rendering in a fresh
+profile. The application does not intercept or scan each browser response, restrict
+normal API methods or suppress media. The browser retains its default sandbox and
+TLS validation. Screenshot classification describes the visible result; it is not
+a malware verdict. Static contact parsing continues to use its separate validated,
+scanned text-extraction path and does not execute JavaScript. See the
+[Tools guide](../modules/tools/docs/README.md#website-loading-and-capture)
+for capture behavior and verification.
 
 Regression tests use inert synthetic responses. No flagged production page is
 fetched or executed for validation. Native Windows and Microsoft Defender behavior
 must be verified on the installed release; portable test results are recorded in
-VALIDATION.md without implying workstation acceptance.
+the [validation records](history/README.md#validation-records) without implying workstation acceptance.
 

@@ -1,15 +1,20 @@
 {
   "name": "shadowserver-companion",
-  "version": "0.12.0",
   "private": true,
   "type": "module",
   "description": "Development-only frontend verification; the installed app does not require Node.",
   "scripts": {
     "test": "node tests/run_frontend.cjs",
     "test:browser": "python tools/verify.py --only-browser",
-    "format": "prettier --write \"static/**/*.{js,css,html}\" \"tests/*.cjs\"",
-    "format:check": "prettier --check \"static/**/*.{js,css,html}\" \"tests/*.cjs\"",
+    "format": "prettier --write \"modules/*/static/**/*.{js,css,html}\" \"modules/*/tests/**/*.cjs\" \"tests/**/*.cjs\"",
+    "format:check": "prettier --check \"modules/*/static/**/*.{js,css,html}\" \"modules/*/tests/**/*.cjs\" \"tests/**/*.cjs\"",
     "lint": "node tests/check_frontend_syntax.cjs"
+  },
+  "prettier": {
+    "singleQuote": true,
+    "printWidth": 100,
+    "trailingComma": "all",
+    "htmlWhitespaceSensitivity": "css"
   },
   "devDependencies": {
     "playwright": "1.62.1",

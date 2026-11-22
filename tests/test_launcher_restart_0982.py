@@ -7,8 +7,8 @@ import sys
 
 import pytest
 
-import run
-from test_chaos_isolation_0981 import helper
+from modules.workspace.components import startup as workspace_startup
+from tests.support.installation import helper
 
 
 @pytest.fixture
@@ -30,7 +30,7 @@ def test_live_listener_is_rejected_by_actual_bind(launcher, tmp_path, monkeypatc
                 asyncio.Protocol, host="127.0.0.1", port=port
             )
 
-        monkeypatch.setattr(run, "main", lambda: asyncio.run(bind()))
+        monkeypatch.setattr(workspace_startup, "main", lambda: asyncio.run(bind()))
         with pytest.raises(OSError):
             launcher.main(["--data-dir", str(tmp_path), "--port", str(port), "--no-browser"])
         assert listener.fileno() >= 0
@@ -69,7 +69,7 @@ def test_immediate_restart_after_server_connection_closes(launcher, tmp_path, mo
             server.close()
             await server.wait_closed()
 
-    monkeypatch.setattr(run, "main", lambda: asyncio.run(rebind()))
+    monkeypatch.setattr(workspace_startup, "main", lambda: asyncio.run(rebind()))
     assert (
         launcher.main(["--data-dir", str(tmp_path), "--port", str(address[1]), "--no-browser"]) == 0
     )
@@ -81,7 +81,7 @@ def test_client_connection_failure_does_not_block_server_start(
     launcher, tmp_path, monkeypatch, error
 ):
     started = []
-    monkeypatch.setattr(run, "main", lambda: started.append(True))
+    monkeypatch.setattr(workspace_startup, "main", lambda: started.append(True))
 
     def fail(*args, **kwargs):
         raise error

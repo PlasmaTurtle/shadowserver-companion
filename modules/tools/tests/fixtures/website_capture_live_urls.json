@@ -1,0 +1,78 @@
+{
+  "schema": 1,
+  "selected_at": "2026-11-21",
+  "selection_method": "Ten varied public search results selected before running captures. Direct Google results could not be obtained (search connector inaccessible; local browser access unavailable; HTTP result requested JavaScript). Used available web search instead; not represented as actual Google I'm Feeling Lucky selections.",
+  "purpose": "Manual live website-capture examples. External availability and content vary; do not add to deterministic/offline CI.",
+  "sites": [
+    {
+      "id": "01",
+      "name": "National Science Museum, Korea",
+      "url": "https://www.science.go.kr/eps/index.do",
+      "query": "science museum",
+      "source": "https://www.science.go.kr/eps/index.do"
+    },
+    {
+      "id": "02",
+      "name": "Science Museum Oklahoma",
+      "url": "https://www.sciencemuseumok.org/",
+      "query": "science museum",
+      "source": "https://www.sciencemuseumok.org/"
+    },
+    {
+      "id": "03",
+      "name": "Museum of Science, Boston",
+      "url": "https://www.mos.org/",
+      "query": "science museum",
+      "source": "https://www.mos.org/"
+    },
+    {
+      "id": "04",
+      "name": "Roundabout Books",
+      "url": "https://roundaboutbookstore.com/",
+      "query": "independent bookstore",
+      "source": "https://roundaboutbookstore.com/"
+    },
+    {
+      "id": "05",
+      "name": "Bookshop.org",
+      "url": "https://bookshop.org/pages/bookstores",
+      "query": "independent bookstore",
+      "source": "https://bookshop.org/pages/bookstores"
+    },
+    {
+      "id": "06",
+      "name": "CoffeeRoast Co.",
+      "url": "https://coffeeroastco.com/es/collections/all",
+      "query": "coffee roaster",
+      "source": "https://coffeeroastco.com/es/collections/all"
+    },
+    {
+      "id": "07",
+      "name": "Kaldi mobile catalogue",
+      "url": "https://m.kaldi.co.kr/category/products/223",
+      "query": "coffee roaster",
+      "source": "https://m.kaldi.co.kr/category/products/223"
+    },
+    {
+      "id": "08",
+      "name": "Wandercast",
+      "url": "https://wandercast.io/",
+      "query": "public university national park weather forecast open source browser",
+      "source": "https://wandercast.io/"
+    },
+    {
+      "id": "09",
+      "name": "National Weather Service API documentation",
+      "url": "https://www.weather.gov/documentation/services-web-api",
+      "query": "public university national park weather forecast open source browser",
+      "source": "https://www.weather.gov/documentation/services-web-api"
+    },
+    {
+      "id": "10",
+      "name": "Isobar on GitHub",
+      "url": "https://github.com/Us2id/isobar",
+      "query": "public university national park weather forecast open source browser",
+      "source": "https://github.com/Us2id/isobar"
+    }
+  ]
+}

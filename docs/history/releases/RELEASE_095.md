@@ -10,8 +10,8 @@ daily outreach queue. The independent Shadowserver API module remains separate.
 This release adds an offline receipt handoff; it does not connect a live account.
 
 Version 0.8.0 remains the last accepted stable release. See
-[VALIDATION.md](../../../VALIDATION.md) for checks actually executed and
-[HOME_VALIDATION.md](../../../HOME_VALIDATION.md) for exact-build workstation acceptance.
+[VALIDATION.md](../validation/VALIDATION_0120.md) for checks actually executed and
+[HOME_VALIDATION.md](../../WINDOWS_ACCEPTANCE.md) for exact-build workstation acceptance.
 No test result in these release notes substitutes for native Windows observation.
 
 Terminology: the daily queue labeled **Today** in 0.9.5 is now part of

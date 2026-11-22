@@ -56,5 +56,5 @@ the refreshed build over Dark Matter and retain existing data.
 
 ## Validation status
 
-See [VALIDATION.md](../../../VALIDATION.md) for executed checks and [HOME_VALIDATION.md](../../../HOME_VALIDATION.md) for native acceptance. This build remains unstable. Linux browser and package validation do not establish native Windows installer acceptance, screen-reader conformance, or live Shadowserver API access.
+See [VALIDATION.md](../validation/VALIDATION_0120.md) for executed checks and [HOME_VALIDATION.md](../../WINDOWS_ACCEPTANCE.md) for native acceptance. This build remains unstable. Linux browser and package validation do not establish native Windows installer acceptance, screen-reader conformance, or live Shadowserver API access.
 

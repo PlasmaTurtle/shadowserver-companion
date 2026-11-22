@@ -1,10 +1,12 @@
 """Release invariants: provenance, grouping, migration, source failures and real adapter."""
 
+from tests.support.qualification import registry_factory, capture_website
+
 import copy
 import hashlib
 import io
 import json
-from workbench import compact_json
+from modules.workspace.components import compact_json
 import sqlite3
 import zipfile
 from pathlib import Path
@@ -12,17 +14,17 @@ from pathlib import Path
 import httpx
 import pytest
 import requests
-from session_helpers import TestClient
+from tests.session_helpers import TestClient
 
 from attribution import AttributionModule, EvidenceStore, RdapProvider, Settings, verify_export
-from excel_intake import EntryValidator, UnvalidatedEntry
-from workbench.api import create_app
-from workbench.attribution_bridge import RegistrationAttribution
-from workbench.cve_sources import verify, summarize
-from workbench.intake_service import IntakeService, read_entries
-from workbench.store import Store
-from workbench.migrations import SCHEMA_VERSION
-from test_workbench import (
+from modules.accretion.components.intake import EntryValidator, SourceObservation, read_entries
+from modules.workspace.components.api import create_app
+from modules.attribution.components.attribution_bridge import RegistrationAttribution
+from modules.library.components.cve_sources import verify, summarize
+from modules.accretion.components.intake_service import IntakeService
+from modules.workspace.components.store import Store
+from modules.workspace.databases.migrations import SCHEMA_VERSION
+from tests.support.workbench import (
     FakeRegistry,
     csv_bytes,
     observations,
@@ -32,7 +34,7 @@ from test_workbench import (
     app,
     client,
 )
-from schema_helpers import legacy_database
+from tests.schema_helpers import legacy_database
 
 
 def cve_record(cve_id="CVE-2025-12345", state="PUBLISHED"):
@@ -77,13 +79,15 @@ def test_version_optional_only_for_cve_and_numbered_subdomain_preserved():
         "tag": "cve-2025-12345",
     }
     del f["version"]
-    item = UnvalidatedEntry("report.csv", "CSV", 2, f)
+    item = SourceObservation("report.csv", "CSV", 2, f)
     assert EntryValidator({"North Carolina"}).validate_entry(item).source.fields == f
     assert "version" not in item.fields
     for tag in ("eol-php", "cve-2025-12345;eol", "php"):
-        altered = UnvalidatedEntry("report.csv", "CSV", 2, {**f, "tag": tag})
+        altered = SourceObservation("report.csv", "CSV", 2, {**f, "tag": tag})
         assert EntryValidator({"North Carolina"}).rejection_reason(altered) == "missing_version"
-    numeric = UnvalidatedEntry("report.csv", "CSV", 2, {**f, "hostname": "1happy1horse1supply.com"})
+    numeric = SourceObservation(
+        "report.csv", "CSV", 2, {**f, "hostname": "1happy1horse1supply.com"}
+    )
     assert EntryValidator({"North Carolina"}).validate_entry(numeric)
     assert EntryValidator({"North Carolina"}, exclude_numeric_roots=True).validate_entry(numeric)
 
@@ -95,7 +99,7 @@ def test_fixture_colors_cannot_affect_filter_decisions():
     yellow = []
     for entry in sources:
         original = validator.rejection_reason(entry)
-        altered = UnvalidatedEntry(
+        altered = SourceObservation(
             entry.workbook,
             entry.sheet,
             entry.row,
@@ -118,7 +122,7 @@ def test_cve_state_and_snapshot_preserved(tmp_path, monkeypatch, state, status):
         calls.append(args[0])
         return response(cve_record(state=state))
 
-    monkeypatch.setattr("workbench.intelligence.acquisition._response_get", fetch)
+    monkeypatch.setattr("modules.library.components.intelligence.acquisition._response_get", fetch)
     result = verify(store, "cve-2025-12345")
     assert result["verification_status"] == status
     assert (
@@ -138,7 +142,7 @@ def test_cve_state_and_snapshot_preserved(tmp_path, monkeypatch, state, status):
 )
 def test_cve_service_failure_does_not_invent_published_record(tmp_path, monkeypatch, code, status):
     monkeypatch.setattr(
-        "workbench.intelligence.acquisition._response_get",
+        "modules.library.components.intelligence.acquisition._response_get",
         lambda *a, **k: response({"error": "unavailable"}, code),
     )
     result = verify(Store(tmp_path), "CVE-2025-12345")
@@ -152,7 +156,7 @@ def test_cve_service_failure_does_not_invent_published_record(tmp_path, monkeypa
 
 def test_wrong_cve_id_or_incomplete_record_not_verified(tmp_path, monkeypatch):
     monkeypatch.setattr(
-        "workbench.intelligence.acquisition._response_get",
+        "modules.library.components.intelligence.acquisition._response_get",
         lambda *a, **k: response(cve_record("CVE-2025-99999")),
     )
     result = verify(Store(tmp_path), "CVE-2025-12345")
@@ -202,7 +206,7 @@ def test_merge_keeps_all_rows_source_draft_and_completed_files(client, app):
                 {"contact": "support@another.com"},
             )
 
-    app.state.intake.lookup_factory = Other
+    app.state.intake.attribution_factory = registry_factory(Other)
     rows = [{**observations()[0], "hostname": "mail2.another.com", "ip": "8.8.4.4"}]
     import_rows(client, app, rows, "another.csv")
     target = next(x for x in client.get("/api/leads").json() if x["id"] != first)
@@ -247,8 +251,9 @@ def test_merge_keeps_all_rows_source_draft_and_completed_files(client, app):
     exported = client.get("/api/leads/" + target["id"] + "/json").json()
     assert sum(len(g["entries"]) for g in exported["validated_leads"]) == 5
     assert exported["validated_leads"][0]["entries"][0]["ip"] == exported["whois"][0]["ip"]
-    # Reimport a previously merged hostname. It must join the existing target.
-    app.state.intake.lookup_factory = FakeRegistry
+    # A handled repeat resolves the merged owner and stops at the local gate.
+    # The new raw observation remains in Dark Matter, not in active case scope.
+    app.state.intake.attribution_factory = registry_factory(FakeRegistry)
     import_rows(
         client,
         app,
@@ -256,7 +261,10 @@ def test_merge_keeps_all_rows_source_draft_and_completed_files(client, app):
         "next.csv",
     )
     assert len(client.get("/api/leads").json()) == 1
-    assert len(client.get("/api/entities/" + target["id"]).json()["entries"]) == 6
+    assert len(client.get("/api/entities/" + target["id"]).json()["entries"]) == 5
+    archived = app.state.store.dark_matter.query(q="next.csv")
+    assert archived["total"] == 1
+    assert archived["items"][0]["reason"] == "no_actionable_findings"
     # A later observation joins the entity inventory without silently expanding
     # the certified notification's scope or changing its historical package.
     prior_case = client.get("/api/cases/" + source["case_id"]).json()
@@ -284,7 +292,7 @@ def test_schema_one_upgrade_preserves_report_and_creates_backup(client, app):
 
 
 def test_production_adapter_raw_bundle_and_stop_after_match(tmp_path, monkeypatch):
-    import workbench.attribution_bridge as bridge
+    import modules.attribution.components.attribution_bridge as bridge
 
     calls = []
 
@@ -315,16 +323,20 @@ def test_production_adapter_raw_bundle_and_stop_after_match(tmp_path, monkeypatc
             stream=httpx.ByteStream(json.dumps(data).encode()),
         )
 
-    def open_module(path, settings):
+    def open_module(path, settings, *, cancel_event=None):
         store = EvidenceStore(path)
-        provider = RdapProvider(store, settings, transport=httpx.MockTransport(server))
-        module = AttributionModule(store, providers=[provider], settings=settings)
+        provider = RdapProvider(
+            store, settings, transport=httpx.MockTransport(server), cancel_event=cancel_event
+        )
+        module = AttributionModule(
+            store, providers=[provider], settings=settings, cancel_event=cancel_event
+        )
         module._owns_store = True
         module._owned = [provider]
         return module
 
     monkeypatch.setattr(bridge.AttributionModule, "open", open_module)
-    application = create_app(tmp_path / "data", worker=False)
+    application = create_app(tmp_path / "data", worker=False, capture=capture_website)
     with TestClient(application) as client:
         client.headers["X-Workbench-Token"] = client.get("/api/bootstrap").json()["token"]
         imported = client.post(
@@ -362,13 +374,14 @@ def test_production_adapter_raw_bundle_and_stop_after_match(tmp_path, monkeypatc
 
 
 def test_cve_only_import_completes_with_preserved_reference_bytes(client, app, monkeypatch):
-    from test_cve_catalog_integration_0983 import catalog_record
+    from modules.library.tests.support.cve_catalog import catalog_record
 
     monkeypatch.setattr(
-        "workbench.intelligence.acquisition.catalog_record", lambda *_: catalog_record()
+        "modules.library.components.intelligence.acquisition.catalog_record",
+        lambda *_: catalog_record(),
     )
     monkeypatch.setattr(
-        "workbench.intelligence.acquisition._response_get",
+        "modules.library.components.intelligence.acquisition._response_get",
         lambda *a, **k: pytest.fail("Notification intake must use the local CVE catalog"),
     )
     row = {**observations()[0], "ip": "8.8.8.8", "tag": "cve-2025-12345"}
@@ -387,7 +400,7 @@ def test_cve_only_import_completes_with_preserved_reference_bytes(client, app, m
     result = client.post("/api/leads/" + lead_id + "/finalize")
     assert result.status_code == 200, result.text
     directory = app.state.store.path(result.json()["path"])
-    snapshot = compact_json.loads((directory / "snapshot.json").read_text())
+    snapshot = compact_json.loads((directory / "snapshot.json").read_text(encoding="utf-8"))
     archived = snapshot["draft"]["cve_records"][0]
     assert (
         hashlib.sha256((directory / archived["record_path"]).read_bytes()).hexdigest()

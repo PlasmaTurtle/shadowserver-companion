@@ -2,14 +2,16 @@
 
 import hashlib
 import io
-from pathlib import Path
 import zipfile
 
-from session_helpers import TestClient
+from tests.session_helpers import TestClient
 import pytest
 
-from workbench import approved_template
-from workbench.api import create_app
+from modules.workspace.components.api import create_app
+
+from tests.support.stabilization import (
+    protected_state,
+)
 
 
 APPROVED_TEMPLATE_SHA256 = "3b139d987f9e83e97f289b45b69f8b755a06bda1b495452697c59bc8d494d1d3"
@@ -17,31 +19,9 @@ APPROVED_TEMPLATE_SHA256 = "3b139d987f9e83e97f289b45b69f8b755a06bda1b495452697c5
 
 def test_approved_template_is_the_exact_accepted_source():
     """Approved copy remains exact apart from the separately pinned addressee."""
-    from approved_copy_helpers import accepted_source_bytes
+    from tests.approved_copy_helpers import accepted_source_bytes
 
     assert hashlib.sha256(accepted_source_bytes()).hexdigest() == APPROVED_TEMPLATE_SHA256
-
-
-def protected_state(store):
-    tables = (
-        "cases",
-        "case_entries",
-        "case_groups",
-        "reports",
-        "section_validations",
-        "section_events",
-        "contact_attempts",
-        "case_closures",
-    )
-    return {
-        "tables": {table: store.all(f"SELECT * FROM {table} ORDER BY rowid") for table in tables},
-        "files": {
-            file.relative_to(store.root).as_posix(): hashlib.sha256(file.read_bytes()).hexdigest()
-            for directory in ("originals", "evidence", "reports", "closures")
-            for file in (store.root / directory).rglob("*")
-            if file.is_file()
-        },
-    }
 
 
 @pytest.fixture(scope="module")

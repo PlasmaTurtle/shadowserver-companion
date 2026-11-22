@@ -1,24 +1,25 @@
 """v0.7 API regression boundaries: pinned records, presentation, and jobs."""
 
+from tests.support.qualification import registry_factory, capture_website
+
 from copy import deepcopy
 import threading
 import time
 
 import pytest
-from session_helpers import TestClient
+from tests.session_helpers import TestClient
 
-from workbench import api as api_module
-from workbench.cve_sources import SourceCancelled
-from workbench.intelligence_index import bank_index, flags
-from workbench.store import now, dump
-from test_workbench import (
+from modules.workspace.components import api as api_module
+from modules.library.components.cve_sources import SourceCancelled
+from modules.library.components.intelligence_index import bank_index, flags
+from modules.workspace.components.primitives import now, dump
+from tests.support.workbench import (
     FakeRegistry,
     import_rows,
     observations,
     ready,
     reopen_sections,
     validate_sections,
-    record_synthetic_evaluations,
 )
 
 ID = "CVE-2025-12345"
@@ -71,7 +72,7 @@ def source_record(
 
 @pytest.fixture
 def app(tmp_path, monkeypatch):
-    from workbench.intelligence import acquisition
+    from modules.library.components.intelligence import acquisition
 
     monkeypatch.setattr(acquisition, "_wait_for_nvd", lambda store: None)
     control = {"record": source_record(), "block": False, "entered": threading.Event(), "calls": []}
@@ -88,9 +89,14 @@ def app(tmp_path, monkeypatch):
 
     monkeypatch.setattr(api_module, "enrich", fetch)
     registry = FakeRegistry()
-    result = api_module.create_app(tmp_path / "data", worker=False, lookup_factory=lambda: registry)
+    result = api_module.create_app(
+        tmp_path / "data",
+        worker=False,
+        attribution_factory=registry_factory(lambda: registry),
+        capture=capture_website,
+    )
     result.state.fake = registry
-    record_synthetic_evaluations(result)
+
     result.state.source_control = control
     with result.state.store.transaction() as db:
         settings = result.state.store.settings()
@@ -439,7 +445,7 @@ def test_bank_index_retains_simultaneous_ransomware_and_kev_flags(app):
     store = app.state.store
     record = source_record()
     with store.transaction() as db:
-        from workbench.repositories.sources import SourceRepository
+        from modules.library.components.repositories.sources import SourceRepository
 
         SourceRepository.put(db, "intelligence-version:intelligence-one", record)
         db.execute(

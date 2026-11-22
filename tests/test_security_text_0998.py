@@ -2,8 +2,8 @@
 
 import pytest
 
-from workbench.aegis.errors import InputValidationError
-from workbench.aegis.text import decode_bounded_text, parse_media_type
+from modules.workspace.components.aegis.errors import InputValidationError
+from modules.workspace.components.aegis.text import decode_bounded_text, parse_media_type
 
 
 def decode(body, content_type="text/plain", **options):

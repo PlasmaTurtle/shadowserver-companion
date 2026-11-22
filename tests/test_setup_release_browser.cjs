@@ -3,10 +3,12 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const { chromium } = require('playwright');
+const { waitForJSON } = require('./browser_wait.cjs');
 
 (async () => {
   assert(process.env.SETUP_BROWSER_FIXTURE, 'Explicit synthetic workspace required');
   const fixturePath = process.env.SETUP_BROWSER_FIXTURE;
+  const screenshotDirectory = process.env.QA_DIR || path.dirname(fixturePath);
   const fixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
   assert.equal(fixture.mode, 'synthetic-setup-acceptance');
   const { base } = fixture;
@@ -57,7 +59,7 @@ const { chromium } = require('playwright');
       );
     const snapshot = (name) =>
       page.screenshot({
-        path: path.join(path.dirname(fixturePath), name + '.png'),
+        path: path.join(screenshotDirectory, name + '.png'),
         fullPage: true,
       });
     const nextStep = (step) => page.locator(`.setup-steps [data-step="${step}"]`).click();
@@ -146,11 +148,55 @@ const { chromium } = require('playwright');
     await page.locator('#settings-form').waitFor();
     await page.locator('[data-action="open-setup"]').first().click();
     await page.locator('#setup-shadow-form').waitFor();
+    await nextStep('profile');
+    await page.locator('#setup-analyst_name').fill('Updated Synthetic Setup Analyst');
+    await nextStep('automation');
+    await page.locator('#setup-schedule-time').fill('08:35');
+    const scheduleBeforeDraft = await json('/api/schedule');
+    const prematureWrites = [];
+    const recordPrematureWrite = (request) => {
+      if (request.method() !== 'GET' && request.url().startsWith(base + '/api/'))
+        prematureWrites.push(new URL(request.url()).pathname);
+    };
+    page.on('request', recordPrematureWrite);
+    await page.locator('#setup-schedule-form button[type="submit"]').click();
+    await page.locator('#setup-error:not([hidden])').waitFor();
+    page.off('request', recordPrematureWrite);
+    assert.match(await page.locator('#setup-error').textContent(), /profile|identity/i);
+    assert.deepEqual(prematureWrites, []);
+    assert.equal(await page.locator('#setup-schedule-time').inputValue(), '08:35');
+    assert.equal((await json('/api/setup')).profile.analyst_name, 'Synthetic Setup Analyst');
+    assert.deepEqual((await json('/api/schedule')).config, scheduleBeforeDraft.config);
+    await snapshot('setup-unsaved-profile-protected');
+    await nextStep('profile');
+    assert.equal(
+      await page.locator('#setup-analyst_name').inputValue(),
+      'Updated Synthetic Setup Analyst',
+    );
+    await page.locator('#setup-profile-form button[type="submit"]').click();
+    await page.locator('#setup-schedule-form').waitFor();
+    assert.equal(await page.locator('#setup-schedule-time').inputValue(), '08:35');
+    await page.locator('#setup-schedule-form button[type="submit"]').click();
+    await page.locator('#modal').waitFor({ state: 'hidden' });
+    assert.equal(
+      (await json('/api/setup')).profile.analyst_name,
+      'Updated Synthetic Setup Analyst',
+    );
+    assert.equal((await json('/api/schedule')).config.hour, 8);
+    assert.equal((await json('/api/schedule')).config.minute, 35);
+    checks.push(
+      'Finishing setup protects unsaved identity edits and schedule choices until the profile is explicitly saved',
+    );
+
+    await page.locator('[data-action="open-setup"]').first().click();
+    await page.locator('#setup-shadow-form').waitFor();
     await page.locator('#setup-shadow-key').fill(fixture.api_key);
     await page.locator('#setup-shadow-secret').fill(fixture.secret);
     await page.locator('#setup-shadow-form button[type="submit"]').click();
-    await page.waitForFunction(
-      async () => (await (await fetch('/api/shadowserver/status')).json()).connected,
+    await waitForJSON(
+      context.request,
+      base + '/api/shadowserver/status',
+      (value) => value.connected,
     );
     await page
       .locator('#setup-wizard .badge')
@@ -239,6 +285,123 @@ const { chromium } = require('playwright');
       'Catalog and setup share jurisdiction defaults; Settings protect and persist edits; installed release notes reopen without a remote request',
     );
 
+    await page
+      .locator('#settings-agency-preset option[value="fbi"]')
+      .waitFor({ state: 'attached' });
+    const jurisdictionBeforePreset = await page.locator('#f-regions').inputValue();
+    await page.locator('#settings-agency-preset').selectOption('fbi');
+    assert.equal(await page.locator('#f-agency').inputValue(), 'Federal Bureau of Investigation');
+    assert.equal(await page.locator('#f-department').inputValue(), 'U.S. Department of Justice');
+    assert.equal(await page.locator('#f-regions').inputValue(), jurisdictionBeforePreset);
+    await page.getByText('Import formats and lookup options', { exact: true }).click();
+    await page.locator('#f-timeout').fill('');
+    await page.getByText('Import formats and lookup options', { exact: true }).click();
+    const invalidWrites = [];
+    const recordInvalidWrite = (request) => {
+      if (request.method() === 'PUT' && request.url() === base + '/api/settings')
+        invalidWrites.push(request.url());
+    };
+    page.on('request', recordInvalidWrite);
+    await page.locator('#settings-save-button').click();
+    await page.waitForFunction(() => document.activeElement?.id === 'f-timeout');
+    assert.equal(
+      await page.locator('#f-timeout').evaluate((el) => el.closest('details').open),
+      true,
+    );
+    page.off('request', recordInvalidWrite);
+    assert.deepEqual(invalidWrites, []);
+    await snapshot('settings-visible-validation');
+    await page.locator('#f-timeout').fill('10');
+    await page.locator('#settings-save-button').click();
+    await page.locator('#settings-save-status[data-state="saved"]').waitFor();
+    assert.equal((await json('/api/bootstrap')).settings.agency, 'Federal Bureau of Investigation');
+
+    assert.equal(
+      (await mutate('/api/settings', 'PUT', { office: 'Synthetic office saved from another view' }))
+        .status,
+      200,
+    );
+    const themeSaved = page.waitForResponse(
+      (response) =>
+        response.url() === base + '/api/settings' && response.request().method() === 'PUT',
+    );
+    await page.locator('#theme-toggle').click();
+    const themeResponse = await themeSaved;
+    assert.equal(themeResponse.status(), 200);
+    const themeBody = themeResponse.request().postDataJSON();
+    assert.deepEqual(Object.keys(themeBody), ['appearance']);
+    assert.equal(
+      (await json('/api/bootstrap')).settings.office,
+      'Synthetic office saved from another view',
+    );
+    assert.equal(
+      await page.locator('input[name="appearance"]:checked').inputValue(),
+      themeBody.appearance,
+    );
+    await page.reload();
+    await page.locator('#settings-form').waitFor();
+    checks.push(
+      'Settings presets apply, hidden invalid controls become visible, and theme-only saves preserve newer profile values',
+    );
+
+    let releaseKeySave;
+    let keySaveReceived;
+    const receivedKeySave = new Promise((resolve) => {
+      keySaveReceived = resolve;
+    });
+    const keyResponse = new Promise((resolve) => {
+      releaseKeySave = resolve;
+    });
+    const credentialRoute = async (route) => {
+      if (route.request().method() !== 'PUT') return route.continue();
+      keySaveReceived();
+      await keyResponse;
+      return route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ configured: true, source: 'session', remember_supported: false }),
+      });
+    };
+    await page.route(base + '/api/nvd/credentials', credentialRoute);
+    await page.locator('#nvd-api-key').fill('synthetic-first-key');
+    await page.locator('#nvd-key-form button[type="submit"]').click();
+    await receivedKeySave;
+    await page.locator('#nvd-api-key').fill('synthetic-newer-unsaved-key');
+    releaseKeySave();
+    await page
+      .locator('#nvd-key-feedback')
+      .filter({ hasText: 'New key edits remain unsaved' })
+      .waitFor();
+    assert.equal(await page.locator('#nvd-api-key').inputValue(), 'synthetic-newer-unsaved-key');
+    const declinedNavigation = page.waitForEvent('dialog');
+    await page.evaluate(() => {
+      location.hash = '#activity';
+    });
+    await (await declinedNavigation).dismiss();
+    assert.equal(await page.locator('#nvd-api-key').inputValue(), 'synthetic-newer-unsaved-key');
+    assert.equal(await page.locator('#settings-form').count(), 1);
+    const persistedKeyState = await page.evaluate(() =>
+      JSON.stringify({ local: { ...localStorage }, session: { ...sessionStorage } }),
+    );
+    assert(!persistedKeyState.includes('synthetic-first-key'));
+    assert(!persistedKeyState.includes('synthetic-newer-unsaved-key'));
+    await page.locator('[data-action="clear-nvd-key"]').click();
+    assert.equal(await page.locator('#nvd-api-key').inputValue(), '');
+    await page.unroute(base + '/api/nvd/credentials', credentialRoute);
+    checks.push(
+      'Credential save completion preserves newer input; navigation protects it and explicit clearing removes it without browser persistence',
+    );
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    if ((await page.locator('#menu-toggle').getAttribute('aria-expanded')) === 'true')
+      await page.locator('#menu-toggle').click();
+    await page.waitForFunction(
+      () => document.querySelector('#sidebar').getBoundingClientRect().right <= 1,
+    );
+    await page.locator('#main h1').scrollIntoViewIfNeeded();
+    assert((await page.evaluate(() => document.documentElement.scrollWidth - innerWidth)) <= 1);
+    await page.screenshot({ path: path.join(screenshotDirectory, 'settings-narrow-reviewed.png') });
+
     assert.deepEqual(errors, []);
     assert.deepEqual(external, []);
     console.log(
@@ -267,7 +430,7 @@ const { chromium } = require('playwright');
       console.error(JSON.stringify({ setup, responses }));
       await page
         .screenshot({
-          path: path.join(path.dirname(fixturePath), 'setup-release-failure.png'),
+          path: path.join(screenshotDirectory, 'setup-release-failure.png'),
           fullPage: true,
         })
         .catch(() => {});

@@ -26,16 +26,16 @@ def test_current_gate_keeps_baseline_and_covers_new_security_boundaries():
     assert baseline and baseline <= selected
     assert {
         "tests/test_security_stability_0985.py",
-        "tests/test_website_capture_0985.py",
-        "tests/test_api_acquisition_routes_098.py",
-        "tests/test_workspace_data_captures.py",
-        "tests/test_workspace_data_080.py",
+        "modules/investigations/tests/test_website_capture_0985.py",
+        "modules/accretion/tests/test_api_acquisition_routes_098.py",
+        "modules/workspace/tests/test_workspace_data_captures.py",
+        "modules/workspace/tests/test_workspace_data_080.py",
         "tests/test_release_privacy_070.py",
-        "tests/shadowserver_api_module/test_network.py",
-        "tests/shadowserver_api_module/test_download.py",
-        "tests/shadowserver_api_module/test_cli_credentials.py",
+        "modules/accretion/tests/shadowserver_api_module/test_network.py",
+        "modules/accretion/tests/shadowserver_api_module/test_download.py",
+        "modules/accretion/tests/shadowserver_api_module/test_cli_credentials.py",
     } <= selected
-    assert "tests/test_eclipse.py" not in selected
+    assert "modules/observatory/tests/test_eclipse.py" not in selected
     assert all((ROOT / name).is_file() for name in selected)
 
 
@@ -79,7 +79,7 @@ def test_gate_executes_and_records_selected_suites_and_preserves_failure(
     monkeypatch.setattr(gate.subprocess, "run", run)
     expected_pass = exit_codes == (0, 0)
     assert gate.main() == (0 if expected_pass else 1)
-    report = json.loads((output / "security-gate.json").read_text())
+    report = json.loads((output / "security-gate.json").read_text(encoding="utf-8"))
     assert report["passed"] is expected_pass
     assert report["native_windows_acceptance"] is False
     assert report["suites"] == gate.security_suites(tmp_path)

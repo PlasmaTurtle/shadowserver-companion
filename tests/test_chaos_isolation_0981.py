@@ -1,7 +1,6 @@
 """Chaos uses independent install/data identities without migrating private folders."""
 
 from contextlib import nullcontext, closing
-import importlib.util
 import json
 from pathlib import Path
 import re
@@ -11,11 +10,19 @@ from types import SimpleNamespace
 
 import pytest
 
-import run
-from workbench.release import check_output_name, installation_identity, load_release
-from test_upgrade_cleanup_072 import installation, upgrade
+from modules.workspace.components import startup as workspace_startup
+from modules.workspace.components.release import (
+    check_output_name,
+    installation_identity,
+    load_release,
+)
+from tests.support.installation import installation, upgrade
 
-ROOT = Path(__file__).resolve().parents[1]
+from tests.support.installation import (
+    ROOT,
+    helper,
+    tree_bytes,
+)
 
 
 @pytest.fixture(autouse=True)
@@ -32,18 +39,9 @@ def legacy_chaos_runtime_metadata(monkeypatch):
         "display_version": "0.9.81 (Chaos, unstable)",
     }
     monkeypatch.setattr(
-        "workbench.release.load_release",
+        "modules.workspace.components.release.load_release",
         lambda root=None: dict(release) if root is None else load_release(root),
     )
-
-
-def helper(name):
-    spec = importlib.util.spec_from_file_location(
-        "chaos_installer_" + name, ROOT / "tools/windows_installer" / (name + ".py")
-    )
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    return module
 
 
 def release_metadata(root, *, edition=None, channel="unstable", confirmed=False):
@@ -63,12 +61,8 @@ def release_metadata(root, *, edition=None, channel="unstable", confirmed=False)
     return root
 
 
-def tree_bytes(root):
-    return {p.relative_to(root).as_posix(): p.read_bytes() for p in root.rglob("*") if p.is_file()}
-
-
 def mark_manifest(path, edition):
-    data = json.loads(path.read_text())
+    data = json.loads(path.read_text(encoding="utf-8"))
     data["release"] = {"edition": edition}
     path.write_text(json.dumps(data))
 
@@ -108,7 +102,7 @@ def test_identities_do_not_share_ports_mutex_registry_or_shortcuts(tmp_path):
     config = builder.installer_definitions(
         load_release(release_metadata(tmp_path, edition="chaos"))
     )
-    script = (ROOT / "tools/windows_installer/installer.nsi").read_text()
+    script = (ROOT / "tools/windows_installer/installer.nsi").read_text(encoding="utf-8")
     # The standard rename cleanup is compiled out of Chaos entirely.
     legacy = re.search(r'!if "\$\{APP_EDITION\}" == "standard"\n(.*?)!endif', script, re.S)
     assert legacy and 'Delete "$DESKTOP\\Outreach Workbench.lnk"' in legacy[1]
@@ -151,11 +145,11 @@ def test_source_and_installed_launch_defaults_are_isolated(
     assert observed == [expected, (expected_port, expected, demo)]
     observed.clear()
     monkeypatch.setattr(sys, "argv", ["run.py", "--no-browser", *(["--demo"] if demo else [])])
-    monkeypatch.setattr(run, "workspace_session", lambda path: nullcontext())
+    monkeypatch.setattr(workspace_startup, "workspace_session", lambda path: nullcontext())
     monkeypatch.setattr(
-        run, "serve", lambda args, data, preview: observed.append((args.port, data))
+        workspace_startup, "serve", lambda args, data, preview: observed.append((args.port, data))
     )
-    run.main()
+    workspace_startup.main()
     assert observed == [(expected_port, ROOT / ("data-demo" if demo else "data"))]
     assert not list(tmp_path.iterdir())
 
@@ -171,15 +165,15 @@ def test_installed_launcher_refuses_standard_data_before_creating_logs(tmp_path,
         desktop.main(["--data-dir", str(baseline), "--no-browser"])
     monkeypatch.setattr(sys, "argv", ["run.py", "--data-dir", str(baseline), "--no-browser"])
     with pytest.raises(SystemExit) as stopped:
-        run.main()
+        workspace_startup.main()
     assert stopped.value.code == 2
     assert tree_bytes(tmp_path) == before
     assert not (tmp_path / "OutreachWorkbench/data-logs").exists()
 
 
 def test_logs_restore_points_transfers_and_credentials_are_separate(tmp_path, monkeypatch):
-    from workbench.api_acquisition import APIAcquisition
-    from workbench.workspace_data import restore_dir, transfer_dir
+    from modules.accretion.components.api_acquisition import APIAcquisition
+    from modules.workspace.components.workspace_data import restore_dir, transfer_dir
 
     desktop = helper("desktop")
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path))
@@ -237,9 +231,13 @@ def test_chaos_fresh_start_preserves_every_standard_file(tmp_path):
 
 
 def test_explicit_backup_import_makes_independent_comparison_workspace(tmp_path):
-    from workbench.store import Store
-    from workbench.workspace_data import apply_pending_workspace, export_workspace, restore_dir
-    from test_workspace_data_080 import label, manager
+    from modules.workspace.components.store import Store
+    from modules.workspace.components.workspace_data import (
+        apply_pending_workspace,
+        export_workspace,
+        restore_dir,
+    )
+    from modules.workspace.tests.support.workspace_data import label, manager
 
     original = Store(tmp_path / "OutreachWorkbench/data")
     label(original, "Original comparison records")
@@ -280,7 +278,7 @@ def test_chaos_schema_guard_checks_only_chaos_workspace(tmp_path, monkeypatch):
     root, staged = installation(tmp_path)
     mark_manifest(root / "payload-manifest.json", "chaos")
     mark_manifest(staged, "chaos")
-    data = json.loads(staged.read_text())
+    data = json.loads(staged.read_text(encoding="utf-8"))
     data["database_schema_max"] = 10
     staged.write_text(json.dumps(data))
     monkeypatch.setenv("LOCALAPPDATA", str(tmp_path / "local"))

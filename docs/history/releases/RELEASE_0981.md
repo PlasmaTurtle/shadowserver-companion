@@ -102,11 +102,11 @@ new reader, and recipient exports remain separate from internal evidence.
   API intake and the existing dependency pins remain in place.
 - The live Shadowserver account, native Windows install/credential behavior and
   live contact-site checks have not been accepted for this build. Automated and
-  synthetic browser results are reported separately in [VALIDATION.md](../../../VALIDATION.md).
+  synthetic browser results are reported separately in [VALIDATION.md](../validation/VALIDATION_0120.md).
 - `edition: chaos` and `channel: unstable` remain explicit. Chaos cannot be promoted
   to stable in place. Version 0.8.0 remains the last accepted stable release.
 
-Use [HOME_VALIDATION.md](../../../HOME_VALIDATION.md) for the comparison checklist and
-[DEVELOPMENT.md](../../../DEVELOPMENT.md) to reproduce checks. This release does not claim
+Use [HOME_VALIDATION.md](../../WINDOWS_ACCEPTANCE.md) for the comparison checklist and
+[DEVELOPMENT.md](../../DEVELOPMENT.md) to reproduce checks. This release does not claim
 complete production validation, native Windows acceptance or publisher signing.
 

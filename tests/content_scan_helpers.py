@@ -7,7 +7,7 @@ on the CI host's antimalware product or configuration.
 
 import ctypes
 
-from workbench.aegis import antimalware as content_scan
+from modules.workspace.components.aegis import antimalware as content_scan
 
 
 class NativeFunction:

@@ -1,5 +1,6 @@
 {
   "version": "2.0.0",
+  "options": {"env": {"PYTHONUTF8": "1"}},
   "tasks": [
     {
       "label": "Companion: verify everything",

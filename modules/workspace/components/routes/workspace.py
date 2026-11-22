@@ -1,0 +1,134 @@
+"""Workspace HTTP adapters."""
+
+from __future__ import annotations
+
+import os
+import tempfile
+import platform
+import shutil
+import sqlite3
+from contextlib import closing
+from pathlib import Path
+from fastapi import File, Form, UploadFile
+from pydantic import BaseModel
+from ..workspace_data import MAX_ARCHIVE, export_workspace, restore_point_path
+from modules import __version__
+from fastapi.responses import FileResponse
+from starlette.background import BackgroundTask
+from ..primitives import now
+
+
+class DeleteData(BaseModel):
+    confirmation: str
+
+
+def register(app, *, store):
+    @app.get("/api/data/status")
+    def data_status():
+        return app.state.workspace_data.status()
+
+    @app.post("/api/backup")
+    @app.post("/api/data/export")
+    def backup():
+        with app.state.workspace_data.operation():
+            path = export_workspace(store)
+        return FileResponse(
+            path,
+            filename="shadowserver-companion-backup.zip",
+            background=BackgroundTask(path.unlink, missing_ok=True),
+        )
+
+    @app.get("/api/data/restore-points/{identifier}")
+    def download_restore_point(identifier: str):
+        path = restore_point_path(store.root, identifier)
+        return FileResponse(path, filename="companion-restore-point-" + identifier[:8] + ".zip")
+
+    @app.get("/api/data/diagnostics")
+    def diagnostics():
+        # Deliberately avoid raw logs, file paths, settings, hostnames, contacts,
+        # source contents and tokens. The summary is safe to inspect/share.
+        with closing(store.connect()) as db:
+            counts = {
+                table: db.execute("SELECT COUNT(*) FROM " + table).fetchone()[0]
+                for table in ("imports", "leads", "entries", "reports")
+            }
+            schema = db.execute("PRAGMA user_version").fetchone()[0]
+        status = app.state.workspace_data.status()
+        return {
+            "format": "companion-diagnostics",
+            "version": 1,
+            "generated_at": now(),
+            "application_version": __version__,
+            "python": platform.python_version(),
+            "system": platform.system(),
+            "sqlite": sqlite3.sqlite_version,
+            "database_schema": schema,
+            "record_counts": counts,
+            "free_disk_bytes": shutil.disk_usage(store.root).free,
+            "pending_data_change": status["pending"],
+            "last_export_verified_at": (status["backup"].get("last_export") or {}).get(
+                "verified_at"
+            ),
+            "restore_point_count": len(status["backup"].get("restore_points", [])),
+            "excludes": [
+                "credentials",
+                "tokens",
+                "file paths",
+                "raw logs",
+                "reports",
+                "contact values",
+            ],
+        }
+
+    @app.post("/api/data/check")
+    def check_workspace():
+        with app.state.workspace_data.operation(), closing(store.connect()) as db:
+            ok = db.execute("PRAGMA integrity_check").fetchone()[0] == "ok"
+            references_ok = db.execute("PRAGMA foreign_key_check").fetchone() is None
+            if not ok or not references_ok:
+                raise ValueError(
+                    "Workspace database check failed; preserve existing data and restore a verified backup"
+                )
+        return {
+            "ok": True,
+            "message": "Database integrity and record references passed. Export data to verify the complete evidence and report backup.",
+        }
+
+    @app.post("/api/data/import")
+    def import_data(
+        file: UploadFile = File(...),
+        confirmation: str = Form(...),
+        skip_restore_point: bool = Form(False),
+    ):
+        if confirmation != "IMPORT":
+            raise ValueError("Type IMPORT to confirm replacing all current workspace data")
+        handle, filename = tempfile.mkstemp(suffix=".zip")
+        path = Path(filename)
+        try:
+            with os.fdopen(handle, "wb") as output:
+                total = 0
+                while chunk := file.file.read(1024**2):
+                    total += len(chunk)
+                    if total > MAX_ARCHIVE:
+                        raise ValueError("Backup must be no larger than 2 GB")
+                    output.write(chunk)
+            return app.state.workspace_data.stage(
+                "import", path, retain_current=not skip_restore_point
+            )
+        finally:
+            path.unlink(missing_ok=True)
+            file.file.close()
+
+    @app.post("/api/data/delete")
+    def delete_data(body: DeleteData):
+        if body.confirmation != "DELETE":
+            raise ValueError("Type DELETE to confirm deleting all workspace data")
+        return app.state.workspace_data.stage("delete")
+
+    @app.post("/api/data/cancel")
+    def cancel_data_change():
+        return app.state.workspace_data.cancel()
+
+    from . import workspace_health
+
+    workspace_health.register(app, store=store)

@@ -9,9 +9,11 @@ This directory is for maintainers building and validating the installer.
 
 ## Build from source
 
-Use a complete source checkout with Python **3.12 or later**, pip, and
+Use a complete source checkout with the project's Python **3.14**
+[development environment](../../docs/DEVELOPMENT.md#windows-ide-setup), pip, and
 **NSIS 3.09 or later**. The builder supports Windows or Linux hosts; a successful
-build on either host does not establish Windows runtime acceptance.
+build on either host does not establish Windows runtime acceptance. The embedded
+runtime shipped to users is pinned separately in `runtime-lock.json`.
 
 Run from the repository root:
 
@@ -59,8 +61,11 @@ The current release is a **candidate**, and the supplied installer build is
 unsigned unless a distributor signs the final artifact. Prior Windows acceptance
 of 0.9.96 does not establish acceptance of the current version.
 
-Use [VALIDATION.md](../../VALIDATION.md) for recorded results and
-[HOME_VALIDATION.md](../../HOME_VALIDATION.md) for the workstation checklist.
+The [November 14 candidate record](../../docs/history/validation/VALIDATION_0120.md)
+contains historical results for that build. Use
+[Windows acceptance](../../docs/WINDOWS_ACCEPTANCE.md) for the current workstation
+checklist and [ISS014](../../docs/ISSUES.md#iss014-current-version-windows-acceptance)
+for its tracked status.
 Exercise install, upgrade, launch, report generation, backup/restore, scheduling,
 and uninstall with retained records. Compilation alone does not complete these checks.
 
@@ -71,5 +76,6 @@ and uninstall with retained records. Compilation alone does not complete these c
 | Installer behavior, update mode, scheduling, and acceptance | [Technical reference](REFERENCE.md) |
 | Pinned Python runtime | [Runtime lock](runtime-lock.json) |
 | Distribution contents | [Release policy](../release_policy.py) |
-| Application update protocol | [Software updates](../../docs/SOFTWARE_UPDATES.md) |
-| Development and release process | [Development](../../DEVELOPMENT.md) |
+| Application update protocol | [Software updates](../../modules/settings/docs/SOFTWARE_UPDATES.md) |
+| Guarded launch, repair and first-upgrade limits | [Launch protocol](REFERENCE.md#guarded-launch-and-maintenance) |
+| Development and release process | [Development](../../docs/DEVELOPMENT.md) |

@@ -8,7 +8,10 @@
       "program": "${workspaceFolder}/run.py",
       "cwd": "${workspaceFolder}",
       "args": ["--demo", "--data-dir", "${workspaceFolder}/build/ide-demo", "--port", "8880"],
-      "env": {"PYTHONPATH": "${workspaceFolder}/components/attribution/src"},
+      "env": {
+        "PYTHONPATH": "${workspaceFolder}/modules/attribution/components/engine/src",
+        "PYTHONUTF8": "1"
+      },
       "console": "integratedTerminal",
       "justMyCode": true
     }

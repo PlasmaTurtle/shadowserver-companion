@@ -16,9 +16,9 @@ import pytest
 from attribution.bounded_http import capture_response, CaptureCancelled
 from attribution import bounded_http
 from attribution.http import retry_delay, MAX_RETRY_AFTER
-from workbench.intelligence import service as sources
-from workbench.intelligence import acquisition
-from workbench.store import Store
+from modules.library.components.intelligence import service as sources
+from modules.library.components.intelligence import acquisition
+from modules.workspace.components.store import Store
 
 
 @contextmanager

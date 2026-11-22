@@ -1,24 +1,27 @@
 """Evidence originals and manifest-only exports preserve bytes without active suffixes."""
 
+from tests.filesystem_helpers import create_test_symlink
+
 import hashlib
 import io
 import json
-from workbench import compact_json
-from pathlib import Path
+from modules.workspace.components import compact_json
 from zipfile import ZipFile, ZIP_DEFLATED
 
 import pytest
-from PIL import Image
 
-from test_workbench import app, client, import_rows, ready, attach
-from workbench.image_evidence import decode_screenshot
-from workbench.package_integrity import validated_inventory, write_export, package_folder
+from tests.support.workbench import app, client, import_rows, ready
+from modules.investigations.components.image_evidence import decode_screenshot
+from modules.investigations.components.package_integrity import (
+    validated_inventory,
+    write_export,
+    package_folder,
+)
 
-
-def png_bytes():
-    stream = io.BytesIO()
-    Image.new("RGB", (3, 2), "white").save(stream, "PNG")
-    return stream.getvalue()
+from tests.support.export_security import (
+    make_package,
+    png_bytes,
+)
 
 
 @pytest.mark.parametrize(
@@ -48,7 +51,7 @@ def test_screenshot_original_is_neutral_and_preserved_in_certified_package(clien
         files={"file": ("capture.png", original, "image/png")},
     )
     assert accepted.status_code == 200, accepted.text
-    item = accepted.json()["evidence"][0]
+    item = next(e for e in accepted.json()["evidence"] if e["filename"] == "capture.png")
     assert item["filename"] == "capture.png"
     assert item["path"].endswith(".original.bin")
     assert app.state.store.path(item["path"]).read_bytes() == original
@@ -73,26 +76,6 @@ def test_screenshot_original_is_neutral_and_preserved_in_certified_package(clien
         assert set(archive.namelist()) == set(manifest["files"]) | {"manifest.json"}
 
 
-def make_package(folder, *, legacy=False):
-    folder.mkdir()
-    evidence = "evidence/capture.html" if legacy else "evidence/capture.original.bin"
-    values = {
-        "notification.pdf": b"SYNTHETIC_PDF",
-        "notification.docx": b"SYNTHETIC_DOCX",
-        "snapshot.json": json.dumps(
-            {"evidence": [{"path": evidence, "name": "capture.html"}]}
-        ).encode(),
-        evidence: png_bytes() + b"SYNTHETIC_CAPTURE_MARKER",
-    }
-    for name, body in values.items():
-        p = folder / name
-        p.parent.mkdir(exist_ok=True)
-        p.write_bytes(body)
-    manifest = {"files": {n: hashlib.sha256(b).hexdigest() for n, b in values.items()}}
-    (folder / "manifest.json").write_text(json.dumps(manifest))
-    return values
-
-
 def export_bytes(folder):
     manifest, raw = validated_inventory(
         folder, {"notification.pdf", "notification.docx", "snapshot.json"}
@@ -109,7 +92,7 @@ def test_unlisted_file_or_symlink_is_never_collected(tmp_path):
     outside = tmp_path / "other-case.txt"
     outside.write_bytes(b"SYNTHETIC_OTHER_CASE")
     (folder / "unexpected.txt").write_bytes(b"UNLISTED")
-    (folder / "unexpected-link").symlink_to(outside)
+    create_test_symlink(folder / "unexpected-link", outside)
     with ZipFile(io.BytesIO(export_bytes(folder))) as archive:
         assert set(archive.namelist()) == set(values) | {"manifest.json"}
         assert b"SYNTHETIC_OTHER_CASE" not in b"".join(archive.read(n) for n in archive.namelist())
@@ -121,7 +104,7 @@ def test_listed_symlink_is_rejected_even_when_target_hash_matches(tmp_path):
     pdf = folder / "notification.pdf"
     inside = folder / "same-bytes.pdf"
     pdf.rename(inside)
-    pdf.symlink_to(inside)
+    create_test_symlink(pdf, inside)
     with pytest.raises(ValueError, match="symbolic links"):
         export_bytes(folder)
 
@@ -130,7 +113,7 @@ def test_package_directory_cannot_redirect_through_a_link(tmp_path):
     actual = tmp_path / "reports"
     actual.mkdir()
     (actual / "case").mkdir()
-    (tmp_path / "linked-reports").symlink_to(actual, target_is_directory=True)
+    create_test_symlink(tmp_path / "linked-reports", actual, target_is_directory=True)
     with pytest.raises(ValueError, match="symbolic links"):
         package_folder(tmp_path, "linked-reports/case")
 
@@ -185,7 +168,7 @@ def test_legacy_export_has_separate_transport_manifest_and_preserves_certified_b
 def test_manifest_names_are_portable_and_canonical(tmp_path, name):
     folder = tmp_path / "package"
     make_package(folder)
-    manifest = json.loads((folder / "manifest.json").read_text())
+    manifest = json.loads((folder / "manifest.json").read_text(encoding="utf-8"))
     manifest["files"][name] = "0" * 64
     (folder / "manifest.json").write_text(json.dumps(manifest))
     with pytest.raises(ValueError):

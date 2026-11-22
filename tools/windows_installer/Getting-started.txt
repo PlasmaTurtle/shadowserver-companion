@@ -1,7 +1,7 @@
 {APP_NAME} {APP_DISPLAY_VERSION} - WINDOWS INSTALLATION
 
 {RELEASE_NOTICE}
-Workstation validation record: app\HOME_VALIDATION.md
+Workstation acceptance checklist: app\docs\WINDOWS_ACCEPTANCE.md
 
 START AND STOP
 Open {APP_NAME} from the Start menu or desktop. The launcher opens your
@@ -25,6 +25,8 @@ individual settings from Settings when your role, jurisdiction or APIs change.
 
 In Library, select Download catalog. The initial download uses compressed
 annual NVD feeds, followed by API updates; allow 10 GiB of free disk space.
+An NVD key is optional for normal downloads and updates; add one for faster
+API updates. EPSS and KEV do not require separate keys.
 Saved catalog records are retained if you pause; Resume download continues
 the remaining work.
 Wait for complete catalog coverage before importing reports for lead scoring.
