@@ -1,5 +1,8 @@
+import { createReviewedGuides } from './reviewed_guides.js';
+
 /** Reference explainer editing owned by Library. No startup requests or event listeners are installed here. */
 export function install(ctx) {
+  const loadReviewedGuides = createReviewedGuides(ctx);
   async function resourcesPage(params = new URLSearchParams()) {
     if (params.get('item')) ctx.state.resources.resourceId = params.get('item');
     return (
@@ -9,6 +12,7 @@ export function install(ctx) {
         `<button id="library-new-explainer" class="button primary" data-action="new-block" disabled>${ctx.actions.icon('plus')}New explainer</button>`,
       ) +
       (await ctx.actions.catalogSection(params, { defer: true })) +
+      `<section id="library-reviewed-guides" data-guide="${ctx.actions.esc(params.get('guide') || '')}" aria-busy="true"><h2>Reviewed explainers</h2><p role="status">Loading guides…</p></section>` +
       `<section id="library-explainers" aria-busy="true"><h2 class="catalog-explainers-heading">Explainers</h2><p role="status">Loading explanations…</p></section>`
     );
   }
@@ -37,7 +41,11 @@ export function install(ctx) {
   }
 
   async function mountLibraryPage() {
-    await Promise.allSettled([ctx.actions.mountCatalog(), loadLibraryExplainers()]);
+    await Promise.allSettled([
+      ctx.actions.mountCatalog(),
+      loadLibraryExplainers(),
+      loadReviewedGuides(),
+    ]);
   }
 
   function resourceCitationFields(sources, metadata = []) {
@@ -284,6 +292,7 @@ export function install(ctx) {
     resourcesPage,
     mountLibraryPage,
     loadLibraryExplainers,
+    loadReviewedGuides,
     resourceCitationFields,
     readResourceCitations,
     resourceForm,

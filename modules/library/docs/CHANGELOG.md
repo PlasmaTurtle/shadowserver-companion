@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.12.1
+
+- Added a workspace frequency view for reported CVEs and product or service labels. Library shows observation counts and coverage independently of catalog severity.
+- Made reviewed report and finding guides searchable offline by report identity, finding tag and documented field. Added nine sourced finding explanations and exposed the versioned bank through the Library API.
+- Added a separate Red Hat guidance panel and callable read and refresh APIs for exact publisher wording and product-scoped advisories.
+- Added an automatic comparison of open notification selections against the current local CISA KEV catalog in the Changes view.
+
 ## 0.12.0
 
 - Added search across local CVEs, products and explainers. Named research views

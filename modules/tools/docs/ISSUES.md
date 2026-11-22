@@ -1,6 +1,6 @@
 # Tools tracking
 
-This tracker owns reusable runtime-tool maintenance. Last reviewed: **2026-11-21**.
+This tracker owns reusable runtime-tool maintenance. Last reviewed: **2026-11-22**.
 Use the [module guide](README.md) for operation and interfaces and the
 [project index](../../../docs/ISSUES.md) for shared work. Follow the
 [issue lifecycle](../../../docs/ISSUES.md#maintaining-this-register).
@@ -9,7 +9,7 @@ Use the [module guide](README.md) for operation and interfaces and the
 | --- | --- | --- |
 | ISS020 | [Reported-host loading and redirects](#iss020-reported-host-loading-and-redirects) | Resolved |
 | ISS026 | [Reusable tools and duplicate capabilities](#iss026-reusable-tools-and-duplicate-capabilities) | Resolved |
-| ISS051 | [Capture browser startup failures](#iss051-capture-browser-startup-failures) | Diagnostics fixed, incident cause open |
+| ISS051 | [Capture browser startup failures](#iss051-capture-browser-startup-failures) | Playwright migration verified; installed acceptance pending |
 | ISS055 | [Website capture permitted file downloads](#iss055-website-capture-permitted-file-downloads) | Resolved in source |
 
 ## ISS055 Website capture permitted file downloads
@@ -70,6 +70,21 @@ reproduced under the restricted automation account. Under the interactive Window
 account, the same production capture path passed the redirect, rendering and
 download tests with the browser sandbox enabled. The installed
 launcher incident has separate evidence in the project register.
+
+**Recurrence, November 22, 2026.** A 394-group import stopped after its first group
+with the retained diagnostic `Capture browser startup failed: Capture browser
+exited before startup (exit code 0)`. This is distinct from the earlier restricted-
+account GPU crash. The installed and source capture files were byte-identical;
+the same installed Python runtime subsequently rendered a controlled local page
+with Edge in 3.55 seconds under the interactive account. The original application
+had already shut down, so its launch conditions could not be reconstructed from
+the running process. No relevant application, AppLocker or Code Integrity event
+was available in the incident window. This evidence does not establish the cause
+of the clean exit or resolve the failed import.
+
+The [Playwright migration](#playwright-driver-migration) removes the unsupported
+custom-driver approach. Keep this incident open until the affected installed
+workflow is exercised successfully; a passing local fixture is not that acceptance.
 
 ## ISS026 Reusable tools and duplicate capabilities
 
@@ -158,7 +173,7 @@ than labeling a blocked destination as a successfully loaded business page.
 Failed loads must remain distinguishable, and cancellation/completion must clean
 up the owned browser and profile. Test results support the visible improvement.
 
-The replacement uses ordinary Chromium navigation and screenshot commands.
+The November 21 replacement used ordinary Chromium navigation and screenshot commands.
 The request broker and deny-only proxy are retired, and URL handling supports
 normal HTTP(S) addresses, ports, queries, fragments, IPs and IDNs. Browser
 lifetime, loading and evidence attachment remain separate responsibilities.
@@ -179,6 +194,76 @@ separately against that baseline under the shared decision rule.
 [Navigation](https://playwright.dev/python/docs/api/class-page#page-goto) ·
 [Screenshots](https://playwright.dev/python/docs/screenshots) ·
 [Library selection rule](../../../docs/DEVELOPMENT.md#library-selection)
+
+### Playwright driver migration
+
+**Implementation, November 22, 2026.** Tools now uses the maintained Playwright
+Python API for browser launch, isolated context creation, navigation, bounded
+viewport observation and screenshots. The custom CDP WebSocket implementation,
+manual browser subprocess launcher and Windows process guard are removed.
+The existing synchronous capture API and caller-owned identity/fallback decisions
+remain intact. Playwright and its packaged driver are runtime dependencies; the
+application selects installed stable Edge/Chrome channels without downloading
+browsers or requiring a separate system Node installation.
+
+The application explicitly enables the browser sandbox and disables accepted
+downloads. A small observer uses Playwright's public browser CDP session only to
+acknowledge the deny policy for the owned context and retain terminal download
+outcomes. This exception has a concrete API gap: Playwright's `download.failure()`
+returns an inaccessible-artifact message when downloads are denied, rather than
+the browser's terminal cancellation state. No private Playwright objects or
+custom transport remain. [Playwright download implementation](https://github.com/microsoft/playwright/blob/main/packages/playwright-core/src/server/download.ts) ·
+[Artifact result](https://github.com/microsoft/playwright/blob/main/packages/playwright-core/src/server/artifact.ts)
+
+Cancellation closes the context/browser on the owning event loop and allows
+operations to unwind. It does not cancel tasks running Playwright calls. Native
+operation timeouts bound state probes as well as navigation. Review reproduced
+a busy-renderer fixture consuming the entire seven-second capture budget despite
+a 1.5-second page budget; replacing unbounded evaluation with a timed
+`wait_for_function` probe addresses that specific gap. Startup failure remains a
+distinct exception so Accretion does not repeat a broken local launch for every
+group. Cleanup tolerates already-disconnected resources without replacing the
+original failure.
+
+New metadata uses `playwright-viewport-v1` and browser channel/version. The unused
+`resource_bytes` field is omitted because it is no longer measured; source URL,
+fallback, status, image dimensions and bounded download evidence remain available.
+Earlier capture metadata is still readable. The [current guide](README.md#website-loading-and-capture)
+owns these contracts.
+
+Native verification passed **52 checks on Edge 158 and 52 on Chrome 157**, with
+no skips. These checks cover actual rendered images, cookies, redirects, POST
+APIs, media, login pages, failed-site fallback, blocked attachments/Blob downloads
+in pages and popups, cancellation and a busy renderer. Chrome used the final
+source; Edge preceded only the first-tab failure-classification correction,
+covered by the focused lifecycle checks. Nineteen dependency checks and 12
+subtests passed. An offline staged Windows runtime installed all 37 pinned
+packages and started the packaged driver with both installed browsers.
+
+A bounded replay of the affected report in a copied workspace processed three
+groups in **75.95 seconds**: two qualified, evaluated and associated leads, plus
+one identity rejection. Both retained screenshots and previews were visually
+inspected, and their stored hashes verified. Two contact-discovery jobs were
+queued. No browser-startup failure occurred, and the original workspace was
+unchanged. This demonstrates the shared implementation and real funnel handoff;
+the installed application remains unchanged pending an updated build.
+[ISS051](#iss051-capture-browser-startup-failures) stays open for installed-workflow
+acceptance and the unreconstructed original exit-zero cause. Exact snapshots,
+screenshots, logs and dependency proofs are in the task's `capture-startup-audit/`
+bundle, outside maintained source.
+
+The complete affected Accretion, Investigations and Tools selection (with the two
+capture/browser files verified separately above) recorded **1,596 passed, 132
+subtests, nine skips and 17 failures**. All 17 failures were the verification
+environment missing `pdftotext` on PATH. Corrected-environment rechecks passed 88
+distinct complete-file cases, covering every original failure, with one optional
+LibreOffice skip. A temporary mismatch from concurrent report-revision edits also
+passed after its owner's changes aligned; this work did not edit those files.
+The original failed run remains retained rather than relabeled as a clean run.
+The final capture lifecycle/projection checks passed 12 cases, module-boundary
+checks passed 39, and release-layout/privacy checks passed 24. Lint, formatting,
+local documentation links and the regenerated ownership map passed. These results
+do not replace a new installer build or installed-workflow acceptance.
 
 **Maintenance lesson:** the ordinary browser reference rendered the museum
 artwork/video and bookstore page that the custom broker left incomplete. Keeping

@@ -8,6 +8,7 @@ an EOL tag, KEV flag, version age, or presence of a CVE.
 
 from __future__ import annotations
 
+from copy import deepcopy
 from functools import lru_cache
 import hashlib
 from ipaddress import ip_address
@@ -339,6 +340,11 @@ def notification_eligibility(fields, profile, config, *, catalog_records=None):
         "admission_catalog_complete": catalog_complete,
         "outreach_mode": "targeted" if targeted else "critical",
         "override_reason": str(config.get("targeted_reason") or "").strip() if targeted else None,
+        **(
+            {"override_authority": deepcopy(config["targeted_authority"])}
+            if targeted and isinstance(config.get("targeted_authority"), dict)
+            else {}
+        ),
         "included_as_context": False,
     }
 

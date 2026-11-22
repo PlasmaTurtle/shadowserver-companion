@@ -4,6 +4,13 @@
 
 ## 0.12.1
 
+- Settings and guided setup share validated agency, jurisdiction and timezone
+  choices, with matching API checks for identity, email, numeric and report-profile
+  inputs. Unsupported saved values remain visible until explicitly corrected.
+- Targeted outreach links a specific explanation to the selected CISA, FBI or
+  USSS authority reference. Agency changes require rationale review, while older
+  sender and import snapshots remain intact. [Validated profiles](ISSUES.md#iss060-validated-profiles-and-agency-authority)
+
 - Guided setup recognizes existing Shadowserver and NVD credentials. Both keys
   complete the connections step, and a missing key has its own entry form.
   Saving one key preserves an unfinished entry for the other service and any

@@ -2,9 +2,15 @@
 
 ## Unreleased
 
-- Documented where the evidence for the custom capture driver ends and which
-  Playwright APIs maintainers should evaluate before extending it.
-  [Capture driver decision review](ISSUES.md#iss020-reported-host-loading-and-redirects)
+## 0.12.1
+
+- Replace the custom capture driver and process guard with Playwright's supported
+  installed Edge/Chrome channels. Preserve the screenshot, fallback, identity and
+  denied-download evidence contracts while the library owns browser lifetime.
+  Keep per-page waits bounded so an unresponsive renderer leaves time for fallback.
+  Package the pinned Playwright driver with the runtime and check its startup
+  during the installed self-test.
+  [Capture driver migration](ISSUES.md#playwright-driver-migration)
 
 ## 0.12.0
 

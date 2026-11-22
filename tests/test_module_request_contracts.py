@@ -27,7 +27,7 @@ import pytest
             "name",
             "Example",
         ),
-        ("settings", "SettingsUpdate", {"regions": [" NC ", "NC"]}, "regions", ["NC"]),
+        ("settings", "SettingsUpdate", {"regions": [" NC ", "NC"]}, "regions", ["North Carolina"]),
         ("library", "SourceJobRequest", {"cve_ids": ["CVE-2026-1234"]}, "refresh", False),
         ("investigations", "CaseCreate", {"entity_id": "example"}, "title", ""),
     ],

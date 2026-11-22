@@ -4,6 +4,7 @@ from copy import deepcopy
 import hashlib
 import json
 from modules.investigations.components import approved_template as approved
+from ..finding_explainers import SUPPORTED_REVISIONS as FINDING_REVISIONS
 
 SECTIONS = {
     "introduction": "Introduction",
@@ -194,8 +195,7 @@ def fingerprints(data, lead, *, sections=None, version=FINGERPRINT_VERSION, prio
             fields["recipient_edition"] = data["draft"]["recipient_edition"]
         if (
             key == "vulnerabilities"
-            and data["draft"].get("finding_explainer_revision")
-            == "finding-explainers-2026-11-10-v1"
+            and data["draft"].get("finding_explainer_revision") in FINDING_REVISIONS
         ):
             fields["finding_explainer_revision"] = data["draft"]["finding_explainer_revision"]
             fields["finding_explainer_snapshots"] = deepcopy(

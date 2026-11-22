@@ -203,6 +203,42 @@ def file_hashes(root):
     }
 
 
+def test_automatic_open_kev_changes_exclude_minor_unknown_stale_and_closed(data):
+    store, catalog = data
+    old = {"id": ID, "kev": False, "kev_catalog_complete": True}
+    current = {"id": ID, "kev": True}
+    case(store, "a", [old, old])
+    case(store, "b", [{"id": ID, "kev": False}])
+    case(store, "c", [old], stage="closed")
+    case(store, "d", [current])
+    case(store, "e", [current, old])
+    case(store, "f", [dict(old, kev_retrieved_at="2099-01-01T00:00:00Z")])
+    case(store, "g", [old], stage="pending_notification")
+    case(store, "h", [dict(old, kev_date="2099-01-01")])
+    case(store, "i", {"unexpected-object": old})
+    service = ReferenceChanges(store, SimpleNamespace(catalog=catalog))
+    assert service.open_kev_changes()["notice"]
+    install_kev(store, listed=True, stale=True)
+    assert service.open_kev_changes()["items"] == []
+    install_kev(store, listed=True)
+    before = database_dump(store)
+    app = FastAPI()
+    register(app, store=store, catalog=SimpleNamespace(catalog=catalog))
+    with TestClient(app) as client:
+        route = "/api/library/changes/open-kev"
+        first = client.get(route, params={"limit": 1}).json()
+        assert first["total"] == 2 and first["unknown"] == 4 and first["comparable"] == 3
+        assert first["unreadable_cases"] == 1
+        assert first["items"][0]["case_id"] == "a"
+        assert first["items"][0]["previous"] is False and first["items"][0]["listed"] is True
+        assert client.get(route, params={"limit": 1}).json() == first
+        assert [
+            row["case_id"] for row in client.get(route, params={"offset": 1}).json()["items"]
+        ] == ["g"]
+        assert client.get(route, params={"limit": 0}).status_code == 422
+    assert database_dump(store) == before
+
+
 @pytest.mark.parametrize(
     "previous,current", [(False, True), (True, False), (False, False), (True, True)]
 )

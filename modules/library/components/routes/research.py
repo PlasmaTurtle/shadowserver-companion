@@ -1,12 +1,24 @@
 """Research discovery and saved-view HTTP adapters."""
 
 from fastapi import HTTPException, Query
+from ..reviewed_guides import GuideResults, ReviewedGuide, guides
 
 from ..research import Research, SavedViewInput, SavedViewUpdate, SavedViewImport, SavedViewConflict
 
 
 def register(app, *, store, catalog):
     research = Research(store, catalog)
+
+    @app.get("/api/library/guides")
+    def reviewed_guides(q: str = Query(default="", max_length=200)) -> GuideResults:
+        return {"items": guides(q)}
+
+    @app.get("/api/library/guides/{guide_id}")
+    def reviewed_guide(guide_id: str) -> ReviewedGuide:
+        for guide in guides(guide_id):
+            if guide["id"] == guide_id:
+                return guide
+        raise HTTPException(404, "Guide not found")
 
     def command(operation):
         try:

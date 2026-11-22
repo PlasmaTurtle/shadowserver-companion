@@ -136,6 +136,7 @@ class Eclipse:
         self.store = store
         self._view_lock = RLock()
         self._view_base = None
+        self._observed_reference_cache = None
         self._view_results = {}
         self._field_results = {}
         try:
@@ -952,6 +953,17 @@ class Eclipse:
 
             decorate_product_selection(self.store.root, snapshot, product_id)
         return snapshot
+
+    def observed_references(self, *, limit=10, cve_offset=0, product_offset=0):
+        from .observed_references import observed_references
+
+        return observed_references(
+            self,
+            limit=limit,
+            cve_offset=cve_offset,
+            product_offset=product_offset,
+            archive_limit=MAX_RECORDS,
+        )
 
     def view(self, **filters):
         from .observatory_view import view

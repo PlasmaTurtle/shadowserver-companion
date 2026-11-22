@@ -16,6 +16,7 @@ maintenance and integration boundaries.
 | Reviewed sender profile and draft adoption | [sender_identity.py](../components/sender_identity.py) |
 | Release discovery, verified download and handoff | [software_updates.py](../components/software_updates.py), [software_updates.js](../static/software_updates.js) |
 | Settings update adapter and presentation | [routes/settings.py](../components/routes/settings.py), [settings.js](../static/settings.js) |
+| Profile choices, validation and authority references | [profile_catalog.py](../components/profile_catalog.py), [api_models.py](../components/api_models.py), [profile_fields.js](../static/profile_fields.js) |
 | Setup and software-update endpoints | [routes/](../components/routes/) |
 
 ## Boundary
@@ -54,8 +55,56 @@ Settings uses native form validation, revealing closed sections containing inval
 controls before requesting focus. NVD input remains only in the form: entering a
 key activates the shared unsaved-change guards, and an earlier save/removal cannot
 clear newer edits. Clear entry discards that input without deleting a stored key;
-Remove key is the separate credential-service operation. Agency presets populate
-through delegated change handlers even while other fields are being edited.
+Remove key is the separate credential-service operation.
+
+## Profile choices and outreach authority
+
+Settings and guided setup consume one catalog through `/api/setup`: the 50 U.S.
+states, DC and five territories; CISA, FBI and USSS; and the seven supported
+display timezones. Agency selection determines the department. Jurisdictions use
+checkboxes and require at least one selection; recognized postal abbreviations
+submitted to the API normalize to full names. Timezones and report profiles use
+controlled choices. Names and office are required when explicitly submitted;
+email remains optional but must be one valid address. Numeric bounds, strict
+boolean/numeric inputs, text length and control-character rules also apply on
+the server. The timezone catalog is a supported subset, not all IANA zones.
+
+Unsupported saved selections remain visible for explicit correction. Reading old
+profiles does not migrate them, and an unrelated partial preference update does
+not revalidate or rewrite their identity or jurisdiction. A full onboarding
+profile save validates profile fields, without changing unrelated legacy import
+preferences. Existing sender snapshots and certified reports retain their values.
+
+Targeted outreach requires a specific explanation of how the material relates to
+the selected agency's mission. Its authority reference is derived by the server,
+never accepted from the client, and stored as a versioned `targeted_authority`
+snapshot alongside `targeted_reason`. Changing agencies requires review of the
+explanation. Accretion includes the snapshot in import identity and retains it as
+`override_authority` beside the eligibility reason; later changes do not rewrite
+earlier imports. Recipient-facing report wording is unchanged.
+
+The three profiles are the application's supported baseline, not an exhaustive
+legal list of authorized agencies. References were checked on November 22, 2026:
+
+- CISA's [6 U.S.C. §659](https://uscode.house.gov/us/usc/t6/s659/) references
+  cybersecurity assistance, information sharing and coordinated disclosure.
+  [Section 650(25)](https://uscode.house.gov/us/usc/t6/s650/) defines a vulnerability;
+  it does not independently grant powers.
+- FBI references include [28 U.S.C. §533](https://uscode.house.gov/us/usc/t28/s533/)
+  and [28 C.F.R. §0.85](https://www.ecfr.gov/current/title-28/chapter-I/part-0/subpart-P/section-0.85).
+  Its priority under [18 U.S.C. §1030(d)(2)](https://uscode.house.gov/us/usc/t18/s1030/)
+  concerns specified national-security offenses. PPD-41 is identified separately
+  as incident-coordination policy.
+- USSS references [18 U.S.C. §3056(b)(3)](https://uscode.house.gov/us/usc/t18/s3056/)
+  and [§1030(d)(1)](https://uscode.house.gov/us/usc/t18/s1030/); the PATRIOT Act
+  §105 note concerns electronic-crime task forces. These references are not a
+  finding that every exposed computer is an offense within an agency's authority.
+
+The catalog owns precise descriptions, source links and revision identity.
+Review the sources before changing it; selecting a profile does not establish
+the factual connection required for particular outreach.
+The architecture registry permits request models to import this pure catalog;
+both remain forbidden from loading application services or network/storage APIs.
 
 `onboarding.py` owns setup progress and completion rules. `sender_identity.py`
 pins the reviewed sender profile into drafts. `software_updates.py` owns release

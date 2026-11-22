@@ -222,7 +222,7 @@ class CatalogStorage(CatalogAnalytics):
         ):
             raise ValueError("Invalid catalog page.")
         if not self.db.is_file():
-            return {"items": [], "total": 0, "limit": limit, "offset": offset}
+            return {"items": [], "total": 0, "limit": limit, "offset": offset, "has_records": False}
         fts = self.metadata("fts_enabled", False)
         args, clauses, join = [], [], ""
         q = query.strip()
@@ -231,19 +231,23 @@ class CatalogStorage(CatalogAnalytics):
             args.append(q.upper())
         elif q.upper().startswith("CVE-"):
             prefix = q.upper()
-            if not re.fullmatch(r"CVE-(?:\d{0,4}|\d{4}-\d*)", prefix):
-                return {"items": [], "total": 0, "limit": limit, "offset": offset}
             # Binary prefix bounds use the primary-key index; SQLite's default
             # case-insensitive LIKE otherwise scans the full public catalog.
-            clauses.append("r.id>=? AND r.id<?")
-            args.extend((prefix, prefix + "\uffff"))
+            if re.fullmatch(r"CVE-(?:\d{0,4}|\d{4}-\d*)", prefix):
+                clauses.append("r.id>=? AND r.id<?")
+                args.extend((prefix, prefix + "\uffff"))
+            else:
+                clauses.append("0")
         elif q and fts:
             words = re.findall(r"[\w.-]+", q, re.UNICODE)
-            if not words:
-                return {"items": [], "total": 0, "limit": limit, "offset": offset}
-            join = " JOIN search_records s ON s.rowid=r.rowid"
-            clauses.append("search_records MATCH ?")
-            args.append(" AND ".join('"' + word.replace('"', '""') + '"*' for word in words[:20]))
+            if words:
+                join = " JOIN search_records s ON s.rowid=r.rowid"
+                clauses.append("search_records MATCH ?")
+                args.append(
+                    " AND ".join('"' + word.replace('"', '""') + '"*' for word in words[:20])
+                )
+            else:
+                clauses.append("0")
         elif q:
             clauses.append("r.description LIKE ? ESCAPE '\\'")
             args.append("%" + q.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_") + "%")
@@ -256,6 +260,9 @@ class CatalogStorage(CatalogAnalytics):
         where = " WHERE " + " AND ".join(clauses) if clauses else ""
         with self.connection(readonly=True) as db:
             total = db.execute("SELECT count(*) FROM records r" + join + where, args).fetchone()[0]
+            has_records = (
+                bool(total) or db.execute("SELECT 1 FROM records LIMIT 1").fetchone() is not None
+            )
             rows = db.execute(
                 "SELECT r.id,r.description,r.status,r.published,r.modified,r.severity,r.score FROM records r"
                 + join
@@ -266,6 +273,7 @@ class CatalogStorage(CatalogAnalytics):
         return {
             "items": [dict(row) for row in rows],
             "total": total,
+            "has_records": has_records,
             "limit": limit,
             "offset": offset,
         }

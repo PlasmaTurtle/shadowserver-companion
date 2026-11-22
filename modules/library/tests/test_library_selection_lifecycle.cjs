@@ -93,6 +93,64 @@ async function fixture() {
     assert.equal(fresh.app.state.resources.catalog.severity, 'HIGH');
   }
   {
+    const { app, nodes, empty } = await fixture();
+    const { createHandlers } = await import('../static/library_events.js');
+    const events = createHandlers(app);
+    const requests = [];
+    let finishExplore;
+    app.actions.api = async (url, options) => {
+      const params = new URLSearchParams(url.split('?')[1]);
+      if (url.includes('/fields/records?')) {
+        requests.push([params.get('field'), params.get('value'), params.get('offset')]);
+        return empty;
+      }
+      if (url.includes('/fields?')) {
+        const field = params.get('field');
+        if (field === 'attack_vector')
+          return new Promise((resolve) => (finishExplore = () => resolve({ field, ...empty })));
+        return { field, items: [{ value: 'CWE-79', count: 1 }], population: 1 };
+      }
+      if (options?.method === 'POST') return { id: 'saved', revision: 1, ...options.body };
+      return empty;
+    };
+    await app.actions.showCatalogView('fields');
+    const pending = app.actions.loadCatalogFields('attack_vector');
+    // Click the still-visible weakness row while the next field's groups are loading.
+    const markup = nodes.get('#catalog-fields-panel').innerHTML;
+    const row = markup.match(/<button [^>]*data-catalog-field-value="CWE-79"[^>]*>/)[0];
+    const button = {
+      dataset: {
+        catalogField: row.match(/data-catalog-field="([^"]+)"/)?.[1],
+        catalogFieldValue: 'CWE-79',
+      },
+    };
+    await events.click.find((handler) => handler.matches(button)).run(button);
+    finishExplore();
+    await pending;
+    const library = app.state.resources.catalog.library;
+    assert.equal(library.field, 'attack_vector');
+    assert.equal(library.fieldSelection.field, 'weakness');
+    const params = new URLSearchParams(app.actions.catalogSelectionURL().split('?')[1]);
+    await app.actions.saveCatalogView('Selected weakness');
+    await events.actions['catalog-page']({ dataset: { offset: '25' } });
+    await app.actions.applyCatalogView('saved');
+    await app.actions.loadCatalogLibrary(params);
+    assert.deepEqual(requests, [
+      ['weakness', 'CWE-79', '0'],
+      ['weakness', 'CWE-79', '25'],
+      ['weakness', 'CWE-79', '0'],
+      ['weakness', 'CWE-79', '0'],
+    ]);
+    assert.equal(library.field, 'attack_vector');
+    const legacyLink = new URLSearchParams({
+      view: 'cves',
+      field: 'reference_type',
+      field_value: '🌍'.repeat(300),
+    });
+    await app.actions.loadCatalogLibrary(legacyLink);
+    assert.deepEqual(requests.at(-1), ['reference_type', legacyLink.get('field_value'), '0']);
+  }
+  {
     const { app, nodes } = await fixture();
     let resolve;
     app.actions.api = (url) =>
@@ -196,6 +254,8 @@ async function fixture() {
           scope: 'critical',
           cveQuery: 'Apache',
           cveSeverity: 'HIGH',
+          field: 'attack_vector',
+          fieldSelection: { field: 'weakness', value: 'CWE-79' },
         },
         {
           label: 'Old shared label',
@@ -203,6 +263,8 @@ async function fixture() {
           scope: 'critical',
           cveQuery: 'Exchange',
           cveSeverity: '',
+          field: 'reference_type',
+          fieldSelection: { value: '🌍'.repeat(2001) },
         },
       ]),
     );
@@ -237,8 +299,11 @@ async function fixture() {
     );
     await app.actions.applyCatalogView('v0');
     assert.equal(app.state.resources.catalog.query, 'Apache');
+    assert.equal(app.state.resources.catalog.library.fieldSelection.field, 'weakness');
     await app.actions.applyCatalogView('v1');
     assert.equal(app.state.resources.catalog.query, 'Exchange');
+    assert.equal(app.state.resources.catalog.library.fieldSelection.field, 'reference_type');
+    assert.equal(app.state.resources.catalog.library.fieldSelection.value, '🌍'.repeat(2000));
     assert.equal(app.state.resources.catalog.severity, '');
     await app.actions.saveCatalogView('Named research');
     assert.equal(app.state.resources.catalog.library.saved.length, 3);
@@ -303,6 +368,7 @@ async function fixture() {
         products: {
           items: [{ id: 'product:example', vendor: 'Example', product: 'Mail' }],
           total: 1,
+          notice: 'Product search covers 1 of 2 local CVE records.',
         },
         explainers: { items: [{ id: 'one', title: 'Safe <script> text', revision: 3 }], total: 1 },
       },
@@ -310,10 +376,28 @@ async function fixture() {
     await app.actions.searchLibrary('mail');
     const html = nodes.get('#library-search-results').innerHTML;
     assert.match(html, /Catalog unavailable/);
+    assert.match(html, /Product search covers 1 of 2 local CVE records/);
     assert.match(html, /Example · Mail/);
     assert.match(html, /Safe &lt;script&gt; text/);
     assert.match(html, /item=one/);
     assert.match(html, /scope=all/);
+  }
+  {
+    const { app, nodes } = await fixture();
+    const attributes = new Map();
+    const region = nodes.get('#library-search-results');
+    region.setAttribute = (name, value) => attributes.set(name, value);
+    region.removeAttribute = (name) => attributes.delete(name);
+    let finish;
+    app.actions.api = () => new Promise((resolve) => (finish = resolve));
+    const pending = app.actions.searchLibrary('mail');
+    assert.equal(attributes.get('aria-busy'), 'true');
+    await app.actions.searchLibrary('   ');
+    assert.equal(attributes.has('aria-busy'), false);
+    finish({ groups: {} });
+    await pending;
+    assert.equal(region.innerHTML, '');
+    assert.equal(attributes.has('aria-busy'), false);
   }
   {
     const { app, nodes, calls } = await fixture();

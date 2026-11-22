@@ -40,6 +40,7 @@ function target(extra = {}) {
     return nodes.get(selector);
   };
   const doc = target({
+    documentElement: { dataset: { theme: 'dark' } },
     querySelector: node,
     querySelectorAll: () => [],
     body: { dataset: {}, classList: { toggle() {} } },
@@ -176,13 +177,18 @@ function target(extra = {}) {
   const boot = {
     version: 'synthetic',
     release: { version: 'synthetic', channel: 'unstable' },
-    settings: { appearance: 'dark', analyst_name: 'Synthetic Analyst' },
+    settings: { appearance: null, analyst_name: '', agency: 'Historical agency' },
     explainers: [],
   };
   let resolvePoll,
     polls = 0;
-  app.actions.api = async (url) => {
+  const appearanceWrites = [];
+  app.actions.api = async (url, options) => {
     if (url === '/api/bootstrap') return boot;
+    if (url === '/api/settings') {
+      appearanceWrites.push(options.body);
+      return { ...boot.settings, ...options.body };
+    }
     if (url === '/api/setup') return { required: false };
     if (url === '/api/software/whats-new') return { should_show: false };
     if (url === '/api/imports') {
@@ -198,6 +204,8 @@ function target(extra = {}) {
   app.state.navigation.currentRoute = 'workspace';
   await app.start();
   await app.start();
+  assert.equal(appearanceWrites.length, 1);
+  assert.deepEqual(Object.keys(appearanceWrites[0]), ['appearance']);
   assert.equal(timers.size, 1);
   const poll = [...timers][0],
     pending = poll();
@@ -215,7 +223,6 @@ function target(extra = {}) {
     route: realRoute,
     settingsPage: async () => '<section>Settings</section>',
     loadNvdKeyStatus: async () => {},
-    loadSettingsSetupStatus: async () => {},
     refreshNavigationCounts: async () => {},
   });
   const unhandled = [],

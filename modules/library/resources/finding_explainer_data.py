@@ -1,4 +1,6 @@
-"""Versioned technical lifecycle snippets for reported HTTP and Exchange findings."""
+"""Versioned technical explanations for source-scoped findings."""
+
+from hashlib import sha256
 
 BANK = {
     "http_eol_component": {
@@ -335,3 +337,335 @@ BANK = {
         ],
     },
 }
+
+# These extracts describe public report definitions and operator guidance. A case pins
+# the selected text and sources together when it adopts this edition of the bank.
+LIFECYCLE_EDITION = "finding-explainers-2026-11-10-v1"
+CURRENT_EDITION = "finding-explainers-2026-11-22-v1"
+
+
+def _reference(publisher, title, url, summary):
+    digest = sha256((url + "\n" + summary).encode("utf-8")).hexdigest()[:12]
+    return {
+        "publisher": publisher,
+        "title": title,
+        "public_url": url,
+        "retrieved_at": "2026-11-22T00:00:00Z",
+        "record": {"summary": summary},
+        "revision_id": f"{CURRENT_EDITION}-{digest}",
+        "partition": "C",
+        "referenced_by": ["EX-VULNERABILITY"],
+        "capture_method": "Reviewed technical reference extract; not the full source.",
+    }
+
+
+def _report_reference(title, slug, summary):
+    return _reference(
+        "The Shadowserver Foundation",
+        title,
+        "https://www.shadowserver.org/what-we-do/network-reporting/" + slug + "/",
+        summary,
+    )
+
+
+def _condition(
+    identifier,
+    *,
+    title,
+    category,
+    family,
+    tags,
+    body,
+    limitations,
+    review,
+    sources,
+    fields=None,
+):
+    rule = {"report_types": ["scan_" + family, "scan6_" + family], "tags": tags}
+    if fields:
+        rule["fields"] = fields
+    return {
+        "id": identifier,
+        "revision": CURRENT_EDITION,
+        "format": "snippet",
+        "category": category,
+        "title": title,
+        "match_rules": [rule],
+        "body": body,
+        "limitations": limitations,
+        "review": review,
+        "sources": sources,
+    }
+
+
+_HTTP_REFERENCE = _report_reference(
+    "Vulnerable HTTP Report",
+    "vulnerable-http-report",
+    "Shadowserver distinguishes Basic authentication on plain HTTP, exposed Git configuration "
+    "and two confidence levels for identifying a MegaRAC management interface. The latter "
+    "check cannot establish firmware patch status. vcenter-dcerpc-exposed separately records "
+    "RPC reachability alongside a vCenter version assessment.",
+)
+
+_CONDITIONS = [
+    _condition(
+        "http_basic_auth",
+        title="Basic authentication offered over plain HTTP",
+        category="configuration",
+        family="http_vulnerable",
+        tags=["basic-auth"],
+        body="Shadowserver observed an HTTP endpoint requesting Basic authentication without "
+        "transport encryption. A client that answers this challenge sends a reversibly encoded "
+        "username and password. Anyone able to observe that traffic could recover them.",
+        limitations="The challenge shows what the server offered. It does not show that a user "
+        "submitted credentials, that anyone intercepted them, or that a login succeeded.",
+        review="Check the virtual host and reverse proxy handling this request. Require HTTPS "
+        "before sending an authentication challenge. Review access and authentication records "
+        "for the exposure period and rotate credentials if their use over plain HTTP is confirmed.",
+        sources=[
+            _HTTP_REFERENCE,
+            _reference(
+                "Internet Engineering Task Force",
+                "RFC 7617: The 'Basic' HTTP Authentication Scheme",
+                "https://www.rfc-editor.org/rfc/rfc7617",
+                "Basic authentication encodes the username and password with Base64. Section 4 "
+                "requires an external protection mechanism such as TLS for confidentiality.",
+            ),
+        ],
+    ),
+    _condition(
+        "http_git_config",
+        title="Git repository configuration exposed by a web server",
+        category="exposure",
+        family="http_vulnerable",
+        tags=["git-config-file", "git-config-file."],
+        body="Shadowserver reports that a public web endpoint returned Git repository "
+        "configuration. Other repository files deployed in the same web directory could expose "
+        "source code, revision history or credentials.",
+        limitations="The observed configuration file does not establish which other files were "
+        "available, whether the repository contained a secret, or whether anyone downloaded it.",
+        review="Check the deployed web root and build artifact for repository metadata. Remove "
+        "that metadata from public deployments and deny web access to it. Review access logs "
+        "and repository history to identify credentials that need replacement.",
+        sources=[
+            _HTTP_REFERENCE,
+            _reference(
+                "Swiss National Cyber Security Centre",
+                "Unprotected .git folders on the internet pose a security risk",
+                "https://www.bacs.admin.ch/en/git-en",
+                "Git metadata can disclose source code, historical changes and embedded secrets. "
+                "The NCSC recommends preventing web access to Git directories and keeping secrets "
+                "out of source control.",
+            ),
+        ],
+    ),
+    _condition(
+        "http_megarac_management",
+        title="Public server management interface",
+        category="exposure",
+        family="http_vulnerable",
+        tags=["megarac", "potential-megarac"],
+        body="Shadowserver observed a public Redfish management endpoint. Its megarac and "
+        "potential-megarac tags express different confidence levels in the identification of "
+        "AMI MegaRAC firmware. This interface can provide hardware administration independently "
+        "of the host operating system.",
+        limitations="A response does not establish the exact controller, firmware revision, "
+        "patch status or a successful administrative login. The potential-megarac tag is a "
+        "tentative product identification.",
+        review="Identify the hardware model and management-controller firmware in the asset "
+        "inventory. Compare the installed revision with the hardware supplier's security "
+        "updates and restrict management access to a dedicated, trusted network.",
+        sources=[
+            _HTTP_REFERENCE,
+            _reference(
+                "National Security Agency and Cybersecurity and Infrastructure Security Agency",
+                "Harden Baseboard Management Controllers",
+                "https://media.defense.gov/2023/Jun/14/2003241405/-1/-1/0/CSI_HARDEN_BMCS.PDF",
+                "The agencies advise isolating management controllers from other network traffic, "
+                "restricting administrative access and maintaining controller firmware.",
+            ),
+        ],
+    ),
+    _condition(
+        "vcenter_dcerpc_exposed",
+        title="vCenter RPC service reachable from the internet",
+        category="exposure",
+        family="http_vulnerable",
+        tags=["vcenter-dcerpc-exposed"],
+        body="Shadowserver separately reports that the vCenter DCERPC service was reachable "
+        "from the internet. The tag adds evidence about access to a management service beyond "
+        "what the web interface's software version alone can establish.",
+        limitations="Reachability does not establish which operations the service would allow, "
+        "whether someone used it without authorization, or the installed patch level. Assess "
+        "any accompanying CVE against its own evidence.",
+        review="Identify the vCenter appliance, verify its installed build and review the "
+        "networks permitted to reach its management services. Restrict access to required "
+        "management clients and review the supplier's advisory for any separately reported CVE.",
+        sources=[
+            _HTTP_REFERENCE,
+            _reference(
+                "Broadcom",
+                "Configure the VAMI firewall to restrict vCenter access to specified IP addresses or subnets",
+                "https://knowledge.broadcom.com/external/article/412016/configure-the-vami-firewall-to-restrict.html",
+                "Broadcom documents the appliance firewall controls for restricting access to "
+                "vCenter Server by source address or subnet.",
+            ),
+        ],
+    ),
+    _condition(
+        "mongodb_noauth",
+        title="MongoDB database names visible without authentication",
+        category="configuration",
+        family="mongodb",
+        tags=["mongodb-noauth"],
+        body="Shadowserver reports that the MongoDB service allowed its unauthenticated "
+        "database-listing check. The visible_databases field can record up to five returned "
+        "names. Database names can reveal which applications use the service.",
+        limitations="This observation does not demonstrate document reads, writes or deletion. "
+        "It does not identify who accessed the service or establish any separate version-based CVE.",
+        review="Check which networks can reach the database and whether the deployment enforces "
+        "authentication and least-privilege roles. Restrict client access to trusted networks, "
+        "review available database audit records and verify the effective access policy.",
+        sources=[
+            _report_reference(
+                "Open MongoDB Report",
+                "open-mongodb-report",
+                "The provider distinguishes a reachable MongoDB service from an unauthenticated "
+                "database listing. It records up to five database names for a successful listing.",
+            ),
+            _reference(
+                "MongoDB",
+                "Security Checklist for Self-Managed Deployments",
+                "https://www.mongodb.com/docs/manual/administration/security-checklist/",
+                "MongoDB recommends enforcing access control, limiting roles and network access, "
+                "and retaining audit records for review.",
+            ),
+        ],
+    ),
+    _condition(
+        "smtp_exim_21nails",
+        title="Exim banner associated with the 21Nails advisory",
+        category="version_assessment",
+        family="smtp_vulnerable",
+        tags=["21nails"],
+        body="Shadowserver associated the version advertised by the SMTP service with the "
+        "21Nails group of Exim mail-server vulnerabilities. This is a banner-based indication "
+        "for the mail administrator to compare with the installed package.",
+        limitations="The banner does not identify installed distributor backports or establish "
+        "that a particular member of the advisory group applies. It supplies no evidence of "
+        "message access or compromise.",
+        review="Identify the running Exim package, its distributor and complete package revision. "
+        "Compare that revision with the distributor's advisory and install the applicable "
+        "security update. Retain the package record when documenting a backported fix.",
+        sources=[
+            _report_reference(
+                "Vulnerable SMTP Report",
+                "vulnerable-smtp-report",
+                "The provider maps SMTP banner versions to the 21nails tag and warns that banner "
+                "information alone can misclassify patched systems.",
+            ),
+            _reference(
+                "Canonical",
+                "USN-4934-2: Exim vulnerabilities",
+                "https://ubuntu.com/security/notices/USN-4934-2",
+                "Ubuntu published distribution-specific Exim security package revisions. The "
+                "appropriate fixed package depends on the Ubuntu release and support channel.",
+            ),
+        ],
+    ),
+    _condition(
+        "isakmp_softether",
+        title="SoftEther VPN service reported as a traffic reflector",
+        category="exposure",
+        family="isakmp",
+        tags=["softether"],
+        body="Shadowserver identified an internet-facing SoftEther VPN service associated with "
+        "a documented L2TP response behavior. In an affected configuration, the service can "
+        "send unwanted traffic to a third party.",
+        limitations="The report does not establish that the VPN participated in an attack. "
+        "An IKE protocol version is separate from the installed SoftEther software release.",
+        review="Check the installed SoftEther edition and build and whether L2TP is required. "
+        "Compare the installed package with the maintainer's fixed release for the applicable "
+        "branch. Disable unneeded L2TP access or apply the appropriate corrected build.",
+        sources=[
+            _report_reference(
+                "Vulnerable ISAKMP Report",
+                "vulnerable-isakmp-report",
+                "The softether tag identifies SoftEther VPN endpoints reported for potential "
+                "reflection and amplification. The version field describes the IKE protocol.",
+            ),
+            _reference(
+                "SoftEther VPN Project",
+                "SoftEther VPN L2TP amplification advisory",
+                "https://github.com/SoftEtherVPN/SoftEtherVPN/security/advisories/GHSA-j35p-p8pj-vqxq",
+                "The maintainer describes the affected L2TP configuration and identifies a corrected "
+                "software release in its package advisory.",
+            ),
+        ],
+    ),
+    _condition(
+        "badsecrets_secret_found",
+        title="Known weak application secret identified",
+        category="configuration",
+        family="badsecrets",
+        tags=["badsecret"],
+        fields={"badsecret_type": "SecretFound"},
+        body="The detector reports a match between application output and a known weak "
+        "cryptographic secret. Its module and location fields identify the check and where "
+        "the matching evidence appeared. The security effect depends on what the application "
+        "uses that secret to protect.",
+        limitations="This result does not establish who used the secret, whether a session "
+        "was forged, or which other systems share the key.",
+        review="Identify the application and key purpose using its configuration and the "
+        "reported module. Replace the weak secret, retire the old value and invalidate affected "
+        "sessions or tokens where applicable. Review relevant authentication or application logs.",
+        sources=[
+            _report_reference(
+                "Badsecrets Report",
+                "badsecrets-report",
+                "The provider documents a SecretFound result, with separate fields for the detection "
+                "module and location in the application's response.",
+            ),
+            _reference(
+                "OWASP Foundation",
+                "Secrets Management Cheat Sheet",
+                "https://cheatsheetseries.owasp.org/cheatsheets/Secrets_Management_Cheat_Sheet.html",
+                "OWASP describes rotating, revoking and auditing secrets throughout their lifecycle, "
+                "including revoking compromised keys and tokens.",
+            ),
+        ],
+    ),
+    _condition(
+        "rdp_native_security",
+        title="Remote Desktop responded with native RDP security",
+        category="configuration",
+        family="rdp",
+        tags=["rdp"],
+        fields={"rdp_protocol": "RDP"},
+        body="Shadowserver classified the responding Remote Desktop connection as native RDP "
+        "security. Its report distinguishes that response from TLS-enforced security and from "
+        "a connection requiring Network Level Authentication.",
+        limitations="The negotiation result describes the endpoint at the observation time. "
+        "It does not identify the operating system, demonstrate a successful sign-in, or "
+        "determine which accounts could connect.",
+        review="Review the effective Remote Desktop security policy on the identified host "
+        "and any gateway. Require Network Level Authentication on supported clients and hosts, "
+        "and restrict the networks and users allowed to reach the service.",
+        sources=[
+            _report_reference(
+                "Accessible RDP Report",
+                "accessible-rdp-report",
+                "The rdp_protocol field distinguishes native RDP security, enforced TLS, enforced "
+                "CredSSP, unsupported negotiation and a server that ignores negotiation.",
+            ),
+            _reference(
+                "Microsoft",
+                "Enable Remote Desktop on your PC",
+                "https://learn.microsoft.com/en-us/windows-server/remote/remote-desktop-services/remotepc/remote-desktop-allow-access",
+                "Microsoft recommends Network Level Authentication, describes how it authenticates "
+                "users before establishing a remote session, and documents authorized remote users.",
+            ),
+        ],
+    ),
+]
+BANK.update({condition["id"]: condition for condition in _CONDITIONS})

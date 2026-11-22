@@ -42,12 +42,14 @@ CUSTOM = {
 }
 
 
-def settings(client, **changes):
-    value = client.get("/api/bootstrap").json()["settings"]
-    value.update(changes)
-    result = client.put("/api/settings", json=value)
-    assert result.status_code == 200, result.text
-    return result.json()
+def restore_legacy_settings(app, **changes):
+    # These historical custom/incomplete identities predate the supported-agency
+    # write catalog. Restore their recorded values so pinned-draft, adoption and
+    # certification compatibility remain covered without bypassing API policy.
+    with app.state.store.transaction() as db:
+        value = {**app.state.store.settings(db), **changes}
+        db.execute("UPDATE settings SET value=? WHERE key='profile'", (json.dumps(value),))
+    return value
 
 
 def opened(client, app):
@@ -123,7 +125,7 @@ def test_another_usss_office_does_not_claim_charlotte_task_force_or_carolinas_mi
 
 @pytest.mark.parametrize("field", ["agency", "analyst_name"])
 def test_missing_sender_setup_blocks_introduction_with_an_adoption_action(client, app, field):
-    settings(client, **{field: ""})
+    restore_legacy_settings(app, **{field: ""})
     lead = opened(client, app)
     check = next(row for row in lead["readiness"] if row["key"] == "sender_profile")
     assert not check["ok"] and "adopt" in check["label"]
@@ -174,7 +176,7 @@ def test_settings_reject_multiline_or_control_identity(client, field):
 def test_custom_profile_is_consistent_across_live_report_model_and_sender_name_without_title(
     client, app
 ):
-    settings(client, **CUSTOM)
+    restore_legacy_settings(app, **CUSTOM)
     lead = opened(client, app)
     draft = lead["draft"]
     assert draft["sender_name"] == CUSTOM["analyst_name"] and draft["sender_title"] == ""
@@ -197,7 +199,7 @@ def test_settings_changes_preserve_frozen_sender_until_reasoned_adoption(client,
     lead = ready(client, lead["id"])
     original = {r["key"]: r["validation_id"] for r in lead["section_reviews"]}
     old_profile = deepcopy(lead["draft"]["sender_profile"])
-    settings(client, **CUSTOM)
+    restore_legacy_settings(app, **CUSTOM)
     lead = client.get(f"/api/cases/{lead['case_id']}").json()
     assert lead["draft"]["sender_profile"] == old_profile
     assert lead["draft"]["sender_name"] == "Test Analyst"
@@ -259,7 +261,7 @@ def test_legacy_saved_draft_requires_explicit_adoption_for_custom_identity(clien
         )
         draft.pop("sender_profile")
         db.execute("UPDATE cases SET draft=? WHERE id=?", (json.dumps(draft), lead["case_id"]))
-    settings(client, **CUSTOM)
+    restore_legacy_settings(app, **CUSTOM)
     lead = client.get(f"/api/cases/{lead['case_id']}").json()
     assert "sender_profile" not in lead["draft"]
     assert "United States Secret Service" in lead["draft"]["intro"]
@@ -280,10 +282,29 @@ def test_certified_bytes_and_sender_survive_settings_changes(client, app):
     report_id = certified.json()["id"]
     path = f"/api/reports/{report_id}/pdf"
     before = hashlib.sha256(client.get(path).content).hexdigest()
-    settings(client, **CUSTOM)
+    restore_legacy_settings(app, **CUSTOM)
     historical = client.get(f"/api/cases/{lead['case_id']}").json()
     assert historical["draft"]["sender_name"] == "Test Analyst"
     assert historical["draft"]["sender_profile"]["agency"] == DEFAULT_SETTINGS["agency"]
     assert not historical["sender_profile_update_available"]
     assert hashlib.sha256(client.get(path).content).hexdigest() == before
     assert adopt(client, historical).status_code == 422
+
+
+def test_supported_agency_write_preserves_pinned_sender_until_adoption(client, app):
+    lead = opened(client, app)
+    before = deepcopy(lead["draft"]["sender_profile"])
+    response = client.put(
+        "/api/settings",
+        json={
+            "agency": "Cybersecurity and Infrastructure Security Agency",
+            "office": "Synthetic regional office",
+        },
+    )
+    assert response.status_code == 200, response.text
+    current = client.get(f"/api/cases/{lead['case_id']}").json()
+    assert current["draft"]["sender_profile"] == before
+    assert current["sender_profile_update_available"]
+    adopted = adopt(client, current)
+    assert adopted.status_code == 200, adopted.text
+    assert adopted.json()["draft"]["sender_profile"]["agency"] == response.json()["agency"]

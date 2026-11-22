@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.12.1
+
+- Initial appearance persistence sends only the theme, so incomplete or legacy
+  profile values do not prevent startup from saving the preference.
+
 ## 0.12.0
 
 - Keep keyboard focus on a command-palette result while delayed search results

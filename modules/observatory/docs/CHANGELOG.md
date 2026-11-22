@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+## 0.12.1
+
+- Supplied Library with workspace counts for CVEs and product or service labels found in retained observations, including available archived source rows.
+
 ## 0.12.0
 
 - Added nationwide city lookup and used the workspace's saved jurisdiction for

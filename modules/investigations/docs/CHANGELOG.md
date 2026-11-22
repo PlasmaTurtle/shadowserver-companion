@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+## 0.12.1
+
+- Select the new Library condition explanations using retained report identity, tags and qualifying fields. Render configuration and exposure guidance with its own wording and preserve previously selected editions.
+- Expose a compact read of known-exploitation evidence retained by open notifications for Library's automatic comparison.
+
 ## 0.12.0
 
 - Count a case once on its first recorded delivery or acknowledgement. Leads,

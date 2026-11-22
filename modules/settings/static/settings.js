@@ -1,8 +1,21 @@
+import {
+  requireProfileCatalog,
+  profileInput,
+  agencyFields,
+  jurisdictionFields,
+  timezoneField,
+  targetedFields,
+  applyAgencySelection,
+  validateProfileFields,
+  removeUnsupportedRegions,
+} from './profile_fields.js';
+
 /** Application preferences, identity and service configuration owned by Settings. No startup requests or event listeners are installed here. */
 export function install(ctx) {
   let settingsWrites = Promise.resolve();
   let pendingAppearance = null;
   let themeRevision = 0;
+  let profileCatalog = null;
 
   function persistSettings(values) {
     const saved = settingsWrites.then(async () => {
@@ -105,7 +118,7 @@ export function install(ctx) {
       )
       .join(
         '',
-      )}</div></fieldset><div class="field"><label for="display-timezone">Display timezone</label><input id="display-timezone" name="display_timezone" value="${ctx.actions.esc(s.display_timezone || 'America/New_York')}" placeholder="America/New_York"><small>Event times retain their original UTC values; timestamps display the selected zone.</small></div><div class="policy-card"><span class="tlp-mark">TLP:AMBER</span><p>Share on a need-to-know basis within the receiving organization and its clients. Source-specific additional restrictions still apply. Reports include the marking in the header and footer of every page.</p></div><p class="section-note">Blue: confirmed association or completed workflow. Red: adverse finding. Gray: pending or unknown. Confirmation does not mean remediation.</p></div></section>`;
+      )}</div></fieldset>${timezoneField(ctx.actions.esc, s, requireProfileCatalog(profileCatalog), 'display-timezone')}<div class="policy-card"><span class="tlp-mark">TLP:AMBER</span><p>Share on a need-to-know basis within the receiving organization and its clients. Source-specific additional restrictions still apply. Reports include the marking in the header and footer of every page.</p></div><p class="section-note">Blue: confirmed association or completed workflow. Red: adverse finding. Gray: pending or unknown. Confirmation does not mean remediation.</p></div></section>`;
   }
 
   function hasUnsavedSettings() {
@@ -122,6 +135,7 @@ export function install(ctx) {
   }
 
   function validateSettingsForm(form) {
+    validateProfileFields(form);
     if (!form.checkValidity || form.checkValidity()) return true;
     for (const input of form.querySelectorAll(':invalid')) {
       let details = input.closest('details');
@@ -146,6 +160,7 @@ export function install(ctx) {
 
   function settingsChanged(form) {
     if (!form || form.id !== 'settings-form') return;
+    validateProfileFields(form);
     form.dataset.dirty = 'true';
     form.dataset.editRevision = String(Number(form.dataset.editRevision || 0) + 1);
     ctx.actions.settingsSaveStatus('Unsaved changes', 'unsaved', form);
@@ -364,16 +379,21 @@ export function install(ctx) {
 
   async function settingsPage() {
     const s = ctx.state.navigation.boot.settings;
-    const dataStatus = await ctx.actions.api('/api/data/status');
-    const profile = `<section class="panel" id="settings-section-profile"><div class="panel-head"><div><h2>Notification profile</h2><p>Identity used for new notifications. Earlier certified reports keep their saved sender.</p></div></div><div class="panel-body form-grid"><div class="field settings-agency-preset"><label for="settings-agency-preset">Agency preset</label><select id="settings-agency-preset"><option value="custom">Current agency / custom organization</option></select><small>A preset fills the agency and department. Your jurisdiction is selected separately.</small></div>${ctx.actions.field('Analyst name', 'analyst_name', s.analyst_name, { draft: false })}${ctx.actions.field('Title (optional)', 'analyst_title', s.analyst_title, { draft: false, help: 'Leave blank to show your name without a title.' })}${ctx.actions.field('Office / location', 'office', s.office, { draft: false, help: 'Your office or work location; not a jurisdiction filter.' })}${ctx.actions.field('Contact email', 'email', s.email, { draft: false, type: 'email' })}${ctx.actions.field('Agency', 'agency', s.agency, { draft: false, full: true })}${ctx.actions.field('Department', 'department', s.department, { draft: false, full: true })}</div></section>`;
-    const jurisdiction = `<section class="panel" id="settings-section-jurisdiction"><div class="panel-head"><div><h2>Jurisdiction</h2><p>Scope for new intake, report API choices and workspace views.</p></div></div><div class="panel-body form-grid">${ctx.actions.field('Jurisdictions · one region per line', 'regions', s.regions.join('\n'), { draft: false, area: true, rows: 3, full: true, help: 'Use report region names, such as North Carolina. Out-of-jurisdiction API choices are excluded. Changing scope does not delete existing records.' })}<p class="help full">Use guided setup for a state checklist. Review the retrieval schedule after changing jurisdiction; a previously saved subscription may no longer be available.</p></div></section>`;
+    const [dataStatus, catalog] = await Promise.all([
+      ctx.actions.api('/api/data/status'),
+      ctx.actions.api('/api/setup'),
+    ]);
+    profileCatalog = requireProfileCatalog(catalog);
+    const esc = ctx.actions.esc;
+    const profile = `<section class="panel" id="settings-section-profile"><div class="panel-head"><div><h2>Notification profile</h2><p>Identity used for new notifications. Earlier certified reports keep their saved sender.</p></div></div><div class="panel-body form-grid">${agencyFields(esc, s, profileCatalog, 'f-', 'settings-agency-preset')}${profileInput(esc, 'f-', 'Analyst name', 'analyst_name', s.analyst_name, { required: true, max: 300, autocomplete: 'name' })}${profileInput(esc, 'f-', 'Title (optional)', 'analyst_title', s.analyst_title, { max: 300, help: 'Leave blank to show your name without a title.' })}${profileInput(esc, 'f-', 'Office / location', 'office', s.office, { required: true, help: 'Your office or work location; not a jurisdiction filter.' })}${profileInput(esc, 'f-', 'Contact email (optional)', 'email', s.email, { type: 'email', max: 254, autocomplete: 'email' })}</div></section>`;
+    const jurisdiction = `<section class="panel" id="settings-section-jurisdiction"><div class="panel-head"><div><h2>Jurisdiction</h2><p>Scope for new intake, report API choices and workspace views.</p></div></div><div class="panel-body form-grid">${jurisdictionFields(esc, s, profileCatalog, 'settings-remove-unsupported-regions')}<p class="help full">Review the retrieval schedule after changing jurisdiction; a previously saved subscription may no longer be available.</p></div></section>`;
     const intake = `<section class="panel" id="settings-section-reports"><div class="panel-head"><div><h2>Review &amp; import defaults</h2><p>Changes apply to new imports and reports you choose to re-evaluate.</p></div></div><div class="panel-body form-grid"><div class="field"><label for="outreach-mode">Outreach scope</label><select id="outreach-mode" name="outreach_mode">${ctx.actions.optionList(
       [
         ['critical', 'Critical or known exploited'],
         ['targeted', 'Targeted outreach'],
       ],
       s.outreach_mode || 'critical',
-    )}</select></div>${ctx.actions.field('Targeted outreach reason', 'targeted_reason', s.targeted_reason || '', { draft: false, full: true, required: s.outreach_mode === 'targeted', help: 'Record why this finding or report type is appropriate for targeted review.' })}<details class="full settings-help"><summary>Agency priorities</summary><div class="form-grid">${ctx.actions.field('Priority cities', 'accretion_priority_cities', (s.accretion_priority_cities || []).join('\n'), { draft: false, area: true, rows: 2, help: 'Optional · one city per line or separated by commas.' })}${ctx.actions.field('Priority products', 'accretion_priority_products', (s.accretion_priority_products || []).join('\n'), { draft: false, area: true, rows: 2, help: 'Optional · one product per line or separated by commas.' })}<p class="help full">Matching cities and products increase urgency. Intake requirements still apply.</p></div></details><label class="checkbox full"><input type="checkbox" name="watch_inbox" ${s.watch_inbox ? 'checked' : ''}><span>Check the inbox folder automatically</span></label><details class="full settings-help"><summary>Import formats and lookup options</summary><div class="form-grid">${reportProfileSetting(s)}${ctx.actions.field('Worksheet name', 'sheet', s.sheet, { draft: false, full: true, help: 'Leave blank to use the first worksheet. CSV reports do not use this setting.' })}${settingsNumber('timeout', 'Lookup timeout', s.timeout ?? 10, 1, 60, 'any')}${settingsNumber('retries', 'Network retries', s.retries ?? 1, 0, 3, 1)}${settingsNumber('interval', 'Minimum lookup interval', s.interval ?? 0.25, 0, 10, 'any')}</div></details><details class="full settings-help"><summary>How rows qualify</summary><p class="help">Default outreach admits supported critical findings or locally verified KEVs. Required values: tag, hostname, IP and an in-jurisdiction region. Version requirements depend on the report type: HTTP findings without a CVE and all end-of-life findings require a software version. Supported service and incident reports may omit it. Original rows are preserved. Private IPs are retained and flagged. One exact registration or DNS match qualifies a hostname group; partial registration-name matches require review.</p></details></div></section>`;
+    )}</select></div>${targetedFields(esc, s, profileCatalog, 'f-', 'settings-agency-authority')}<details class="full settings-help"><summary>Agency priorities</summary><div class="form-grid">${ctx.actions.field('Priority cities', 'accretion_priority_cities', (s.accretion_priority_cities || []).join('\n'), { draft: false, area: true, rows: 2, help: 'Optional · one city per line or separated by commas.' })}${ctx.actions.field('Priority products', 'accretion_priority_products', (s.accretion_priority_products || []).join('\n'), { draft: false, area: true, rows: 2, help: 'Optional · one product per line or separated by commas.' })}<p class="help full">Matching cities and products increase urgency. Intake requirements still apply.</p></div></details><label class="checkbox full"><input type="checkbox" name="watch_inbox" ${s.watch_inbox ? 'checked' : ''}><span>Check the inbox folder automatically</span></label><details class="full settings-help"><summary>Import formats and lookup options</summary><div class="form-grid">${reportProfileSetting(s)}${profileInput(esc, 'f-', 'Worksheet name', 'sheet', s.sheet, { max: 100, full: true, help: 'Leave blank to use the first worksheet. CSV reports do not use this setting.' })}${settingsNumber('timeout', 'Lookup timeout', s.timeout ?? 10, 1, 60, 'any')}${settingsNumber('retries', 'Network retries', s.retries ?? 1, 0, 3, 1)}${settingsNumber('interval', 'Minimum lookup interval', s.interval ?? 0.25, 0, 10, 'any')}</div></details><details class="full settings-help"><summary>How rows qualify</summary><p class="help">Default outreach admits supported critical findings or locally verified KEVs. Required values: tag, hostname, IP and an in-jurisdiction region. Version requirements depend on the report type: HTTP findings without a CVE and all end-of-life findings require a software version. Supported service and incident reports may omit it. Original rows are preserved. Private IPs are retained and flagged. One exact registration or DNS match qualifies a hostname group; partial registration-name matches require review.</p></details></div></section>`;
     const sections = [
       ['settings-section-profile', 'Profile'],
       ['settings-section-jurisdiction', 'Jurisdiction'],
@@ -390,7 +410,33 @@ export function install(ctx) {
       `<nav class="settings-section-nav" aria-label="Settings sections">${sections.map(([id, label]) => `<button type="button" data-action="settings-section" data-section="${id}">${label}</button>`).join('')}</nav><div class="settings-layout"><form id="settings-form" class="settings-main" novalidate data-dirty="false" data-edit-revision="0"><div class="settings-savebar"><div><strong>Workspace preferences</strong><p id="settings-save-status" role="status" aria-live="polite" data-state="${dataStatus.pending ? 'paused' : 'saved'}">${dataStatus.pending ? 'Restart or cancel the pending data change before saving settings.' : 'No unsaved changes'}</p></div><button id="settings-save-button" class="button primary" type="submit" ${dataStatus.pending ? 'disabled' : ''}>${ctx.actions.icon('save')}Save settings</button></div>${profile}${jurisdiction}${intake}<details class="settings-appearance" id="settings-section-display"><summary>Appearance, branding &amp; display</summary>${ctx.actions.presentationSettings(s)}</details></form><aside id="settings-data-panel" aria-label="Connections, retrieval schedule, software and workspace recovery">${nvdKeyMarkup()}${settingsAutomationMarkup()}${ctx.actions.softwareUpdatesMarkup?.() || ''}<div id="settings-data-controls">${ctx.actions.settingsDataMarkup(dataStatus)}</div></aside></div>`
     );
   }
+  function applySettingsAgency(select) {
+    applyAgencySelection(select, profileCatalog, ctx.actions.esc, 'settings-agency-authority');
+    settingsChanged(select.closest('#settings-form'));
+  }
+  function settingsOutreachChanged(select) {
+    const form = select.closest('#settings-form');
+    const reason = form.querySelector('[name="targeted_reason"]');
+    const authority = form.querySelector('#settings-agency-authority');
+    const targeted = select.value === 'targeted';
+    if (reason) {
+      reason.required = targeted;
+      reason.toggleAttribute('data-profile-trim-required', targeted);
+      reason.setCustomValidity('');
+    }
+    if (authority) authority.hidden = !targeted;
+    settingsChanged(form);
+  }
+  function removeSettingsUnsupportedRegions(button) {
+    const form = button.closest('#settings-form');
+    removeUnsupportedRegions(button);
+    settingsChanged(form);
+    validateProfileFields(form);
+  }
   const actions = {
+    applySettingsAgency,
+    settingsOutreachChanged,
+    removeSettingsUnsupportedRegions,
     nvdKeyMarkup,
     settingsAutomationMarkup,
     libraryAutomationMarkup,

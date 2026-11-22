@@ -10,7 +10,17 @@ from urllib.parse import quote
 
 from modules.investigations.components.repositories.reference_usage import ReferenceUsage
 from .cve_catalog.risk import RiskStore
+from .cve_catalog.risk_policy import date
 from .intelligence.metrics import select_nvd_metric
+
+
+def _newer_or_invalid(pinned, current):
+    if not pinned:
+        return False
+    try:
+        return date(pinned) > date(current)
+    except (ValueError, TypeError, AttributeError):
+        return True
 
 
 def _score(raw):
@@ -136,6 +146,65 @@ class ReferenceChanges:
     def __init__(self, store, catalog):
         self.usage, self.catalog = ReferenceUsage(store), catalog
         self.risk = RiskStore(store.root)
+
+    def open_kev_changes(self, *, offset=0, limit=25):
+        if not 0 <= offset <= 500000 or not 1 <= limit <= 100:
+            raise ValueError("Invalid case reference page")
+        result = {
+            "items": [],
+            "total": 0,
+            "offset": offset,
+            "limit": limit,
+            "comparable": 0,
+            "unknown": 0,
+            "unreadable_cases": 0,
+            "source": None,
+            "notice": None,
+        }
+        try:
+            feed = self.risk.extract("kev")
+        except (ValueError, OSError, sqlite3.Error):
+            result["notice"] = "The local KEV catalog could not be verified."
+            return result
+        if feed:
+            result["source"] = feed["source"]
+        if not feed or feed["stale"]:
+            result["notice"] = "A current local KEV catalog is needed to check open work."
+            return result
+        current = {entry["cveID"] for entry in feed["data"]["vulnerabilities"]}
+        with self.usage.open_kev_selections() as (rows, unreadable):
+            result["unreadable_cases"] = unreadable
+            for row in rows:
+                identifier = row["cve_id"]
+                if not isinstance(identifier, str) or not re.fullmatch(
+                    r"CVE-\d{4}-\d{4,}", identifier
+                ):
+                    continue
+                if (
+                    row["listed"] is None
+                    or _newer_or_invalid(row["retrieved_at"], feed["source"]["retrieved_at"])
+                    or _newer_or_invalid(row["released_at"], feed["data"]["dateReleased"])
+                ):
+                    result["unknown"] += 1
+                    continue
+                result["comparable"] += 1
+                previous, listed = bool(row["listed"]), identifier in current
+                if previous == listed:
+                    continue
+                if offset <= result["total"] < offset + limit:
+                    result["items"].append(
+                        {
+                            "case_id": row["id"],
+                            "case_title": row["title"],
+                            "cve_id": identifier,
+                            "previous": previous,
+                            "listed": listed,
+                            "pinned_at": row["retrieved_at"],
+                            "url": "#workspace/notifications/" + quote(row["id"], safe=""),
+                        }
+                    )
+                result["total"] += 1
+        return result
 
     def impact(self, cve_id, *, limit=25, offset=0, include_completed=False):
         cve_id = str(cve_id).upper()

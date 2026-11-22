@@ -248,24 +248,28 @@ def journal_change(db, old, new, old_digest, new_digest, changed_at):
 
 
 class CatalogAnalytics:
+    @staticmethod
+    def _index_status(db):
+        if db is None:
+            return {"ready": False, "indexed": 0, "total": 0, "remaining": 0, "errors": 0}
+        total = db.execute("SELECT count(*) FROM records").fetchone()[0]
+        indexed, errors = db.execute(
+            "SELECT count(CASE WHEN error IS NULL THEN 1 END),count(error) FROM catalog_indexed"
+        ).fetchone()
+        indexed = min(indexed, db.execute("SELECT count(*) FROM catalog_overview").fetchone()[0])
+        return {
+            "ready": indexed == total and total > 0,
+            "indexed": indexed,
+            "total": total,
+            "remaining": max(0, total - indexed - errors),
+            "errors": errors,
+        }
+
     def index_status(self):
         if not self.db.is_file():
-            return {"ready": False, "indexed": 0, "total": 0, "remaining": 0, "errors": 0}
+            return self._index_status(None)
         with self.connection(readonly=True) as db:
-            total = db.execute("SELECT count(*) FROM records").fetchone()[0]
-            indexed, errors = db.execute(
-                "SELECT count(CASE WHEN error IS NULL THEN 1 END),count(error) FROM catalog_indexed"
-            ).fetchone()
-            indexed = min(
-                indexed, db.execute("SELECT count(*) FROM catalog_overview").fetchone()[0]
-            )
-            return {
-                "ready": indexed == total and total > 0,
-                "indexed": indexed,
-                "total": total,
-                "remaining": max(0, total - indexed - errors),
-                "errors": errors,
-            }
+            return self._index_status(db)
 
     def build_index(self, *, cancel_event=None, progress=None, batch_size=250):
         with _index_guard:
@@ -477,11 +481,12 @@ class CatalogAnalytics:
             "total": 0,
             "limit": limit,
             "offset": offset,
-            "index": self.index_status(),
         }
         if not self.db.is_file():
+            result["index"] = self._index_status(None)
             return result
         with self.connection(readonly=True) as db:
+            result["index"] = self._index_status(db)
             risk = self._risk_sql(db)
             where, args = self._where(scope, risk)
             if query.strip():

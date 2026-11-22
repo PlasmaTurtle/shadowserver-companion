@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const vm = require('node:vm');
 const { loadApplication } = require('../../../tests/frontend_harness.cjs');
+const profileCatalog = require('../../settings/tests/support/profile_catalog.cjs');
 (async () => {
   const context = vm.createContext({
     console,
@@ -11,13 +12,13 @@ const { loadApplication } = require('../../../tests/frontend_harness.cjs');
   });
   const { application: ctx } = await loadApplication(context, { attach: false });
   ctx.state.navigation.boot = { settings: { regions: [] }, workspace: '/synthetic/data' };
-  ctx.actions.api = async () => ({ pending: null });
+  ctx.actions.api = async (url) => (url === '/api/setup' ? profileCatalog : { pending: null });
   let markup = await ctx.actions.settingsPage();
   assert.match(markup, /Export data/);
   assert.match(markup, /Import data/);
   assert.match(markup, /Delete all data/);
   assert.doesNotMatch(markup, /replace its data folder/);
-  ctx.actions.api = async () => ({ pending: 'import' });
+  ctx.actions.api = async (url) => (url === '/api/setup' ? profileCatalog : { pending: 'import' });
   markup = await ctx.actions.settingsPage();
   assert.match(markup, /Close and reopen the app to apply\./);
   assert.match(markup, /data-action="cancel-data-change"/);

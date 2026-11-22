@@ -2,6 +2,13 @@
 
 - Guided setup recognizes existing Shadowserver and NVD credentials when you open it. Only missing credentials prompt for entry. When both are present, the connections step is complete and you can continue to your profile.
 - Saving one service's key keeps any unfinished entry for the other service. A saved manual-import choice is preserved, and Test connection remains available to verify Shadowserver access.
+- Settings and guided setup share validated agency, jurisdiction and timezone choices, with consistent checks for identity, email, numeric and report-profile inputs. Unsupported saved values remain visible until corrected.
+- Targeted outreach records the reviewed CISA, FBI or USSS authority and its explanation. Agency changes require rationale review, and a changed authority creates a distinct intake decision while preserving earlier sender and import snapshots.
+- Library shows the most frequently reported CVEs and product or service labels across retained workspace observations, including available archived rows, with coverage shown separately from catalog severity.
+- Search reviewed report and finding guides offline by report identity, finding tag and documented field. Nine new sourced explanations cover configuration and exposure findings; reports retain previously selected editions.
+- Read exact Red Hat guidance and product-specific advisories in a separate Library panel, with an explicit refresh. The Changes view automatically compares open notifications with the current local CISA known-exploited-vulnerability catalog.
+- Website capture uses Playwright with installed Microsoft Edge or Google Chrome. Preserve screenshot, identity, fallback and denied-download evidence, bound page waits, and check the bundled driver during the runtime self-test.
+- Saving the initial theme no longer depends on incomplete or older profile values.
 
 # 0.12.0 — Guided Setup
 

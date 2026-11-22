@@ -463,21 +463,24 @@ def build_exhibits(
         )
     eol_groups = OrderedDict()
     from .finding_explainers import (
-        REVISION as FINDING_EXPLAINER_REVISION,
+        SUPPORTED_REVISIONS as FINDING_REVISIONS,
+        attach_explanation,
         enrich_eol_findings,
         match_snippet,
+        observation_conditions,
     )
 
     technical_snippets = (
         data["draft"].get("finding_explainer_snapshots", [])
-        if data["draft"].get("finding_explainer_revision") == FINDING_EXPLAINER_REVISION
+        if data["draft"].get("finding_explainer_revision") in FINDING_REVISIONS
         else []
     )
     for o in observations:
         f = o["fields"]
         for tag in re.split(r"[;,\s]+", str(f.get("tag", ""))):
-            if not re.search(r"(^|[-_])eol($|[-_])", tag, re.I) and not match_snippet(
-                o["row"], tag, technical_snippets
+            snippet = match_snippet(o["row"], tag, technical_snippets)
+            if not re.search(r"(^|[-_])eol($|[-_])", tag, re.I) and not (
+                snippet and snippet["category"] == "lifecycle"
             ):
                 continue
             key = (tag, str(f.get("version") or "Version not supplied"))
@@ -504,30 +507,21 @@ def build_exhibits(
 
     if data["draft"].get("narrative_revision") in SOURCE_AWARE_REVISIONS:
         observed_findings = OrderedDict()
-        for observation in observations:
-            if not has_active_findings(observation["row"]):
-                continue
+        rows = (
+            (observation, tag, snippet)
+            for observation in observations
+            if has_active_findings(observation["row"])
+            for tag, snippet in observation_conditions(observation["row"], technical_snippets)
+        )
+        for observation, tag, snippet in rows:
             fields = observation["fields"]
-            tag = str(fields.get("tag") or "")
-            if re.search(r"(^|[-_;,\s])eol($|[-_;,\s])", tag, re.I):
-                continue
-            if any(
-                match_snippet(observation["row"], token, technical_snippets)
-                for token in re.split(r"[;,\s]+", tag)
-            ):
-                continue
             context = source_context(observation["row"])
-            if CVE.search(tag):
-                # The missing-authentication observation remains distinct from
-                # a CVE, including when that CVE is separately excluded.
-                if context["id"] in {
-                    "scan_mongodb",
-                    "scan6_mongodb",
-                } and "mongodb-noauth" in re.split(r"[;,\s]+", tag.casefold()):
-                    tag = "mongodb-noauth"
-                else:
-                    continue
-            key = (context["id"], tag, str(fields.get("version") or ""))
+            key = (
+                context["id"],
+                tag.casefold() if snippet else tag,
+                str(fields.get("version") or ""),
+                snippet["id"] if snippet else "",
+            )
             item = observed_findings.setdefault(
                 key,
                 {
@@ -567,6 +561,8 @@ def build_exhibits(
                 item["endpoints"].append(endpoint)
             item["observation_ids"].append(observation["id"])
             item["appendix_entry_ids"].append(observation["entry_id"])
+            if snippet and "technical_explanation" not in item:
+                attach_explanation(item, snippet, refs, appendix)
         for item in observed_findings.values():
             item["observation_scope"] = "; ".join(item.pop("endpoints"))
         vulnerability_items.extend(observed_findings.values())
@@ -588,6 +584,18 @@ def build_exhibits(
         ),
         "alt_text": "Distinct reported CVEs and EOL conditions; scores and exploitation signals describe the published vulnerability, not confirmed compromise of this recipient. Full source descriptions and assessments are in Appendix C.",
     }
+    reviewed_observations = sum(
+        item["finding_type"] == "observation" and "technical_explanation" in item
+        for item in vulnerability_items
+    )
+    if reviewed_observations:
+        vulnerability["counts"].append(
+            {"label": "Reviewed source conditions", "value": reviewed_observations}
+        )
+        vulnerability["alt_text"] = (
+            "Reported findings with their supporting observations. Source-condition cards explain "
+            "the scanner tag, what it establishes and what the operator can check."
+        )
     # Explicitly supplied captured bodies are case scoped by the snapshot layer.
     # The Information review also carries its versioned public-reference extract.
     from .information_model import SUPPORTED_REVISIONS as INFORMATION_REVISIONS, reference_sources

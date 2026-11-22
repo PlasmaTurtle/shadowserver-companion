@@ -41,19 +41,29 @@ class DownloadObservations:
         self.attempts = []
         self.truncated = False
 
-    def _start(self, frame, guid):
+    async def attach(self, browser):
+        """Use Playwright's public CDP API for terminal download observations.
+
+        A denied Playwright Download exposes an inaccessible-artifact error,
+        not the browser's terminal state. This dedicated browser has exactly
+        one isolated context; enable its events on our observation session.
+        """
+        events = await browser.new_browser_cdp_session()
+        for method in ("Browser.downloadWillBegin", "Browser.downloadProgress"):
+            events.on(method, lambda data, name=method: self.observe(name, data))
+        contexts = (await events.send("Target.getBrowserContexts"))["browserContextIds"]
+        if len(contexts) != 1:
+            raise ValueError("Capture browser could not configure download observations")
+        await events.send(
+            "Browser.setDownloadBehavior",
+            {"behavior": "deny", "eventsEnabled": True, "browserContextId": contexts[0]},
+        )
+
+    def _start(self, guid):
         if len(self.attempts) == MAX_ATTEMPTS:
             self.truncated = True
             return
-        self.attempts.append(
-            {"frame": frame, "guid": guid, "observed_at": now(), "outcome": "unconfirmed"}
-        )
-
-    def navigation_download(self, frame):
-        # Page.navigate can report isDownload before or after downloadWillBegin.
-        # Each navigation candidate gets a fresh target and main frame.
-        if frame and not any(item["frame"] == frame for item in self.attempts):
-            self._start(frame, None)
+        self.attempts.append({"guid": guid, "observed_at": now(), "outcome": "unconfirmed"})
 
     def observe(self, method, params):
         guid = params.get("guid")
@@ -61,21 +71,10 @@ class DownloadObservations:
             return
         item = next((item for item in self.attempts if item["guid"] == guid), None)
         if method == "Browser.downloadWillBegin" and item is None:
-            frame = params.get("frameId")
-            pending = next(
-                (item for item in self.attempts if item["frame"] == frame and item["guid"] is None),
-                None,
-            )
-            if pending is None:
-                self._start(frame, guid)
-            else:
-                pending["guid"] = guid
+            self._start(guid)
         elif method == "Browser.downloadProgress" and item and item["outcome"] == "unconfirmed":
             if params.get("state") in ("canceled", "completed"):
                 item["outcome"] = params["state"]
-
-    def pending(self):
-        return any(item["outcome"] == "unconfirmed" for item in self.attempts)
 
     def snapshot(self):
         return download_activity(

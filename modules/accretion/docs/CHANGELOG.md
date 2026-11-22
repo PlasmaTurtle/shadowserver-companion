@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+## 0.12.1
+
+- Targeted intake retains Settings' reviewed agency authority alongside its
+  reason. A changed authority creates a distinct import decision without rewriting
+  prior imports. [Settings validation](../../settings/docs/ISSUES.md#iss060-validated-profiles-and-agency-authority)
+
 ## 0.12.0
 
 - Workbook, manual API and scheduled API imports now share qualification rules. Reimporting a report reuses its source identity. Data shows source-row counts separately from domain groups qualified, evaluated and published. [Intake workflow verification](../../../docs/history/validation/intake-review-2026-11-22.md#workflow-and-upgrade-evidence)
