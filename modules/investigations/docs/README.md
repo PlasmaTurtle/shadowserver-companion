@@ -27,6 +27,7 @@ dates. Leads, Entities and Associate share this query.
 | Maintenance area | Start here |
 | --- | --- |
 | Case lifecycle and command transactions | [cases.py](../components/cases.py), [services/](../components/services) |
+| Website evidence images, attachment and capture | [routes/evidence.py](../components/routes/evidence.py) |
 | Certification and interrupted publication | [certification.py](../components/services/certification.py), [recovery.py](../components/services/recovery.py), [report_publication.py](../components/repositories/report_publication.py) |
 | Case, review, evidence and report request validation | [api_models.py](../components/api_models.py) |
 | Review policy, projections and guards | [reviews/](../components/reviews) and [review command ownership](#review-command-ownership) |

@@ -8,7 +8,7 @@ import json
 from pathlib import Path
 from urllib.parse import urlsplit
 from fastapi import UploadFile, File, Form, HTTPException
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, Response
 from starlette.concurrency import run_in_threadpool
 from modules.workspace.components.primitives import now, uid
 from ..image_evidence import decode_screenshot, metadata_path
@@ -20,6 +20,18 @@ from modules.investigations.components.api_models import (
 
 
 def register(app, *, store, cases, get_lead):
+    @app.get("/api/website-evidence/{capture_id}/image")
+    def website_evidence_image(capture_id: str, original: bool = False):
+        from modules.investigations.components.website_evidence import preview
+
+        try:
+            content = preview(store, capture_id, original=original)
+        except KeyError as error:
+            raise HTTPException(404, "Website screenshot not found") from error
+        except (OSError, ValueError) as error:
+            raise HTTPException(409, "Website screenshot failed its integrity check") from error
+        return Response(content, media_type="image/png")
+
     @app.get("/api/cases/{case_id}/website-capture")
     def capture_scope(case_id: str):
         _, hosts = app.state.website_jobs.scope(case_id)

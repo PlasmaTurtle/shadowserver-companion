@@ -10,7 +10,6 @@ from pathlib import Path
 from zipfile import ZipFile, ZIP_DEFLATED
 from fastapi import HTTPException
 from pydantic import BaseModel, ConfigDict, Field
-from typing import Literal
 from fastapi.responses import FileResponse, Response
 from starlette.background import BackgroundTask
 from modules.workspace.components.primitives import dump
@@ -31,29 +30,10 @@ from modules.investigations.components.services.case_queries import (
     list_cases,
     notification_histories,
 )
-from modules.leads.components.lead_queue import LeadQueue, save_ip_association
+from modules.leads.components.lead_queue import save_ip_association
 from ..repositories.entities import EntityRepository
 from modules.attribution.components.attribution_display import attribution_summaries
 from ..entity_dns import EntityDNS
-
-
-class PendingLeadStart(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    expected_revision: int = Field(ge=0)
-    case_id: str | None = None
-    expected_case_version: int | None = Field(default=None, ge=0)
-
-
-class PendingLeadDisposition(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    expected_revision: int = Field(ge=0)
-    status: Literal["pending", "deferred", "dismissed"]
-
-
-class PendingLeadAssociation(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    expected_revision: int = Field(ge=0)
-    entity_id: str = Field(min_length=1, max_length=100)
 
 
 class OwnershipTransfer(BaseModel):
@@ -97,47 +77,9 @@ class EntityDetailsAdoption(CaseVersion):
     reason: str = Field(default="", max_length=5000)
 
 
-def register(app, *, store, cases, get_lead):
-    queue = LeadQueue(store)
+def register(app, *, store, cases, get_lead, queue):
     dns_connections = EntityDNS(store)
     app.state.entity_dns = dns_connections
-
-    @app.get("/api/pending-leads")
-    def pending_leads(status: str = "pending", q: str = ""):
-        return queue.list(status, q)
-
-    @app.get("/api/pending-leads/{pending_id}")
-    def pending_lead(pending_id: str):
-        return queue.detail(pending_id)
-
-    @app.get("/api/website-evidence/{capture_id}/image")
-    def website_evidence_image(capture_id: str, original: bool = False):
-        from modules.investigations.components.website_evidence import preview
-
-        try:
-            content = preview(store, capture_id, original=original)
-        except KeyError as error:
-            raise HTTPException(404, "Website screenshot not found") from error
-        except (OSError, ValueError) as error:
-            raise HTTPException(409, "Website screenshot failed its integrity check") from error
-        return Response(content, media_type="image/png")
-
-    @app.post("/api/pending-leads/{pending_id}/start")
-    def start_pending(pending_id: str, body: PendingLeadStart):
-        return queue.start(
-            pending_id,
-            body.expected_revision,
-            case_id=body.case_id,
-            expected_case_version=body.expected_case_version,
-        )
-
-    @app.post("/api/pending-leads/{pending_id}/disposition")
-    def disposition(pending_id: str, body: PendingLeadDisposition):
-        return queue.disposition(pending_id, body.expected_revision, body.status)
-
-    @app.post("/api/pending-leads/{pending_id}/associate")
-    def associate(pending_id: str, body: PendingLeadAssociation):
-        return queue.associate(pending_id, body.expected_revision, body.entity_id)
 
     @app.get("/api/entities")
     def entities(q: str = "", review_required: bool = False):

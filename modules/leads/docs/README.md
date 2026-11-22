@@ -16,6 +16,7 @@ responsibilities.
 | Scoped record access and export | [repositories/lead_scopes.py](../components/repositories/lead_scopes.py), [services/lead_exports.py](../components/services/lead_exports.py) |
 | Queue schema and stable identity | [lead_queue_migration.py](../databases/lead_queue_migration.py), [queue_identity.py](../helpers/queue_identity.py) |
 | Qualified queue and investigation actions | [entity_leads.js](../static/entity_leads.js), [entity_leads_events.js](../static/entity_leads_events.js) |
+| Pending-lead HTTP queries and decisions | [routes/queue.py](../components/routes/queue.py) |
 
 ## Boundary
 

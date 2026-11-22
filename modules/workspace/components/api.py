@@ -38,6 +38,8 @@ from modules.investigations.components.services.notification_views import load_n
 from .routes import overview as overview_routes
 from modules.investigations.components.routes import cases as case_routes
 from modules.entities.components.routes import entities as entity_routes
+from modules.leads.components.lead_queue import LeadQueue
+from modules.leads.components.routes import queue as lead_routes
 from modules.investigations.components.routes import drafts as draft_routes
 from modules.accretion.components.routes import intake as intake_routes
 from modules.investigations.components.routes import evidence as evidence_routes
@@ -262,7 +264,9 @@ def create_app(
     overview_routes.register(app, store=store, token=token, demo=demo)
     eclipse_routes.register(app, eclipse=eclipse)
     case_routes.register(app, store=store, cases=cases, get_lead=get_lead)
-    entity_routes.register(app, store=store, cases=cases, get_lead=get_lead)
+    lead_queue = LeadQueue(store)
+    lead_routes.register(app, queue=lead_queue)
+    entity_routes.register(app, store=store, cases=cases, get_lead=get_lead, queue=lead_queue)
     draft_routes.register(app, store=store, get_lead=get_lead, drafts=drafts)
     intake_routes.register(app, store=store, intake=intake)
     evidence_routes.register(app, store=store, cases=cases, get_lead=get_lead)

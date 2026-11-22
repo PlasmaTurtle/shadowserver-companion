@@ -13,6 +13,10 @@ and current entity links resolve to the same delivery history. The count and
 last notification date come from the
 [Investigations notification query](../../investigations/docs/README.md#completed-notifications).
 
+Leads owns the [pending-lead HTTP routes](../../leads/components/routes/queue.py).
+Investigations serves the [retained website image](../../investigations/components/routes/evidence.py)
+used by both Leads and Entities.
+
 ## Start here
 
 | Maintenance area | Start here |
