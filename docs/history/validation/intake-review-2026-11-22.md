@@ -35,6 +35,13 @@ changes tested for the 0.12.0 candidate. It complements the
   opened at full resolution. After certification, simulated delivery and closure,
   the original lead showed one completed notification. The recipient PDF contained
   the admitted host and omitted the excluded hostname and the internal referral.
+- Reversing the host order exposed a second defect. A lead could retain the first
+  host's screenshot after Associate had excluded that host. Qualification now
+  chooses evidence for surviving observations and Associate rechecks its scope
+  before publication. Case creation and previews use that admitted capture.
+  With the referred host first, the certified case contained one observation on
+  the surviving host and its matching screenshot. The ten-page PDF, Word export
+  and recipient manifest omitted the excluded host and internal referral.
 - A whole-domain referral allowed its group through qualification and evaluation
   and published zero leads. A separate history fixture with two completed cases
   and one pending report displayed two notifications, including after entity merges.
@@ -46,7 +53,8 @@ changes tested for the 0.12.0 candidate. It complements the
   The schema-24 upgrade and separate backup restore both preserved all 90
   protected files, three reports, four attached evidence records and fifteen
   section validations. All fifteen historical download responses matched the
-  recorded bytes.
+  recorded bytes. A separate upgrade from schema 20 and restore preserved
+  all 53 protected files.
 
 ## Build checks
 
@@ -55,6 +63,21 @@ Poppler 26.09.0. The dependency check verified all 35 approved wheels. The Pytho
 advisory check and npm lock audit reported zero known vulnerabilities at check
 time. The security and citation gate completed 479 tests and 78 subtests with
 ten skips. Its results overlap the main regression suite.
+
+The full application gate is `python tools/verify.py --check-timeout 4500
+--report <evidence>/final-verification.json`. It runs the release and ownership
+checks, frontend contracts, browser workflows and the backend suite. The release
+commands are `python tools/build_release.py <source-zip>` and
+`python tools/windows_installer/build.py --offline --build-dir <build-cache>
+--makensis <nsis> --output <installer>`.
+
+For this run, `dist/final-backlog-20261122/validation-status.json` records the
+application result and package inspection separately. The adjacent SHA-256
+file identifies the local artifacts. The independent inspection compares the
+frozen checkout, ZIP, staged payload and extracted installer. It also checks
+installed documentation and exercises the packaged runtime in a synthetic
+workspace. The detailed logs and evidence are under the task workspace's
+`validation/final-backlog-20261122/`.
 
 The installed launcher investigation remains open under
 [ISS054](../../ISSUES.md#iss054-defender-quarantined-the-windows-launcher).
